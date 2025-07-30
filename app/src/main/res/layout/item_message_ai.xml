@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="start"
+    android:orientation="horizontal"
+    android:paddingVertical="4dp">
+
+    <!-- The robot emoji stays the same -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🤖"
+        android:visibility="gone"
+        android:textSize="24sp"
+        android:layout_marginEnd="8dp"
+        android:layout_gravity="top" />
+    <ImageButton
+        android:id="@+id/copyButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+
+        android:layout_marginTop="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Copy text"
+        android:padding="4dp"
+        android:src="@drawable/ic_tune"
+        app:tint="#8A8A8A" />
+
+    <!-- NEW: A vertical layout to hold the message bubble and the copy button -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- This is your existing message TextView, now inside the new layout -->
+        <TextView
+            android:id="@+id/messageTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_ai_message"
+            android:fontFamily="@font/geologica_light"
+            android:padding="12dp"
+            android:textColorHighlight="#756151"
+            android:text="AI message here"
+            android:textColor="#F8F8F8"
+            android:textIsSelectable="true"
+            android:textSize="17sp"
+
+            />
+        <ImageButton
+            android:id="@+id/copyButton2"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:visibility="gone"
+            android:layout_gravity="end"
+            android:layout_marginTop="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Copy text"
+            android:padding="4dp"
+            android:src="@drawable/outline_content_copy_24"
+            app:tint="#8A8A8A" />
+        <!-- ADD THIS: The new tiny copy button -->
+        <!-- Tint the icon to a subtle gray -->
+
+    </LinearLayout>
+
+</LinearLayout>

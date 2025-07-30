@@ -1,0 +1,30 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Oxproxion" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your dark theme here. -->
+        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    </style>
+    <style name="MyEditTextTheme" parent="ThemeOverlay.AppCompat.Light">
+        <!-- Replace #FF0000 with the color you want for the underline -->
+        <item name="colorControlActivated">#FF9800</item>
+        <item name="colorControlNormal">#79480a</item>   <!-- underline when not focused -->
+    </style>
+    <style name="RoundedCornersDialog" parent="Theme.MaterialComponents.DayNight.Dialog">
+        <!-- Set the custom drawable as the window background -->
+        <item name="android:windowBackground">@drawable/rounded_dialog_background</item>
+        <!-- Optional: Remove default title bar if not using AlertDialog.Builder's title -->
+        <item name="android:windowNoTitle">true</item>
+        <!-- Ensure it's floating (standard dialog behavior) -->
+        <item name="android:windowIsFloating">true</item>
+
+        <!-- Make sure it's not translucent if you want a solid background -->
+        <item name="android:windowIsTranslucent">false</item>
+        <!-- Remove any default content overlay -->
+
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="colorAccent">#C2C2C2</item>
+        <item name="colorPrimary">#C2C2C2</item>
+        <!-- Remove default padding around the window content -->
+        <!--  <item name="android:windowBackgroundDimAmount">0.6</item>  Adjust dimming behind dialog -->
+    </style>
+</resources>

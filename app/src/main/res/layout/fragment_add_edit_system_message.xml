@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:background="#000000">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:titleTextColor="@android:color/white"
+        android:background="#1C1C1E"
+        app:navigationIcon="@drawable/ic_exit"
+        app:menu="@menu/add_edit_system_message_menu" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <EditText
+            android:id="@+id/edit_text_system_message_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Title"
+            android:textColor="#C2C2C2"
+            android:theme="@style/MyEditTextTheme"
+            android:textColorHint="#888888"/>
+
+        <EditText
+            android:id="@+id/edit_text_system_message_prompt"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="top"
+            android:theme="@style/MyEditTextTheme"
+            android:hint="System Message Prompt"
+            android:textColor="#C2C2C2"
+            android:textColorHint="#888888"/>
+    </LinearLayout>
+</LinearLayout>

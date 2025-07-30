@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- button_background_col.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true" android:color="@color/pressed_color"/>
+    <item android:state_focused="true" android:color="@color/focused_color"/>
+    <item android:state_selected="true" android:color="@color/ora" />
+    <item android:color="#171717"/>   <!-- 4D = 30 % alpha 10 % → #1A
+20 % → #33
+40 % → #66
+50 % → #80
+60 % → #99
+70 % → #B3
+80 % → #CC  -->
+</selector>

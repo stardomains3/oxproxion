@@ -1,0 +1,74 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+*.aar
+*.so
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+
+# Gradle files
+.gradle/
+build/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# Android Studio and IntelliJ IDEA files
+.idea/
+.project
+.settings
+.iml
+*.ipr
+*.iws
+.idea/workspace.xml
+.idea/libraries/
+.idea/modules.xml
+.idea/runConfigurations/
+.idea/gradle.xml
+.idea/misc.xml
+
+# Keystore files
+*.jks
+*.keystore
+release.properties
+
+# Log files
+*.log
+
+# Misc
+captures/
+.DS_Store
+app/release/
+!app/src/main/res/drawable/.gitkeep
+!app/src/main/res/raw/.gitkeep
+
+# Local test results
+/build/test-results/
+
+# Lint results
+lint-results.html
+lint-results.xml
+
+# CMake
+CMakeLists.txt.user
+
+# Android Profiling
+*.prof
+
+# Gradle Wrapper
+# The `gradle-wrapper.jar` is often committed to ensure consistent Gradle versions.
+# If you *don't* want to commit it, remove the line below.
+!gradle/wrapper/gradle-wrapper.jar
+
+# Other common files to ignore
+.vscode/ # Visual Studio Code settings

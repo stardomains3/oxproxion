@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">oxproxion</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="add_new_system_message">Add new system message</string>
+</resources>

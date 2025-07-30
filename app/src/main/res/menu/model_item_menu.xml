@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/edit_model"
+        android:title="Edit"
+        android:icon="@drawable/ic_check" />
+    <item android:id="@+id/delete_model"
+        android:title="Delete"
+        android:icon="@drawable/ic_new_chat" />
+</menu>
