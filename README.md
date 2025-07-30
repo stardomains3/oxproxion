@@ -44,7 +44,7 @@ Here are some screenshots of the app in action:
 ### SOTA Models Galore! 
 ![Models Screen](screenshots/models400.webp)
 
-*Add Models to your delight!.*
+*Add Models to your delight!*
 
 ## ️ Technologies Used
 
