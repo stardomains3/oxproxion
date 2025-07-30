@@ -16,6 +16,35 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 - **📄 On-Device PDF Export**: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.
 - ** Built with Modern Tech**: 100% Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
 
+## Screenshots
+
+Here are some screenshots of the app in action:
+
+### Main Screen
+![Main App Screen](screenshots/mainscreensmall.webp)
+
+*A view of the app's primary interface.*
+
+### Options
+![Options Screen](screenshots/optionssmall.webp)
+
+*Customize your experience in the options menu.*
+
+### Saved Chats
+![Saved Chats Screen](screenshots/savedsmall.webp)
+
+*Save chats. With import/export.*
+
+### System Messages
+![System Messages Screen](screenshots/sysmesssmall.webp)
+
+*Custom System Messages.*
+
+### SOTA Models Galore! 
+![Models Screen](screenshots/modelssmall.webp)
+
+*Add Models to your delight!.*
+
 ## ️ Technologies Used
 
 - **UI**: Android Jetpack, Material Components, View Binding
