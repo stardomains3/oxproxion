@@ -4,19 +4,19 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 
 ## ✨ Features
 
-- ** Multi-Model Support**: Switch between different LLM bots and models.
-- ** Chat Interface**: A clean and intuitive interface for conversing with AI models.
-- ** Save & Load Chats**: Save your chat sessions and load them later to continue the conversation.
-- ** Import & Export**: Easily import and export your chat histories.
-- ** Streaming or Non-Streaming Responses**: You choose!
-- ** Chat with Images**: With models that support it!
-- **✍️ System Message Customization**: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.
-- **🔗 OpenRouter Integration**:
-    - Long-press the model name to open the OpenRouter models list in your browser.
-    - Long-press the API key icon to view your remaining OpenRouter credits.
-- **📋 Effortless Copying**: Press any avatar to copy the corresponding response to the clipboard.
-- **📄 On-Device PDF Export**: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.
-- ** Built with Modern Tech**: 100% Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
+**🤖 Multi-Model Support**: Switch between different LLM bots and models.  
+**💬 Chat Interface**: A clean and intuitive interface for conversing with AI models.  
+**💾 Save & Load Chats**: Save your chat sessions and load them later to continue the conversation.  
+**📤📥 Import & Export**: Easily import and export your chat histories.  
+**⚡ Streaming or Non-Streaming Responses**: You choose!  
+**🖼️ Chat with Images**: With models that support it!  
+✍️ System Message Customization: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.  
+🔗 OpenRouter Integration:  
+  • Long-press the model name to open the OpenRouter models list in your browser.  
+  • Long-press the API key icon to view your remaining OpenRouter credits.  
+📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard.  
+📄 On-Device PDF Export: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.  
+**🛠️ Built with Modern Tech**: 100 % Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
 
 ## Screenshots
 
