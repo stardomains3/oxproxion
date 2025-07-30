@@ -10,7 +10,7 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 - ** Import & Export**: Easily import and export your chat histories.
 - **✍️ System Message Customization**: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.
 - **🔗 OpenRouter Integration**:
-    - Long-press the model name to open the model's page on OpenRouter in your browser.
+    - Long-press the model name to open the OpenRouter models list in your browser.
     - Long-press the API key icon to view your remaining OpenRouter credits.
 - **📋 Effortless Copying**: Press any avatar to copy the corresponding response to the clipboard.
 - **📄 On-Device PDF Export**: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.
