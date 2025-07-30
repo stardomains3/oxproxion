@@ -54,7 +54,6 @@ Here are some screenshots of the app in action:
 - **Asynchronicity**: Kotlin Coroutines
 - **Database**: Jetpack Room for local storage
 - **Networking**: Ktor HTTP Client
-- **Dependency Injection**: (Add your DI framework if you use one, e.g., Hilt, Koin)
 - **Markdown Rendering**: Markwon
 
 ##  Getting Started
@@ -78,7 +77,7 @@ Once you have your key, you can add it to the app where prompted.
 
 **Disclaimer:** This project is not affiliated with, endorsed by, or sponsored by OpenRouter.ai in any way.
 
-If you find this app useful, consider supporting its development: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
+If you find this app useful, please consider supporting its development: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
 
 ##  License
 
