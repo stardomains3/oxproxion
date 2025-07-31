@@ -4,46 +4,43 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 
 ## ✨ Features
 
-- ** Multi-Model Support**: Switch between different LLM bots and models.
-- ** Chat Interface**: A clean and intuitive interface for conversing with AI models.
-- ** Save & Load Chats**: Save your chat sessions and load them later to continue the conversation.
-- ** Import & Export**: Easily import and export your chat histories.
-- **✍️ System Message Customization**: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.
-- **🔗 OpenRouter Integration**:
-    - Long-press the model name to open the model's page on OpenRouter in your browser.
-    - Long-press the API key icon to view your remaining OpenRouter credits.
-- **📋 Effortless Copying**: Press any avatar to copy the corresponding response to the clipboard.
-- **📄 On-Device PDF Export**: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.
-- ** Built with Modern Tech**: 100% Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
+**🤖 Multi-Model Support**: Switch between different LLM bots and models.  
+**💬 Chat Interface**: A clean and intuitive interface for conversing with AI models.  
+**💾 Save & Load Chats**: Save your chat sessions and load them later to continue the conversation.  
+**📤📥 Import & Export**: Easily import and export your chat histories.  
+**⚡ Streaming or Non-Streaming Responses**: You choose!  
+**🖼️ Chat with Images**: With models that support it!  
+✍️ System Message Customization: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.  
+🔗 OpenRouter Integration:  
+  • Long-press the model name to open the OpenRouter models list in your browser.  
+  • Long-press the API key icon to view your remaining OpenRouter credits.  
+📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard.  
+📄 On-Device PDF Export: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.  
+**🛠️ Built with Modern Tech**: 100 % Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
 
 ## Screenshots
 
 Here are some screenshots of the app in action:
 
 ### Main Screen
-![Main App Screen](screenshots/mainscreensmall.webp)
+![Main App Screen](screenshots/mainscreen400.webp)
 
 *A view of the app's primary interface.*
 
 ### Options
-![Options Screen](screenshots/optionssmall.webp)
+![Options Screen](screenshots/options400.webp)
 
 *Customize your experience in the options menu.*
 
-### Saved Chats
-![Saved Chats Screen](screenshots/savedsmall.webp)
-
-*Save chats. With import/export.*
-
 ### System Messages
-![System Messages Screen](screenshots/sysmesssmall.webp)
+![System Messages Screen](screenshots/sysmess400.webp)
 
 *Custom System Messages.*
 
 ### SOTA Models Galore! 
-![Models Screen](screenshots/modelssmall.webp)
+![Models Screen](screenshots/models400.webp)
 
-*Add Models to your delight!.*
+*Add Models to your delight!*
 
 ## ️ Technologies Used
 
@@ -52,7 +49,6 @@ Here are some screenshots of the app in action:
 - **Asynchronicity**: Kotlin Coroutines
 - **Database**: Jetpack Room for local storage
 - **Networking**: Ktor HTTP Client
-- **Dependency Injection**: (Add your DI framework if you use one, e.g., Hilt, Koin)
 - **Markdown Rendering**: Markwon
 
 ##  Getting Started
@@ -76,7 +72,7 @@ Once you have your key, you can add it to the app where prompted.
 
 **Disclaimer:** This project is not affiliated with, endorsed by, or sponsored by OpenRouter.ai in any way.
 
-If you find this app useful, consider supporting its development: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
+If you find this app useful, please consider supporting its developer: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
 
 ##  License
 
