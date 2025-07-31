@@ -32,11 +32,6 @@ Here are some screenshots of the app in action:
 
 *Customize your experience in the options menu.*
 
-### Saved Chats
-![Saved Chats Screen](screenshots/saved400.webp)
-
-*Save chats. With import/export.*
-
 ### System Messages
 ![System Messages Screen](screenshots/sysmess400.webp)
 
