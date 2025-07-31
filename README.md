@@ -77,7 +77,7 @@ Once you have your key, you can add it to the app where prompted.
 
 **Disclaimer:** This project is not affiliated with, endorsed by, or sponsored by OpenRouter.ai in any way.
 
-If you find this app useful, please consider supporting its development: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
+If you find this app useful, please consider supporting its developer: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
 
 ##  License
 
