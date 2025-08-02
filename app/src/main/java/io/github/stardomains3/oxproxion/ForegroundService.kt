@@ -11,7 +11,7 @@ import androidx.core.app.NotificationCompat
 
 class ForegroundService : Service() {
 
-    private val CHANNEL_ID = "ForegroundServiceChannell"
+    private val CHANNEL_ID = "ForegroundServiceChannel"
 
     companion object {
         private var instance: ForegroundService? = null

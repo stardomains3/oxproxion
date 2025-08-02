@@ -132,7 +132,7 @@ class SavedChatsFragment : Fragment() {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/json"
-            putExtra(Intent.EXTRA_TITLE, "oxproxion_backup.json")
+            putExtra(Intent.EXTRA_TITLE, "openchat_backup.json")
         }
         exportChatsLauncher.launch(intent)
     }
