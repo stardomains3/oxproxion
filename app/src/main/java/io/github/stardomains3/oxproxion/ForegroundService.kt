@@ -11,12 +11,13 @@ import androidx.core.app.NotificationCompat
 
 class ForegroundService : Service() {
 
-    private val CHANNEL_ID = "ForegroundServiceChannel"
+    private val CHANNEL_ID = "ForegroundServiceChannell"
 
     companion object {
         private var instance: ForegroundService? = null
 
         fun stopService() {
+            // Log.d("ForegroundService", "stopService() called")
             instance?.stop()
         }
         @Volatile
@@ -25,7 +26,10 @@ class ForegroundService : Service() {
     }
 
     private fun stop() {
+        // Log.d("ForegroundService", "Stopping service")
         try {
+            // setServiceRunning(this, false)
+            // stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         } catch (e: Exception) {
             Log.e("ForegroundService", "Error stopping service", e)
@@ -35,6 +39,7 @@ class ForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // Log.d("ForegroundService", "Service created")
     }
 
     override fun onDestroy() {
@@ -44,7 +49,12 @@ class ForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-
+        /* if (!isChatActive(this)) {
+             setServiceRunning(this, false)
+             stopForeground(STOP_FOREGROUND_REMOVE)
+             stopSelf()
+             return START_NOT_STICKY
+         }*/
         if (!ChatServiceGate.shouldRunService) {
             stopSelf()
             return START_NOT_STICKY
@@ -90,4 +100,5 @@ class ForegroundService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(serviceChannel)
     }
+
 }
