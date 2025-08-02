@@ -49,11 +49,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val errorMessage: LiveData<String?> = _errorMessage
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val visionKeywords = listOf("google", "chatgpt-4o-latest","claude-sonnet-4", "gemini", "grok-4", "gpt-4.1", "maverick","mistral-medium-3").map { it.lowercase() }
+    fun isVisionModel(modelIdentifier: String?): Boolean {
+        if (modelIdentifier == null) return false
 
-    fun isVisionModel(model: String?): Boolean = model?.lowercase()?.let { m ->
-        visionKeywords.any { m.contains(it) }
-    } ?: false
+        val customModels = sharedPreferencesHelper.getCustomModels()
+        val allModels = getBuiltInModels() + customModels
+
+        val model = allModels.find { it.apiIdentifier == modelIdentifier }
+        return model?.isVisionCapable ?: false
+    }
 
     fun hasImagesInChat(): Boolean = _chatMessages.value?.any { isImageMessage(it) } ?: false
 

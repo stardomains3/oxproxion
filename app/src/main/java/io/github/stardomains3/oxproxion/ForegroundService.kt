@@ -5,12 +5,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import kotlin.apply
-import kotlin.jvm.java
 
 class ForegroundService : Service() {
 
@@ -20,15 +17,15 @@ class ForegroundService : Service() {
         private var instance: ForegroundService? = null
 
         fun stopService() {
-           // Log.d("ForegroundService", "stopService() called")
             instance?.stop()
         }
+        @Volatile
+        var isRunningForeground: Boolean = false
+            private set
     }
 
     private fun stop() {
-       // Log.d("ForegroundService", "Stopping service")
         try {
-            stopForeground(true)
             stopSelf()
         } catch (e: Exception) {
             Log.e("ForegroundService", "Error stopping service", e)
@@ -38,16 +35,20 @@ class ForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-       // Log.d("ForegroundService", "Service created")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-       // Log.d("ForegroundService", "Service destroyed")
+        isRunningForeground = false
         instance = null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+        if (!ChatServiceGate.shouldRunService) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         createNotificationChannel()
 
         // Create intent to bring app to foreground
@@ -72,7 +73,7 @@ class ForegroundService : Service() {
             .build()
 
         startForeground(1, notification)
-
+        isRunningForeground = true
         return START_NOT_STICKY
     }
 

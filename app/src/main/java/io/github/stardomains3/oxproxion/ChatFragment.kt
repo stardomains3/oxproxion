@@ -15,7 +15,7 @@ import android.os.Looper
 import android.util.Base64
 import android.util.Log
 import android.view.View
-import android.view.inputmethod.InputMethodManager
+import android.view.WindowInsets
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -24,6 +24,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -48,12 +49,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
-    private var serviceStarted = false
     private var originalSendIcon: Drawable? = null
-
-
     private val viewModel: ChatViewModel by activityViewModels()
-
     private lateinit var modelNameTextView: TextView
     private lateinit var chatRecyclerView: RecyclerView
     private lateinit var chatEditText: EditText
@@ -72,7 +69,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var markwon: Markwon
     private lateinit var pdfGenerator: PdfGenerator
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
-
     private lateinit var attachmentPreviewContainer: View
     private lateinit var previewImageView: ImageView
     private lateinit var removeAttachmentButton: ImageButton
@@ -80,13 +76,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         sharedPreferencesHelper = SharedPreferencesHelper(requireContext())
-
         // --- Initialize Views from fragment_chat.xml ---
-
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
-
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
@@ -204,11 +197,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
     }
-    private fun hideKeyboard() {
-        val inputMethodManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        val currentFocusedView = activity?.currentFocus
-        if (currentFocusedView != null) {
-            inputMethodManager.hideSoftInputFromWindow(currentFocusedView.windowToken, 0)
+    fun View.showKeyboard() {
+        doOnPreDraw {
+            if (!isFocusable || !isFocusableInTouchMode) return@doOnPreDraw
+            requestFocus()
+            windowInsetsController?.show(WindowInsets.Type.ime())
+        }
+    }
+
+    fun View.hideKeyboard() {
+        doOnPreDraw {
+            windowInsetsController?.hide(WindowInsets.Type.ime())
+            requestFocus()
         }
     }
 
@@ -233,12 +233,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
                 val prompt = chatEditText.text.toString().trim()
                 if (prompt.isNotBlank() || selectedImageBytes != null) {
-                    if (!serviceStarted) {
+                    if (!ForegroundService.isRunningForeground) {
+                        ChatServiceGate.shouldRunService = true
                         startForegroundService()
-                        serviceStarted = true
                     }
                     chatEditText.text.clear()
-                    hideKeyboard()
+                    chatEditText.hideKeyboard()
                     val userContent = if (selectedImageBytes != null) {
                         val base64 = Base64.encodeToString(selectedImageBytes, Base64.NO_WRAP)
                         val imageUrl = "data:$selectedImageMime;base64,$base64"
@@ -351,13 +351,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     dialog.dismiss()
                 }
                 .setPositiveButton("Reset") { dialog, which ->
-                    viewModel.startNewChat()
-                    if (serviceStarted) {
+                    if (ForegroundService.isRunningForeground) {
                         stopForegroundService()
-                        serviceStarted = false
                     }
-                    //  buttonsContainer.visibility = View.GONE
-                    // modelNameTextView.isVisible = false
+                    else{
+                        ChatServiceGate.shouldRunService = false
+                    }
+                    viewModel.startNewChat()
                 }
                 .show()
         }
@@ -617,16 +617,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
           }*/
         //  }
         if (viewModel.chatMessages.value.isNullOrEmpty()) {
-            showKeyboard()
+            chatEditText.showKeyboard()
+        }
+        else {
+            chatEditText.hideKeyboard()
         }
     }
 
-    private fun showKeyboard() {
-        chatEditText.requestFocus()
-        val inputMethodManager =
-            requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        inputMethodManager.showSoftInput(chatEditText, InputMethodManager.SHOW_IMPLICIT)
-    }
     fun onBackPressed(): Boolean {
         if (buttonsContainer.isVisible) {
             buttonsContainer.isVisible = false

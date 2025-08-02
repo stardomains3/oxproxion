@@ -30,6 +30,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.regex.Pattern
 
 class PdfGenerator(private val context: Context) {
 
@@ -65,7 +66,8 @@ class PdfGenerator(private val context: Context) {
     }
     fun generateMarkdownPdf(markdown: String): String? {
         try {
-            val styledText = markwon.toMarkdown(markdown)
+            val processedMarkdown = processMarkdownLinks(markdown)
+            val styledText = markwon.toMarkdown(processedMarkdown)
             val margin = 20f
             val page_width = 595
             val paint = TextPaint().apply {
@@ -114,6 +116,7 @@ class PdfGenerator(private val context: Context) {
             return null
         }
     }
+
     private fun parseChatTextToMessages(chatText: String): List<FlexibleMessage> {
         val messages = mutableListOf<FlexibleMessage>()
         val parts = chatText.split(Regex("(?=(User:|AI:))")).filter { it.isNotBlank() }
@@ -169,6 +172,7 @@ class PdfGenerator(private val context: Context) {
             } else if (message.content is JsonPrimitive) {
                 textContent = (message.content as JsonPrimitive).content
             }
+            textContent = processMarkdownLinks(textContent)
             totalHeight += calculateTotalMessageHeight(textContent, imageBitmap, pageWidth, if (isUser) userIconDrawable != null else aiIconDrawable != null)
             if (index < messagesToRender.size - 1) {
                 totalHeight += bubbleSpacing // Add spacing between messages
@@ -211,6 +215,7 @@ class PdfGenerator(private val context: Context) {
                 } else if (message.content is JsonPrimitive) {
                     textContent = (message.content as JsonPrimitive).content
                 }
+                textContent = processMarkdownLinks(textContent)
 
                 // Draw the icon and bubble
                 val messageHeight = calculateTotalMessageHeight(textContent, imageBitmap, canvas.width.toFloat(), if (isUser) userIconDrawable != null else aiIconDrawable != null)
@@ -229,6 +234,21 @@ class PdfGenerator(private val context: Context) {
             Log.e("PdfGenerator", "Error creating PDF", e)
             return null
         }
+    }
+
+    private fun processMarkdownLinks(markdown: String): String {
+        // Regex to match Markdown links: [text](url)
+        // Handles optional spaces around text and url
+        val pattern = Pattern.compile("\\[\\s*([^\\]]+?)\\s*\\]\\(\\s*([^\\)]+?)\\s*\\)")
+        val matcher = pattern.matcher(markdown)
+        val sb = StringBuffer()
+        while (matcher.find()) {
+            val text = matcher.group(1)
+            val url = matcher.group(2)
+            matcher.appendReplacement(sb, "$text ($url)")
+        }
+        matcher.appendTail(sb)
+        return sb.toString()
     }
 
     private fun calculateTotalMessageHeight(text: String, image: Bitmap?, pageWidth: Float, hasIcon: Boolean): Float {

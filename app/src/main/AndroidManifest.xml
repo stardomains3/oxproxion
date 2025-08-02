@@ -19,6 +19,7 @@
             android:foregroundServiceType="dataSync" />
         <activity
             android:name=".MainActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
