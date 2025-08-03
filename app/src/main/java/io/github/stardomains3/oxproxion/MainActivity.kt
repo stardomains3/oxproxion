@@ -1,6 +1,7 @@
 package io.github.stardomains3.oxproxion
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
@@ -23,8 +24,16 @@ class MainActivity : AppCompatActivity() {
         sharedPreferencesHelper.seedDefaultSystemMessagesIfNeeded()
 
         if (savedInstanceState == null) {
+            val chatFragment = ChatFragment()
+            if (intent?.action == Intent.ACTION_SEND && "text/plain" == intent.type) {
+                intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
+                    val bundle = Bundle()
+                    bundle.putString("shared_text", it)
+                    chatFragment.arguments = bundle
+                }
+            }
             supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, ChatFragment())
+                .replace(R.id.fragment_container, chatFragment)
                 .commitNow()
 
         }
@@ -51,6 +60,20 @@ class MainActivity : AppCompatActivity() {
         }
         onBackPressedDispatcher.addCallback(this, callback)
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.action == Intent.ACTION_SEND && "text/plain" == intent.type) {
+            intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
+                val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+                if (fragment is ChatFragment) {
+                    fragment.setSharedText(text)
+                }
+            }
+        }
+    }
+
     private fun askNotificationPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED

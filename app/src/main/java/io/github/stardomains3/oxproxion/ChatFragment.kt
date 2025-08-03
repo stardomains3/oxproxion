@@ -97,6 +97,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         attachmentPreviewContainer = view.findViewById(R.id.attachmentPreviewContainer)
         previewImageView = view.findViewById(R.id.previewImageView)
         removeAttachmentButton = view.findViewById(R.id.removeAttachmentButton)
+
+        arguments?.getString("shared_text")?.let { sharedText ->
+            setSharedText(sharedText)
+            arguments?.remove("shared_text") // To prevent re-processing
+        }
+
         markwon = Markwon.builder(requireContext())
             .usePlugin(HtmlPlugin.create())
             .usePlugin(object : AbstractMarkwonPlugin() {
@@ -186,6 +192,22 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
 
 
+    }
+
+    fun setSharedText(sharedText: String) {
+        var spookyValue = sharedText
+        val httpIndex = spookyValue.indexOf("http", 0, true)
+        if (httpIndex != 0 && httpIndex != -1) {
+            spookyValue = spookyValue.substring(httpIndex)
+            val spaceIndex = spookyValue.indexOf(" ")
+            if(spaceIndex != -1){
+                spookyValue = spookyValue.substring(0, spaceIndex)
+            }
+            spookyValue = spookyValue.trim()
+            spookyValue = spookyValue.trim('"')
+        }
+        spookyValue = spookyValue.trim()
+        chatEditText.setText(spookyValue)
     }
 
     private fun setupRecyclerView() {
@@ -606,8 +628,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         // if (isInitialCreate) {
         //     isInitialCreate = false
         //  } else {
-      //  modelNameTextView.isVisible = true
-       // buttonsContainer.isVisible = true
+        //  modelNameTextView.isVisible = true
+        // buttonsContainer.isVisible = true
         /*  Handler(Looper.getMainLooper()).postDelayed(2400) {
              // if (!buttonsContainer.isVisible)
               //{

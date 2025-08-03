@@ -146,6 +146,7 @@ class BotModelPickerFragment : Fragment() {
             val maverickModel = "meta-llama/llama-4-maverick"
             sharedPreferencesHelper.savePreferenceModelnewchat(maverickModel)
             chatViewModel.setModel(maverickModel)
+            adapter.updateCurrentModel(maverickModel)
             Toast.makeText(context, "Active model changed to Maverick", Toast.LENGTH_SHORT).show()
         }
         models.remove(model)

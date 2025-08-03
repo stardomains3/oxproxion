@@ -11,11 +11,15 @@ import androidx.recyclerview.widget.RecyclerView
 
 class BotModelAdapter(
     private var models: MutableList<LlmModel>,
-    private val currentModelId: String?,
+    private var currentModelId: String?,
     private val onItemClicked: (LlmModel) -> Unit,
     private val onItemEdit: (LlmModel) -> Unit,
     private val onItemDelete: (LlmModel) -> Unit
 ) : RecyclerView.Adapter<BotModelAdapter.ModelViewHolder>() {
+
+    fun updateCurrentModel(newModelId: String?) {
+        currentModelId = newModelId
+    }
 
     class ModelViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val modelName: TextView = view.findViewById(R.id.textModelName)
