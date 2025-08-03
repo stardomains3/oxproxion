@@ -64,6 +64,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
+    private lateinit var soundButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var markwon: Markwon
@@ -80,6 +81,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
+        soundButton = view.findViewById(R.id.soundButton)
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
@@ -182,6 +184,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             streamButton.isSelected = isEnabled
         }
 
+        viewModel.isSoundEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            soundButton.isSelected = isEnabled
+        }
+
         viewModel.scrollToBottomEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
                 if (chatAdapter.itemCount > 0) {
@@ -245,6 +251,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         sendChatButton.setOnClickListener {
             if (viewModel.isAwaitingResponse.value == true) {
                 viewModel.cancelCurrentRequest()
+                viewModel.playCancelTone()
             } else {
                 // --- API Key Check ---
                 if (viewModel.activeChatApiKey.isBlank()) {
@@ -504,6 +511,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         streamButton.setOnClickListener {
             viewModel.toggleStreaming()
+        }
+
+        soundButton.setOnClickListener {
+            viewModel.toggleSound()
         }
 
         menuButton.setOnLongClickListener {

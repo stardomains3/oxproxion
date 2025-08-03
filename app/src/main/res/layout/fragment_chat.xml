@@ -83,7 +83,8 @@
                     android:id="@+id/buttonsRow1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_horizontal">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/openSavedChatsButton"
@@ -153,6 +154,23 @@
                         android:insetRight="0dp"
                         app:iconTint="#A8A8A8"
                         app:backgroundTint="@color/button_background_col"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/soundButton"
+                        style="@style/Widget.Material3.Button.IconButton.Filled"
+                        app:icon="@drawable/ic_mobilesound"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:iconGravity="textStart"
+                        app:iconSize="28dp"
+                        app:cornerRadius="24dp"
+                        android:layout_marginEnd="14dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        app:iconTint="#A8A8A8"
+                        app:backgroundTint="@color/button_background_col"/>
+
 
                 </LinearLayout>
 
@@ -160,7 +178,8 @@
                     android:id="@+id/buttonsRow2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_horizontal">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/saveChatButton"

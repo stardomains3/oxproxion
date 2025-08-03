@@ -92,6 +92,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val creditsResult: LiveData<Event<String>> = _creditsResult
     private val _isStreamingEnabled = MutableLiveData<Boolean>(false)
     val isStreamingEnabled: LiveData<Boolean> = _isStreamingEnabled
+    private val _isSoundEnabled = MutableLiveData<Boolean>(false)
+    val isSoundEnabled: LiveData<Boolean> = _isSoundEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private var networkJob: Job? = null
@@ -103,9 +105,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         sharedPreferencesHelper.saveStreamingPreference(newStremingState)
     }
 
+    fun toggleSound() {
+        val newSoundState = !(_isSoundEnabled.value ?: false)
+        _isSoundEnabled.value = newSoundState
+        sharedPreferencesHelper.saveSoundPreference(newSoundState)
+    }
+
     var activeChatUrl: String = "https://openrouter.ai/api/v1/chat/completions"
     var activeChatApiKey: String = ""
-   // var runningCost: Double = 0.0 // Updated on successful responses
+    // var runningCost: Double = 0.0 // Updated on successful responses
 
     companion object {
         private const val TIMEOUT_MS = 150_000L
@@ -118,9 +126,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val httpClient: HttpClient
     private var llmService: LlmService
     private val sharedPreferencesHelper: SharedPreferencesHelper
+    private val soundManager: SoundManager
 
     init {
         sharedPreferencesHelper = SharedPreferencesHelper(application)
+        soundManager = SoundManager(application)
         val chatDao = AppDatabase.getDatabase(application).chatDao()
         repository = ChatRepository(chatDao)
         httpClient = HttpClient(OkHttp) {
@@ -135,13 +145,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         _activeChatModel.value = sharedPreferencesHelper.getPreferenceModelnew()
         _isStreamingEnabled.value = sharedPreferencesHelper.getStreamingPreference()
+        _isSoundEnabled.value = sharedPreferencesHelper.getSoundPreference()
         llmService = LlmService(httpClient, activeChatUrl)
         activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
     }
 
     override fun onCleared() {
         super.onCleared()
+        soundManager.release()
         httpClient.close() // Prevent leaks
+    }
+
+    fun playCancelTone() {
+        soundManager.playCancelTone()
     }
 
     fun setModel(model: String) {
@@ -318,6 +334,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
+                soundManager.playSuccessTone()
             } catch (e: Throwable) {
                 withContext(Dispatchers.Main) {
                     handleError(e, thinkingMessage)
@@ -332,7 +349,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messages = messagesForApiRequest,
-                  //  usage = UsageRequest(include = true),
+                    //  usage = UsageRequest(include = true),
                     max_tokens = 2800,
                 )
 
@@ -367,9 +384,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val index = list.indexOf(thinkingMessage)
             if (index != -1) list[index] = finalAiMessage
         }
+        soundManager.playSuccessTone()
     }
 
     private fun handleError(e: Throwable, thinkingMessage: FlexibleMessage) {
+        soundManager.playErrorTone()
         if (e is CancellationException && e !is TimeoutCancellationException) {
             Log.w("ChatNetwork", "Request cancelled by user.", e)
             updateMessages { list ->
@@ -414,7 +433,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startNewChat() {
         _chatMessages.value = emptyList()
-      //  runningCost = 0.0
+        //  runningCost = 0.0
         currentSessionId = null
     }
 

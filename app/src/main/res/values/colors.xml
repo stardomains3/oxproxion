@@ -13,7 +13,7 @@
     <color name="thumbColorChecked">#516c6f</color>
     <color name="thumbColorUnchecked">#FFFFFFFF</color>
     <color name="ff">#121212</color>
-    <color name="your_orange_color">#FF9800</color>
+    <color name="your_orange_color">#a0610a</color>
     <color name="your_default_text_color">#DE000000</color>
 
 </resources>
