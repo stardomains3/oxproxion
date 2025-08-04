@@ -36,7 +36,12 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
 import io.noties.markwon.core.MarkwonTheme
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
+import io.noties.markwon.image.coil.CoilImagesPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -107,6 +112,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         markwon = Markwon.builder(requireContext())
             .usePlugin(HtmlPlugin.create())
+            .usePlugin(LinkifyPlugin.create())
+            .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(TablePlugin.create(requireContext()))      // <-- Add Tables plugin
+            .usePlugin(TaskListPlugin.create(requireContext()))    // <-- Add Task List plugin
+            .usePlugin(CoilImagesPlugin.create(requireContext()))
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder

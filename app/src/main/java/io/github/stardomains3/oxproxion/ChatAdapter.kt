@@ -3,6 +3,7 @@ package io.github.stardomains3.oxproxion
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -153,6 +154,7 @@ class ChatAdapter(
 
         fun bind(text: String) {
             markwon.setMarkdown(messageTextView, text)
+            messageTextView.movementMethod = LinkMovementMethod.getInstance()
             val rawMarkdown = text
             // Special handling for the copy button
             if (text == "thinking...") {

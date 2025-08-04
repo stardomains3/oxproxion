@@ -1,7 +1,7 @@
 [versions]
 activityKtx = "1.10.1"
 agp = "8.11.1"
-commonmarkExtAutolink = "0.25.0"
+
 fragmentKtx = "1.8.8"
 gson = "2.13.1"
 json = "20250517"
@@ -25,8 +25,15 @@ kotlinSerializationPlugin = "2.2.0"
 kspPlugin = "2.2.0-2.0.2"
 okhttp = "5.1.0"
 roomRuntime = "2.7.2"
+coil = "2.7.0"
 
 [libraries]
+markwon-image-coil = { module = "io.noties.markwon:image-coil", version.ref = "markwon" }
+linkify = { module = "io.noties.markwon:linkify", version.ref = "markwon" }
+coil-kt = { module = "io.coil-kt:coil", version.ref = "coil" }
+markwon-strikethrough = { module = "io.noties.markwon:ext-strikethrough", version.ref = "markwon" }
+markwon-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markwon" }
+markwon-taskList = { module = "io.noties.markwon:ext-tasklist", version.ref = "markwon" }
 markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }
 markwon-html = { module = "io.noties.markwon:html", version.ref = "markwon" }
 androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activityKtx" }
@@ -37,7 +44,6 @@ androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-view
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRuntime" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
-commonmark-ext-autolink = { module = "org.commonmark:commonmark-ext-autolink", version.ref = "commonmarkExtAutolink" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 json = { module = "org.json:json", version.ref = "json" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 34
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 8
+        versionName = "1.0.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -70,6 +70,14 @@ android {
 }
 
 dependencies {
+    implementation(libs.linkify)
+    implementation(libs.markwon.core)
+    implementation(libs.markwon.html)
+    implementation(libs.markwon.tables)      // <-- Add this
+    implementation(libs.markwon.taskList)
+    implementation(libs.markwon.image.coil) // Markwon's Coil plugin
+    implementation(libs.coil.kt)
+    implementation(libs.markwon.strikethrough)
     implementation(libs.gson)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlinx.coroutines.core)
@@ -85,16 +93,9 @@ dependencies {
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.auth)
     implementation(libs.json)
-    implementation(libs.commonmark.ext.autolink)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.client.android)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.markwon.core) {
-        exclude(group = "com.atlassian.commonmark", module = "commonmark")
-    }
-    implementation(libs.markwon.html) {
-        exclude(group = "com.atlassian.commonmark", module = "commonmark")
-    }
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
