@@ -28,6 +28,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -48,7 +50,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
     private val json = Json { ignoreUnknownKeys = true }
-
+    private val _sharedText = MutableStateFlow<String?>(null)
+    val sharedText: StateFlow<String?> = _sharedText
     fun isVisionModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
 
@@ -483,5 +486,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val customModels = sharedPreferencesHelper.getCustomModels()
         val allModels = builtInModels + customModels
         return allModels.find { it.apiIdentifier == apiIdentifier }?.displayName ?: apiIdentifier
+    }
+    fun consumeSharedText(text: String) {
+        _sharedText.value = text
+    }
+
+    fun textConsumed() {
+        _sharedText.value = null
     }
 }

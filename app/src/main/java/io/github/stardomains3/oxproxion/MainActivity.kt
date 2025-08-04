@@ -6,8 +6,10 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import kotlin.getValue
 
 class MainActivity : AppCompatActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
@@ -66,10 +68,13 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         if (intent.action == Intent.ACTION_SEND && "text/plain" == intent.type) {
             intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
-                val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
-                if (fragment is ChatFragment) {
-                    fragment.setSharedText(text)
-                }
+                val vm: ChatViewModel by viewModels()
+                vm.consumeSharedText(text)
+                //Toast.makeText(this, "Text received", Toast.LENGTH_LONG).show()
+                //val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+                //if (fragment is ChatFragment) {
+                //    fragment.setSharedText(text)
+                //  }
             }
         }
     }

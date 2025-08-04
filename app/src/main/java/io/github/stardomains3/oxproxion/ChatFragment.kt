@@ -28,7 +28,9 @@ import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
@@ -43,6 +45,7 @@ import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.image.coil.CoilImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -133,6 +136,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfGenerator = PdfGenerator(requireContext())
         plusButton = view.findViewById(R.id.plusButton)
         setupImagePicker()
+        updateSystemMessageButtonState()
 
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
@@ -154,6 +158,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
               if(!buttonsContainer.isVisible){
                   modelNameTextView.isVisible = false}
           }*/
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.sharedText.filterNotNull().collect { text ->
+                    // do whatever you need
+                    setSharedText(text)
+                    viewModel.textConsumed()
+                }
+            }
+        }
         // --- Observe LiveData ---
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
@@ -209,7 +222,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
 
     }
-
+    private fun updateSystemMessageButtonState() {
+        val selectedSystemMessage = sharedPreferencesHelper.getSelectedSystemMessage()
+        systemMessageButton.isSelected = !selectedSystemMessage.isDefault
+    }
     fun setSharedText(sharedText: String) {
         var spookyValue = sharedText
         val httpIndex = spookyValue.indexOf("http", 0, true)
@@ -646,6 +662,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
     override fun onResume() {
         super.onResume()
+        updateSystemMessageButtonState()
         // if (isInitialCreate) {
         //     isInitialCreate = false
         //  } else {

@@ -20,7 +20,7 @@
         <activity
             android:name=".MainActivity"
             android:windowSoftInputMode="stateHidden|adjustResize"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
