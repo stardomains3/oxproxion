@@ -135,8 +135,8 @@ class PdfGenerator(private val context: Context) {
         )
         //val userIconDrawable: Drawable? = context.getDrawable(R.drawable.ic_person)
         //val aiIconDrawable: Drawable? = context.getDrawable(R.drawable.ic_tune)
-        val userIconDrawable: Drawable? = AppCompatResources.getDrawable(context,R.drawable.ic_person)
-        val aiIconDrawable: Drawable? = AppCompatResources.getDrawable(context,R.drawable.ic_tune)
+        val userIconDrawable: Drawable? = AppCompatResources.getDrawable(context,R.drawable.ic_person3)
+        val aiIconDrawable: Drawable? = AppCompatResources.getDrawable(context,R.drawable.ic_tune3)
 
         // First, calculate the total height required for the PDF
         var totalHeight = pageMargin // Start with top margin

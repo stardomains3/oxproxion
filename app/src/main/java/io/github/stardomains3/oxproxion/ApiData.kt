@@ -25,16 +25,29 @@ data class ChatRequest(
     val temperature: Double? = null
 )
 
-@Serializable
+/*@Serializable
 data class Message(
     val content: String,
     val role: String
+)*/
+@Serializable
+data class Message(
+    val role: String,
+    val content: String?,
+    val toolCalls: List<ToolCall>? = null,
+    val annotations: List<Annotation>? = null
 )
+
 
 @Serializable
 data class FlexibleMessage(
     val role: String,
-    val content: JsonElement
+    val content: JsonElement,
+    @SerialName("tool_calls")
+    val toolCalls: List<ToolCall>? = null,
+    @SerialName("tool_call_id")
+    val toolCallId: String? = null,
+    val toolsUsed: Boolean = false  // NEW: Flag for visual indication (true if tools were involved in this
 )
 
 @Serializable
@@ -76,16 +89,20 @@ data class ChatResponse(
 @Serializable
 data class Choice(
     val logprobs: String? = null,
-    val finish_reason: String,
+    val finish_reason: String? = null,
     val native_finish_reason: String? = null, // Changed to nullable
     val index: Int,
     val message: MessageResponse
+    // val finishReason: String? = null // From my code, if needed; make optional
 )
 
 @Serializable
 data class MessageResponse(
-    val content: String,
-    val role: String
+    val content: String? = null,
+    val role: String,
+    @SerialName("tool_calls")
+    val toolCalls: List<ToolCall>? = null,
+    val annotations: List<Annotation>? = null // NEW: Added for citations
 )
 
 @Serializable
@@ -146,6 +163,21 @@ data class FunctionCall(
     val name: String,
     val arguments: String // This is a JSON string
 )
+
+@Serializable
+data class ToolCallChunk(
+    val index: Int,
+    val id: String? = null,
+    val type: String? = null,
+    val function: FunctionCallChunk? = null
+)
+
+@Serializable
+data class FunctionCallChunk(
+    val name: String? = null,
+    val arguments: String? = null
+)
+
 @Serializable
 data class SearchParameters(
     val mode: String,
@@ -179,5 +211,25 @@ data class StreamedChoice(
 @Serializable
 data class StreamedDelta(
     val role: String? = null,
-    val content: String? = null
+    val content: String? = null,
+    @SerialName("tool_calls")
+    val toolCalls: List<ToolCallChunk>? = null,
+    val annotations: List<Annotation>? = null // NEW: Added for citations in streaming
+)
+
+// NEW: Added from my code for citations
+@Serializable
+data class Annotation(
+    val type: String,
+    val url_citation: UrlCitation? = null
+)
+
+// NEW: Added from my code for citations
+@Serializable
+data class UrlCitation(
+    val url: String,
+    val title: String,
+    val content: String? = null,
+    val start_index: Int,
+    val end_index: Int
 )

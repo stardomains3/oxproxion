@@ -280,6 +280,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun formatCitations(annotations: List<Annotation>?): String {
+        if (annotations.isNullOrEmpty()) return ""
+
+        val sb = StringBuilder("\n\n---\n**Citations:**\n\n")
+        annotations.forEachIndexed { i, ann ->
+            if (ann.type == "url_citation" && ann.url_citation != null) {
+                val cit = ann.url_citation
+                sb.append("[${i+1}] [${cit.title}](${cit.url})\n\n")
+            }
+        }
+        return sb.toString()
+    }
+
     private suspend fun handleStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withContext(Dispatchers.IO) {
             val chatRequest = ChatRequest(
@@ -304,6 +317,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                     val channel = httpResponse.body<ByteReadChannel>()
                     var accumulatedResponse = ""
+                    val accumulatedAnnotations = mutableListOf<Annotation>()
 
                     withContext(Dispatchers.Main) {
                         updateMessages {
@@ -322,7 +336,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                             try {
                                 val chunk = json.decodeFromString<StreamedChatResponse>(jsonString)
-                                chunk.choices.firstOrNull()?.delta?.content?.let { content ->
+                                val delta = chunk.choices.firstOrNull()?.delta
+                                delta?.content?.let { content ->
                                     accumulatedResponse += content
                                     withContext(Dispatchers.Main) {
                                         updateMessages {
@@ -331,13 +346,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                         }
                                     }
                                 }
+                                delta?.annotations?.forEach { accumulatedAnnotations.add(it) }
                             } catch (e: Exception) {
                                 Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
                             }
                         }
                     }
+
+                    // After streaming, append citations to the final response
+                    val citationsMarkdown = formatCitations(accumulatedAnnotations)
+                    accumulatedResponse += citationsMarkdown
+                    withContext(Dispatchers.Main) {
+                        updateMessages {
+                            val lastMessage = it.last()
+                            it[it.size - 1] = lastMessage.copy(content = JsonPrimitive(accumulatedResponse))
+                        }
+                    }
                 }
-                soundManager.playSuccessTone()
+                withContext(Dispatchers.Main) {
+                    soundManager.playSuccessTone()
+                }
             } catch (e: Throwable) {
                 withContext(Dispatchers.Main) {
                     handleError(e, thinkingMessage)
@@ -380,8 +408,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         chatResponse: ChatResponse,
         thinkingMessage: FlexibleMessage
     ) {
-        val responseText = chatResponse.choices.firstOrNull()?.message?.content ?: "No response received."
-        val finalAiMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(responseText))
+        val message = chatResponse.choices.firstOrNull()?.message ?: throw IllegalStateException("No message")
+        val responseText = message.content ?: "No response received."
+        val citationsMarkdown = formatCitations(message.annotations)
+        val finalContent = responseText + citationsMarkdown
+        val finalAiMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(finalContent))
 
         updateMessages { list ->
             val index = list.indexOf(thinkingMessage)
