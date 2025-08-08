@@ -44,6 +44,9 @@ import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.image.coil.CoilImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
+import io.noties.markwon.syntax.Prism4jThemeDarkula
+import io.noties.markwon.syntax.SyntaxHighlightPlugin
+import io.noties.prism4j.Prism4j
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -112,11 +115,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             setSharedText(sharedText)
             arguments?.remove("shared_text") // To prevent re-processing
         }
-
+        val prism4j = Prism4j(ExampleGrammarLocator())
+        // val theme = Prism4jThemeDefault.create()
+        val theme = Prism4jThemeDarkula.create()
+        val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
         markwon = Markwon.builder(requireContext())
             .usePlugin(HtmlPlugin.create())
             .usePlugin(LinkifyPlugin.create())
             .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(syntaxHighlightPlugin)
             .usePlugin(TablePlugin.create(requireContext()))      // <-- Add Tables plugin
             .usePlugin(TaskListPlugin.create(requireContext()))    // <-- Add Task List plugin
             .usePlugin(CoilImagesPlugin.create(requireContext()))
@@ -292,6 +299,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         ChatServiceGate.shouldRunService = true
                         startForegroundService()
                     }
+                    chatEditText.setText("")
                     chatEditText.text.clear()
                     chatEditText.hideKeyboard()
                     val userContent = if (selectedImageBytes != null) {

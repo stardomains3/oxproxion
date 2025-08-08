@@ -3,8 +3,11 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ksp)
+    kotlin("kapt")
 }
-
+configurations.all {
+    exclude(group = "org.jetbrains", module = "annotations-java5")
+}
 android {
     namespace = "io.github.stardomains3.oxproxion"
     compileSdk = 36
@@ -13,8 +16,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 34
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.1.0"
+        versionCode = 12
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -70,6 +73,9 @@ android {
 }
 
 dependencies {
+    implementation(libs.markwon.syntax.highlight)
+    implementation(libs.prism4j.core)
+    kapt(libs.prism4j.bundler)
     implementation(libs.linkify)
     implementation(libs.markwon.core)
     implementation(libs.markwon.html)

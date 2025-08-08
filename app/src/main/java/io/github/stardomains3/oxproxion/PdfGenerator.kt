@@ -21,7 +21,16 @@ import android.text.TextPaint
 import android.util.Base64
 import android.util.Log
 import androidx.appcompat.content.res.AppCompatResources
+import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
+import io.noties.markwon.core.MarkwonTheme
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tasklist.TaskListPlugin
+import io.noties.markwon.html.HtmlPlugin
+import io.noties.markwon.syntax.Prism4jThemeDarkula
+import io.noties.markwon.syntax.SyntaxHighlightPlugin
+import io.noties.prism4j.Prism4j
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -40,21 +49,29 @@ class PdfGenerator(private val context: Context) {
     private val bubbleSpacing = 20f
     private val iconSize = 36f  // Increase to 48f or 72f if you want larger (but still crisp) icons
     private val iconSpacing = 8f
+   // private val markwon = Markwon.builder(context)
+     //   .build()
+   val prism4j = Prism4j(ExampleGrammarLocator())
+    // val theme = Prism4jThemeDefault.create()
+    val theme = Prism4jThemeDarkula.create()
+    val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
     private val markwon = Markwon.builder(context)
+        .usePlugin(HtmlPlugin.create())
+        .usePlugin(StrikethroughPlugin.create())
+        .usePlugin(syntaxHighlightPlugin)
+        .usePlugin(TablePlugin.create(context))      // <-- Add Tables plugin
+        .usePlugin(TaskListPlugin.create(context))    // <-- Add Task List plugin
+        .usePlugin(object : AbstractMarkwonPlugin() {
+            override fun configureTheme(builder: MarkwonTheme.Builder) {
+                builder
+                    .codeTextColor(Color.LTGRAY)
+                    .codeBackgroundColor(Color.DKGRAY)
+                    .codeBlockBackgroundColor(Color.DKGRAY)
+                    .blockQuoteColor(Color.BLACK)
+                    .isLinkUnderlined(true)
+            }
+        })
         .build()
-    /* private val markwon = Markwon.builder(context)
-     .usePlugin(HtmlPlugin.create())
-     .usePlugin(object : AbstractMarkwonPlugin() {
-         override fun configureTheme(builder: MarkwonTheme.Builder) {
-             builder
-                 .codeTextColor(Color.LTGRAY)
-                 .codeBackgroundColor(Color.DKGRAY)
-                 .codeBlockBackgroundColor(Color.DKGRAY)
-                 .blockQuoteColor(Color.BLACK)
-                 .isLinkUnderlined(true)
-         }
-     })
-     .build()*/
 
     fun generateStyledChatPdfWithImages(context: Context, messages: List<FlexibleMessage>, modelName: String): String? {
         return generatePdf(messages, modelName)

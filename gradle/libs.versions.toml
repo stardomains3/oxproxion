@@ -26,8 +26,11 @@ kspPlugin = "2.2.0-2.0.2"
 okhttp = "5.1.0"
 roomRuntime = "2.7.2"
 coil = "2.7.0"
-
+prism4j = "2.0.0"
 [libraries]
+markwon-syntax-highlight = { module = "io.noties.markwon:syntax-highlight", version.ref = "markwon"}
+prism4j-core    = { module = "io.noties:prism4j", version.ref = "prism4j" }
+prism4j-bundler = { module = "io.noties:prism4j-bundler", version.ref = "prism4j" }
 markwon-image-coil = { module = "io.noties.markwon:image-coil", version.ref = "markwon" }
 linkify = { module = "io.noties.markwon:linkify", version.ref = "markwon" }
 coil-kt = { module = "io.coil-kt:coil", version.ref = "coil" }

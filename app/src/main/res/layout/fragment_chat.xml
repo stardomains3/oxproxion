@@ -336,7 +336,11 @@
                 android:textColorHighlight= "@color/spinner_item_color"
                 android:background="@drawable/bg_rounded"
                 android:textColor="#C2C2C2"
-                android:textColorHint="#888888" />
+                android:textColorHint="#888888"
+                android:inputType="textMultiLine|textCapSentences"
+                android:importantForAutofill="no"
+                android:privateImeOptions="disableRichTextEditor=true"
+                tools:ignore="VisualLintTextFieldSize" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/sendChatButton"
