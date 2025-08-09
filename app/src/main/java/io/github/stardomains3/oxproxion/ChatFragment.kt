@@ -35,6 +35,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
 import io.noties.markwon.core.MarkwonTheme
@@ -54,9 +55,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import kotlin.compareTo
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
 
+    private lateinit var scrollToTopButton: FloatingActionButton
+    private lateinit var scrollToBottomButton: FloatingActionButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
@@ -84,6 +88,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var attachmentPreviewContainer: View
     private lateinit var previewImageView: ImageView
     private lateinit var removeAttachmentButton: ImageButton
+    private lateinit var closeButton: Button
+    private lateinit var headerContainer: LinearLayout
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -110,10 +116,28 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         attachmentPreviewContainer = view.findViewById(R.id.attachmentPreviewContainer)
         previewImageView = view.findViewById(R.id.previewImageView)
         removeAttachmentButton = view.findViewById(R.id.removeAttachmentButton)
+        closeButton = view.findViewById(R.id.closeButton)
+        headerContainer = view.findViewById(R.id.headerContainer)
 
         arguments?.getString("shared_text")?.let { sharedText ->
             setSharedText(sharedText)
             arguments?.remove("shared_text") // To prevent re-processing
+        }
+        scrollToTopButton = view.findViewById(R.id.scrollToTopButton)
+        scrollToBottomButton = view.findViewById(R.id.scrollToBottomButton)
+        setupScrollListener()
+        scrollToTopButton.setOnClickListener {
+            chatRecyclerView.scrollToPosition(0)
+        }
+
+        scrollToBottomButton.setOnClickListener {
+            if (chatAdapter.itemCount > 0) {
+                chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
+                chatRecyclerView.postDelayed({
+                    updateScrollButtons()
+                }, 160)
+
+            }
         }
         val prism4j = Prism4j(ExampleGrammarLocator())
         // val theme = Prism4jThemeDefault.create()
@@ -226,7 +250,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
         }
-
+        menuButton.alpha = 0.6f
 
     }
     private fun updateSystemMessageButtonState() {
@@ -337,6 +361,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     chatEditText.clearFocus()
                     buttonsContainer.visibility = View.GONE
                     modelNameTextView.isVisible = false
+                    headerContainer.isVisible = false
                     selectedImageBytes = null
                     selectedImageMime = null
                     attachmentPreviewContainer.visibility = View.GONE
@@ -463,6 +488,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 if (buttonsContainer.isVisible) {
                     buttonsContainer.visibility = View.GONE
                     modelNameTextView.isVisible = false
+                    headerContainer.isVisible = false
                 }
                 pdfChatButton.setIconResource(R.drawable.ic_pdfnew)
             }, 500)
@@ -516,6 +542,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             val isMenuVisible = !buttonsContainer.isVisible
             buttonsContainer.visibility = if (isMenuVisible) View.VISIBLE else View.GONE
             modelNameTextView.isVisible = isMenuVisible
+            headerContainer.isVisible = isMenuVisible
+        }
+        closeButton.setOnClickListener {
+            val isMenuVisible = !buttonsContainer.isVisible
+            buttonsContainer.visibility = if (isMenuVisible) View.VISIBLE else View.GONE
+            modelNameTextView.isVisible = isMenuVisible
+            headerContainer.isVisible = isMenuVisible
         }
 
         saveapiButton.setOnClickListener {
@@ -696,8 +729,79 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         if (buttonsContainer.isVisible) {
             buttonsContainer.isVisible = false
             modelNameTextView.isVisible = false
+            headerContainer.isVisible = false
             return true
         }
         return false
+    }
+    private fun updateScrollButtons() {
+        val totalItems = chatAdapter.itemCount
+        if (totalItems == 0) {
+            scrollToTopButton.hide()
+            scrollToBottomButton.hide()
+            return
+        }
+
+        val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+        val canScrollDown = chatRecyclerView.canScrollVertically(1)
+
+        val atTop = !canScrollUp
+        val atBottom = !canScrollDown
+
+        when {
+            atTop && atBottom -> {
+                scrollToTopButton.hider()
+                scrollToBottomButton.hide()
+            }
+            atTop -> {
+                scrollToTopButton.hider()
+                scrollToBottomButton.show()
+            }
+            atBottom -> {
+                scrollToTopButton.show()
+                scrollToBottomButton.hider()
+            }
+            else -> {
+                scrollToTopButton.show()
+                scrollToBottomButton.show()
+            }
+        }
+    }
+
+    /*private fun setupScrollListener() {
+        chatRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                updateScrollButtons()
+            }
+        })
+    }*/
+    private fun setupScrollListener() {
+        chatRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                chatRecyclerView.post {
+                    updateScrollButtons()  // Run after current layout pass
+                }
+            }
+        })
+    }
+
+
+
+
+
+    private fun FloatingActionButton.show() {
+        if (visibility != View.VISIBLE) {
+            visibility = View.VISIBLE
+            // No animation - just show instantly
+        }
+    }
+
+    private fun FloatingActionButton.hider() {
+        if (isVisible) {
+            visibility = View.INVISIBLE
+            // No animation
+        }
     }
 }

@@ -52,6 +52,6 @@ class SaveApiDialogFragment : DialogFragment() {
 
         // Request focus and show keyboard automatically
         editTextApiKey.requestFocus()
-        dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+      //  dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
     }
 }

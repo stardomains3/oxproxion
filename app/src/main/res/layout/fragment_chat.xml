@@ -30,6 +30,41 @@
                 android:padding="8dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                android:orientation="vertical"
+                android:gravity="center">
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/scrollToTopButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="16dp"
+                    app:backgroundTint="@color/fab_bg_60"
+                    android:layout_marginBottom="70dp"
+                    app:srcCompat="@drawable/ic_arrow_up"
+                    app:tint="#A8A8A8"
+                    android:visibility="invisible"
+                    app:fabSize="mini" />
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/scrollToBottomButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="70dp"
+                    app:srcCompat="@drawable/ic_arrow_down"
+                    app:tint="#A8A8A8"
+                    app:backgroundTint="@color/fab_bg_60"
+                    app:fabSize="mini"
+                    android:visibility="invisible" />
+            </LinearLayout>
+
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/menuButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -39,218 +74,256 @@
                 app:iconGravity="textStart"
                 app:iconSize="28dp"
                 app:cornerRadius="24dp"
-                android:layout_marginEnd="14dp"
+                android:layout_marginEnd="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:insetLeft="0dp"
                 android:insetRight="0dp"
                 app:iconTint="#A8A8A8"
                 app:backgroundTint="@color/button_background_col"
-                android:layout_gravity="top|start"
-                android:layout_marginTop="4dp"
+                android:layout_gravity="bottom|start"
+                android:layout_marginTop="52dp"
+
                 android:layout_marginStart="4dp"
                 />
 
 
-
-            <TextView
-                android:id="@+id/modelNameTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|center"
-                android:layout_marginTop="2dp"
-                android:fontFamily="@font/geologica_light"
-                android:textColor="#A8A8A8"
-                android:padding="6dp"
-                android:background="@drawable/bg_rounded"
-                android:textSize="17sp"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:visibility="invisible"
-                tools:text="gpt-4o-mini" />
-
             <LinearLayout
-                android:id="@+id/buttonsContainer"
+                android:id="@+id/headerContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginTop="2dp"
                 android:orientation="vertical"
-                android:layout_gravity="top|center_horizontal"
-                android:layout_marginTop="52dp"
-                android:visibility="visible"
-                tools:visibility="visible">
-
-                <LinearLayout
-                    android:id="@+id/buttonsRow1"
+                android:background="@drawable/bg_rounded_black"
+                android:padding="8dp">
+                <TextView
+                    android:id="@+id/modelNameTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_gravity="center_horizontal">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/openSavedChatsButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_schats"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col"
-                        />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/systemMessageButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_tune"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/saveapiButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_key"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/streamButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_stream"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col"/>
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/soundButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_mobilesound"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col"/>
-
-
-                </LinearLayout>
+                    android:layout_gravity="top|center"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/geologica_light"
+                    android:textColor="#A8A8A8"
+                    android:padding="6dp"
+                    android:background="@drawable/bg_rounded"
+                    android:textSize="17sp"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:visibility="invisible"
+                    tools:text="gpt-4o-mini" />
 
                 <LinearLayout
-                    android:id="@+id/buttonsRow2"
+                    android:id="@+id/buttonsContainer"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_gravity="center_horizontal">
+                    android:orientation="vertical"
+                    android:layout_gravity="top|center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:visibility="visible"
+                    tools:visibility="visible">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/saveChatButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_savechat"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col"/>
+                    <LinearLayout
+                        android:id="@+id/buttonsRow1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_gravity="center_horizontal">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/resetChatButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_new_chat"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/openSavedChatsButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_schats"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"
+                            />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/pdfChatButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_pdfnew"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/systemMessageButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_tune"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/copyChatButton"
-                        style="@style/Widget.Material3.Button.IconButton.Filled"
-                        app:icon="@drawable/ic_copi"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:iconGravity="textStart"
-                        app:iconSize="28dp"
-                        app:cornerRadius="24dp"
-                        android:layout_marginEnd="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        app:iconTint="#A8A8A8"
-                        app:backgroundTint="@color/button_background_col" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/saveapiButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_key"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
 
+
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/streamButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_stream"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/buttonsRow3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_gravity="center_horizontal">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/soundButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_mobilesound"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/closeButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_close"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/buttonsRow2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_gravity="center_horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/saveChatButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_savechat"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/resetChatButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_new_chat"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/pdfChatButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_pdfnew"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/copyChatButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_copi"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col" />
+
+                    </LinearLayout>
                 </LinearLayout>
-
             </LinearLayout>
 
             <androidx.cardview.widget.CardView
