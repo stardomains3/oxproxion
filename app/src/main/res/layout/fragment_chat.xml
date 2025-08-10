@@ -30,39 +30,7 @@
                 android:padding="8dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|end"
-                android:layout_marginEnd="16dp"
-                android:layout_marginBottom="16dp"
-                android:orientation="vertical"
-                android:gravity="center">
-                <com.google.android.material.floatingactionbutton.FloatingActionButton
-                    android:id="@+id/scrollToTopButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
-                    android:layout_marginEnd="16dp"
-                    app:backgroundTint="@color/fab_bg_60"
-                    android:layout_marginBottom="70dp"
-                    app:srcCompat="@drawable/ic_arrow_up"
-                    app:tint="#A8A8A8"
-                    android:visibility="invisible"
-                    app:fabSize="mini" />
-                <com.google.android.material.floatingactionbutton.FloatingActionButton
-                    android:id="@+id/scrollToBottomButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
-                    android:layout_marginEnd="16dp"
-                    android:layout_marginBottom="70dp"
-                    app:srcCompat="@drawable/ic_arrow_down"
-                    app:tint="#A8A8A8"
-                    app:backgroundTint="@color/fab_bg_60"
-                    app:fabSize="mini"
-                    android:visibility="invisible" />
-            </LinearLayout>
+
 
 
             <com.google.android.material.button.MaterialButton
@@ -151,9 +119,9 @@
                             />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/systemMessageButton"
+                            android:id="@+id/streamButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_tune"
+                            app:icon="@drawable/ic_stream"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -165,7 +133,7 @@
                             android:insetLeft="0dp"
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col" />
+                            app:backgroundTint="@color/button_background_col"/>
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/saveapiButton"
@@ -186,10 +154,11 @@
 
 
 
+
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/streamButton"
+                            android:id="@+id/systemMessageButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_stream"
+                            app:icon="@drawable/ic_tune"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -201,7 +170,7 @@
                             android:insetLeft="0dp"
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
+                            app:backgroundTint="@color/button_background_col" />
 
 
                     </LinearLayout>
@@ -272,9 +241,9 @@
                             app:backgroundTint="@color/button_background_col"/>
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/resetChatButton"
+                            android:id="@+id/copyChatButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_new_chat"
+                            app:icon="@drawable/ic_copi"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -305,10 +274,11 @@
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
 
+
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/copyChatButton"
+                            android:id="@+id/resetChatButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_copi"
+                            app:icon="@drawable/ic_new_chat"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"

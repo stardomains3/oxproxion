@@ -37,7 +37,7 @@
             android:layout_gravity="bottom|end"
             android:layout_margin="16dp"
             android:src="@drawable/ic_addmod"
-            app:backgroundTint="@color/your_orange_color"
+            app:backgroundTint="@color/chestnut"
             android:contentDescription="@string/add_new_system_message"
             app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior"/>
 

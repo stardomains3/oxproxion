@@ -3,7 +3,7 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true" android:color="@color/pressed_color"/>
     <item android:state_focused="true" android:color="@color/focused_color"/>
-    <item android:state_selected="true" android:color="#a0610a" />
+    <item android:state_selected="true" android:color="#6D2E0F" />
     <item android:color="#171717"/>   <!-- 4D = 30 % alpha 10 % → #1A
 20 % → #33
 40 % → #66

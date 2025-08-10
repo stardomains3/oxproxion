@@ -59,8 +59,6 @@ import kotlin.compareTo
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
 
-    private lateinit var scrollToTopButton: FloatingActionButton
-    private lateinit var scrollToBottomButton: FloatingActionButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
@@ -123,22 +121,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             setSharedText(sharedText)
             arguments?.remove("shared_text") // To prevent re-processing
         }
-        scrollToTopButton = view.findViewById(R.id.scrollToTopButton)
-        scrollToBottomButton = view.findViewById(R.id.scrollToBottomButton)
-        setupScrollListener()
-        scrollToTopButton.setOnClickListener {
-            chatRecyclerView.scrollToPosition(0)
-        }
 
-        scrollToBottomButton.setOnClickListener {
-            if (chatAdapter.itemCount > 0) {
-                chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
-                chatRecyclerView.postDelayed({
-                    updateScrollButtons()
-                }, 160)
-
-            }
-        }
         val prism4j = Prism4j(ExampleGrammarLocator())
         // val theme = Prism4jThemeDefault.create()
         val theme = Prism4jThemeDarkula.create()
@@ -689,7 +672,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             val serviceIntent = Intent(requireContext(), ForegroundService::class.java)
             requireContext().startService(serviceIntent)
         } catch (e: Exception) {
-            Log.e("ChatFragment", "Failed to start foreground service", e)
+          //  Log.e("ChatFragment", "Failed to start foreground service", e)
         }
     }
 
@@ -697,26 +680,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         try {
             ForegroundService.stopService()
         } catch (e: Exception) {
-            Log.e("ChatFragment", "Failed to stop foreground service", e)
+           // Log.e("ChatFragment", "Failed to stop foreground service", e)
         }
     }
 
     override fun onResume() {
         super.onResume()
         updateSystemMessageButtonState()
-        // if (isInitialCreate) {
-        //     isInitialCreate = false
-        //  } else {
-        //  modelNameTextView.isVisible = true
-        // buttonsContainer.isVisible = true
-        /*  Handler(Looper.getMainLooper()).postDelayed(2400) {
-             // if (!buttonsContainer.isVisible)
-              //{
-                  buttonsContainer.isVisible = false
-                  modelNameTextView.isVisible = false
-              //}
-          }*/
-        //  }
+
         if (viewModel.chatMessages.value.isNullOrEmpty()) {
             chatEditText.showKeyboard()
         }
@@ -733,75 +704,5 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             return true
         }
         return false
-    }
-    private fun updateScrollButtons() {
-        val totalItems = chatAdapter.itemCount
-        if (totalItems == 0) {
-            scrollToTopButton.hide()
-            scrollToBottomButton.hide()
-            return
-        }
-
-        val canScrollUp = chatRecyclerView.canScrollVertically(-1)
-        val canScrollDown = chatRecyclerView.canScrollVertically(1)
-
-        val atTop = !canScrollUp
-        val atBottom = !canScrollDown
-
-        when {
-            atTop && atBottom -> {
-                scrollToTopButton.hider()
-                scrollToBottomButton.hide()
-            }
-            atTop -> {
-                scrollToTopButton.hider()
-                scrollToBottomButton.show()
-            }
-            atBottom -> {
-                scrollToTopButton.show()
-                scrollToBottomButton.hider()
-            }
-            else -> {
-                scrollToTopButton.show()
-                scrollToBottomButton.show()
-            }
-        }
-    }
-
-    /*private fun setupScrollListener() {
-        chatRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                updateScrollButtons()
-            }
-        })
-    }*/
-    private fun setupScrollListener() {
-        chatRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                chatRecyclerView.post {
-                    updateScrollButtons()  // Run after current layout pass
-                }
-            }
-        })
-    }
-
-
-
-
-
-    private fun FloatingActionButton.show() {
-        if (visibility != View.VISIBLE) {
-            visibility = View.VISIBLE
-            // No animation - just show instantly
-        }
-    }
-
-    private fun FloatingActionButton.hider() {
-        if (isVisible) {
-            visibility = View.INVISIBLE
-            // No animation
-        }
     }
 }

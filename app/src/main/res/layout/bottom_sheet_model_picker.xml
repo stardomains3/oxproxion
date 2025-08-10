@@ -37,7 +37,7 @@
             android:layout_margin="16dp"
             android:contentDescription="Add Model"
             android:src="@drawable/ic_addmod"
-            android:backgroundTint="@color/your_orange_color"
+            android:backgroundTint="@color/chestnut"
 
             app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior" />
 
