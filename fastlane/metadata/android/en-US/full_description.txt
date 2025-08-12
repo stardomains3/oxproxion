@@ -8,8 +8,10 @@ Android chat application designed to interact with various Language Learning Mod
 🖼️ Chat with Images: With models that support it!
 ✍️ System Message Customization: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.
 🔗 OpenRouter Integration:
-  • Long-press the model name to open the OpenRouter models list in your browser.
-  • Long-press the API key icon to view your remaining OpenRouter credits.
+Long-press the model name to open the OpenRouter models list in your browser.
+Long-press the API key icon to view your remaining OpenRouter credits.
 📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard.
 📄 On-Device PDF Export: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.
 🛠️ Built with Modern Tech: 100 % Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
+
+If you find this app useful, please consider supporting its developer: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕

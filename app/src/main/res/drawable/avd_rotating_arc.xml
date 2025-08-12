@@ -1,0 +1,8 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_stop_with_arc">
+
+    <target
+        android:name="arc_rotation_group"
+        android:animation="@animator/rotate_arc" />
+
+</animated-vector>

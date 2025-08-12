@@ -6,18 +6,24 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Base64
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -33,9 +39,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
 import io.noties.markwon.core.MarkwonTheme
@@ -55,7 +61,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import kotlin.compareTo
+
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
 
@@ -86,9 +92,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var attachmentPreviewContainer: View
     private lateinit var previewImageView: ImageView
     private lateinit var removeAttachmentButton: ImageButton
-    private lateinit var closeButton: Button
     private lateinit var headerContainer: LinearLayout
+    private var overlayView: View? = null
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         sharedPreferencesHelper = SharedPreferencesHelper(requireContext())
@@ -114,7 +121,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         attachmentPreviewContainer = view.findViewById(R.id.attachmentPreviewContainer)
         previewImageView = view.findViewById(R.id.previewImageView)
         removeAttachmentButton = view.findViewById(R.id.removeAttachmentButton)
-        closeButton = view.findViewById(R.id.closeButton)
         headerContainer = view.findViewById(R.id.headerContainer)
 
         arguments?.getString("shared_text")?.let { sharedText ->
@@ -146,11 +152,47 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             })
             .build()
         setupRecyclerView()
+
+        // In onViewCreated(), after initializing chatEditText and before setupClickListeners()
+        chatEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (headerContainer.isVisible && count > 0) { // Hide on first character input (touch on key)
+                    hideMenu()
+                    // Optional: chatEditText.removeTextChangedListener(this) // Remove after first hide
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
         setupClickListeners()
         pdfGenerator = PdfGenerator(requireContext())
         plusButton = view.findViewById(R.id.plusButton)
         setupImagePicker()
         updateSystemMessageButtonState()
+
+        // Initialize the overlay view
+        val rootView = view as FrameLayout // The root FrameLayout (fragment_container)
+        overlayView = View(requireContext()).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            visibility = View.GONE
+            setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    if (headerContainer.isVisible && isTouchOutsideHeader(event.rawX, event.rawY)) {
+                        hideMenu()
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+        }
+        rootView.addView(overlayView)
 
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
@@ -191,14 +233,39 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             copyChatButton.isVisible = hasMessages
         }
 
+        fun areAnimationsEnabled(context: Context): Boolean {
+            val resolver = context.contentResolver
+            return try {
+                val durationScale = Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1.0f)
+                durationScale != 0.0f
+            } catch (e: Exception) {
+                true // Default to true if we can't read settings
+            }
+        }
+
         viewModel.isAwaitingResponse.observe(viewLifecycleOwner) { isAwaiting ->
             sendChatButton.isEnabled = true
-            if (sendChatButton is MaterialButton) {
-                if (isAwaiting) {
-                    (sendChatButton as MaterialButton).setIconResource(R.drawable.ic_stop)
-                } else {
-                    (sendChatButton as MaterialButton).icon = originalSendIcon
+
+            val materialButton = sendChatButton as? MaterialButton ?: return@observe
+
+            if (isAwaiting) {
+                if (areAnimationsEnabled(requireContext())) {
+                    // Stop any existing animation first
+                    // (materialButton.icon as? Animatable)?.stop()
+
+                    // Set and start new animated drawable
+                    val avd = AnimatedVectorDrawableCompat.create(requireContext(), R.drawable.avd_rotating_arc)
+                    materialButton.icon = avd
+                    avd?.start()
                 }
+                else {
+                    // Fallback: show static arc or different icon when animations are off
+                    materialButton.setIconResource(R.drawable.ic_stop) // or another static indicator
+                }
+            } else {
+                // Stop animation and reset to original icon
+                (materialButton.icon as? Animatable)?.stop()
+                materialButton.icon = originalSendIcon
             }
         }
 
@@ -228,18 +295,34 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.scrollToBottomEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
                 if (chatAdapter.itemCount > 0) {
-                    val layoutManager = chatRecyclerView.layoutManager as LinearLayoutManager
-                    layoutManager.scrollToPositionWithOffset(chatAdapter.itemCount - 1, 0)
+                    chatRecyclerView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                        override fun onPreDraw(): Boolean {
+                            chatRecyclerView.viewTreeObserver.removeOnPreDrawListener(this)
+
+                            val layoutManager = chatRecyclerView.layoutManager as LinearLayoutManager
+                            val position = chatAdapter.itemCount - 1
+
+                            // Scroll with positive offset to show icon
+                            // val offset = resources.getDimensionPixelSize(R.dimen.ai_icon_offset)
+                            layoutManager.scrollToPositionWithOffset(position, -12)
+
+                            return true
+                        }
+                    })
                 }
             }
         }
         menuButton.alpha = 0.6f
 
+        // Ensure initial menu state is consistent (visible with overlay)
+        showMenu()
     }
+
     private fun updateSystemMessageButtonState() {
         val selectedSystemMessage = sharedPreferencesHelper.getSelectedSystemMessage()
         systemMessageButton.isSelected = !selectedSystemMessage.isDefault
     }
+
     fun setSharedText(sharedText: String) {
         var spookyValue = sharedText
         val httpIndex = spookyValue.indexOf("http", 0, true)
@@ -265,6 +348,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
     }
+
     fun View.showKeyboard() {
         doOnPreDraw {
             if (!isFocusable || !isFocusableInTouchMode) return@doOnPreDraw
@@ -342,9 +426,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage()
                     viewModel.sendUserMessage(userContent, systemMessage.prompt)
                     chatEditText.clearFocus()
-                    buttonsContainer.visibility = View.GONE
-                    modelNameTextView.isVisible = false
-                    headerContainer.isVisible = false
+                    hideMenu()
                     selectedImageBytes = null
                     selectedImageMime = null
                     attachmentPreviewContainer.visibility = View.GONE
@@ -378,20 +460,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     else
                     {
                         viewModel.setModel(modelString)
-                        /* if(!buttonsContainer.isVisible)
-                         {
-                             modelNameTextView.isVisible = true
-                             Handler(Looper.getMainLooper()).postDelayed(600) {
-                                 modelNameTextView.isVisible = false
-                             }
-                         }
-                         else if(buttonsContainer.isVisible){
-                             Handler(Looper.getMainLooper()).postDelayed(600) {
-                                 modelNameTextView.isVisible = false
-                                 buttonsContainer.isVisible = false
-
-                             }
-                         }*/
                     }
                 }
             }
@@ -410,8 +478,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         resetChatButton.setOnClickListener {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
-                //  buttonsContainer.visibility = View.GONE
-                // modelNameTextView.isVisible = false
                 return@setOnClickListener
             }
 
@@ -435,20 +501,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         saveChatButton.setOnClickListener {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
-                // buttonsContainer.visibility = View.GONE
-                //modelNameTextView.isVisible = false
                 return@setOnClickListener
             }
             else {
-                // buttonsContainer.visibility = View.GONE
-                // modelNameTextView.isVisible = false
                 showSaveChatDialogWithResultApi()
             }
         }
 
         openSavedChatsButton.setOnClickListener {
-            //  buttonsContainer.visibility = View.GONE
-            // modelNameTextView.isVisible = false
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, SavedChatsFragment())
                 .addToBackStack(null)
@@ -457,27 +517,19 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
 
         pdfChatButton.setOnClickListener {
-            // buttonsContainer.visibility = View.GONE
             val messages = viewModel.chatMessages.value ?: emptyList()
 
             if (messages.isEmpty()) {
-                //  buttonsContainer.visibility = View.GONE
-                // modelNameTextView.isVisible = false
                 Toast.makeText(requireContext(), "No chat history to export", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             pdfChatButton.setIconResource(R.drawable.ic_check)
             Handler(Looper.getMainLooper()).postDelayed({
-                if (buttonsContainer.isVisible) {
-                    buttonsContainer.visibility = View.GONE
-                    modelNameTextView.isVisible = false
-                    headerContainer.isVisible = false
-                }
+                hideMenu()
                 pdfChatButton.setIconResource(R.drawable.ic_pdfnew)
             }, 500)
 
             lifecycleScope.launch {
-                // Toast.makeText(requireContext(), "Generating PDF...", Toast.LENGTH_SHORT).show()
                 val modelIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                 val modelName = viewModel.getModelDisplayName(modelIdentifier)
                 val filePath = withContext(Dispatchers.IO) {
@@ -511,27 +563,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 val clip = ClipData.newPlainText("Chat History", chatText)
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(requireContext(), "Chat Copied!", Toast.LENGTH_SHORT).show()
-                //   buttonsContainer.visibility = View.GONE
-                // modelNameTextView.isVisible = false
             }
             else{
-                //    buttonsContainer.visibility = View.GONE
-                //  modelNameTextView.isVisible = false
                 Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
             }
         }
 
         menuButton.setOnClickListener {
-            val isMenuVisible = !buttonsContainer.isVisible
-            buttonsContainer.visibility = if (isMenuVisible) View.VISIBLE else View.GONE
-            modelNameTextView.isVisible = isMenuVisible
-            headerContainer.isVisible = isMenuVisible
-        }
-        closeButton.setOnClickListener {
-            val isMenuVisible = !buttonsContainer.isVisible
-            buttonsContainer.visibility = if (isMenuVisible) View.VISIBLE else View.GONE
-            modelNameTextView.isVisible = isMenuVisible
-            headerContainer.isVisible = isMenuVisible
+            if (headerContainer.isVisible) {
+                hideMenu()
+            } else {
+                showMenu()
+            }
         }
 
         saveapiButton.setOnClickListener {
@@ -543,7 +586,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             if (viewModel.activeChatApiKey.isBlank()) {
                 Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT).show()
             } else {
-                //  Toast.makeText(requireContext(), "Checking credits...", Toast.LENGTH_SHORT).show()
                 viewModel.checkRemainingCredits()
             }
             true // Consume the long click
@@ -573,6 +615,31 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
     }
 
+    private fun isTouchOutsideHeader(x: Float, y: Float): Boolean {
+        val location = IntArray(2)
+        headerContainer.getLocationOnScreen(location)
+        val headerLeft = location[0].toFloat()
+        val headerTop = location[1].toFloat()
+        val headerRight = headerLeft + headerContainer.width
+        val headerBottom = headerTop + headerContainer.height
+
+        return x < headerLeft || x > headerRight || y < headerTop || y > headerBottom
+    }
+
+    private fun showMenu() {
+        buttonsContainer.visibility = View.VISIBLE
+        modelNameTextView.isVisible = true
+        headerContainer.isVisible = true
+        overlayView?.visibility = View.VISIBLE
+    }
+
+    private fun hideMenu() {
+        buttonsContainer.visibility = View.GONE
+        modelNameTextView.isVisible = false
+        headerContainer.isVisible = false
+        overlayView?.visibility = View.GONE
+    }
+
     private fun showSaveChatDialogWithResultApi() {
         val dialog = SaveChatDialogFragment()
         childFragmentManager.setFragmentResultListener(SaveChatDialogFragment.REQUEST_KEY, viewLifecycleOwner) { key, bundle ->
@@ -580,8 +647,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 val title = bundle.getString(SaveChatDialogFragment.BUNDLE_KEY_TITLE)
                 if (!title.isNullOrBlank()) {
                     viewModel.saveCurrentChat(title)
-                    //  buttonsContainer.visibility = View.GONE
-                    // modelNameTextView.isVisible = false
                 }
             }
         }
@@ -672,7 +737,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             val serviceIntent = Intent(requireContext(), ForegroundService::class.java)
             requireContext().startService(serviceIntent)
         } catch (e: Exception) {
-          //  Log.e("ChatFragment", "Failed to start foreground service", e)
+            //  Log.e("ChatFragment", "Failed to start foreground service", e)
         }
     }
 
@@ -680,29 +745,32 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         try {
             ForegroundService.stopService()
         } catch (e: Exception) {
-           // Log.e("ChatFragment", "Failed to stop foreground service", e)
+            // Log.e("ChatFragment", "Failed to stop foreground service", e)
         }
     }
-
     override fun onResume() {
         super.onResume()
         updateSystemMessageButtonState()
-
+        chatEditText.requestFocus()
         if (viewModel.chatMessages.value.isNullOrEmpty()) {
-            chatEditText.showKeyboard()
+            chatEditText.post {
+                chatEditText.showKeyboard()
+            }
         }
         else {
-            chatEditText.hideKeyboard()
+            chatEditText.post {
+                chatEditText.hideKeyboard()
+            }
         }
     }
 
+
     fun onBackPressed(): Boolean {
-        if (buttonsContainer.isVisible) {
-            buttonsContainer.isVisible = false
-            modelNameTextView.isVisible = false
-            headerContainer.isVisible = false
+        if (headerContainer.isVisible) {
+            hideMenu()
             return true
         }
         return false
     }
+
 }
