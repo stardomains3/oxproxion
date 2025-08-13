@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -61,6 +62,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
         onBackPressedDispatcher.addCallback(this, callback)
+        if(sharedPreferencesHelper.getNotiPreference()) {
+            startForegroundService()
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -78,7 +82,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
+    private fun startForegroundService() {
+        try {
+            val serviceIntent = Intent(this, ForegroundService::class.java)
+            startService(serviceIntent)
+        } catch (e: Exception) {
+            Log.e("ChatFragment", "Failed to start foreground service", e)
+        }
+    }
     private fun askNotificationPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED

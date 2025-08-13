@@ -100,14 +100,14 @@ class SavedChatsFragment : Fragment() {
         savedChatsAdapter = SavedChatsAdapter(
             onClick = { session ->
                 viewModel.loadChat(session.id)
-                if (ForegroundService.isRunningForeground){
+               /* if (ForegroundService.isRunningForeground){
                     try {
                         ForegroundService.stopService()
 
                     } catch (e: Exception) {
                         Log.e("ChatFragment", "Failed to stop foreground service", e)
                     }
-                }
+                }*/
                 parentFragmentManager.popBackStack()
             },
             onLongClick = { session ->

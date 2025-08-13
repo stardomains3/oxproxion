@@ -6,7 +6,7 @@ import android.media.ToneGenerator
 
 class SoundManager(context: Context) {
 
-    private val sharedPreferencesHelper = SharedPreferencesHelper(context)
+    /*private val sharedPreferencesHelper = SharedPreferencesHelper(context)
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
 
@@ -43,5 +43,5 @@ class SoundManager(context: Context) {
     }
     fun release() {
         toneGenerator.release()
-    }
+    }*/
 }

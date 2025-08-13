@@ -95,8 +95,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val creditsResult: LiveData<Event<String>> = _creditsResult
     private val _isStreamingEnabled = MutableLiveData<Boolean>(false)
     val isStreamingEnabled: LiveData<Boolean> = _isStreamingEnabled
-    private val _isSoundEnabled = MutableLiveData<Boolean>(false)
-    val isSoundEnabled: LiveData<Boolean> = _isSoundEnabled
+    //private val _isSoundEnabled = MutableLiveData<Boolean>(false)
+    //val isSoundEnabled: LiveData<Boolean> = _isSoundEnabled
+    private val _isNotiEnabled = MutableLiveData<Boolean>(false)
+    val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private var networkJob: Job? = null
@@ -107,12 +109,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isStreamingEnabled.value = newStremingState
         sharedPreferencesHelper.saveStreamingPreference(newStremingState)
     }
+    fun toggleNoti() {
+        val newNotiState = !(_isNotiEnabled.value ?: true)
+        _isNotiEnabled.value = newNotiState
+        sharedPreferencesHelper.saveNotiPreference(newNotiState)
 
-    fun toggleSound() {
+    }
+    /*fun toggleSound() {
         val newSoundState = !(_isSoundEnabled.value ?: false)
         _isSoundEnabled.value = newSoundState
         sharedPreferencesHelper.saveSoundPreference(newSoundState)
-    }
+    }*/
 
     var activeChatUrl: String = "https://openrouter.ai/api/v1/chat/completions"
     var activeChatApiKey: String = ""
@@ -129,11 +136,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val httpClient: HttpClient
     private var llmService: LlmService
     private val sharedPreferencesHelper: SharedPreferencesHelper
-    private val soundManager: SoundManager
+    //private val soundManager: SoundManager
 
     init {
         sharedPreferencesHelper = SharedPreferencesHelper(application)
-        soundManager = SoundManager(application)
+       // soundManager = SoundManager(application)
         val chatDao = AppDatabase.getDatabase(application).chatDao()
         repository = ChatRepository(chatDao)
         httpClient = HttpClient(OkHttp) {
@@ -148,26 +155,30 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         _activeChatModel.value = sharedPreferencesHelper.getPreferenceModelnew()
         _isStreamingEnabled.value = sharedPreferencesHelper.getStreamingPreference()
-        _isSoundEnabled.value = sharedPreferencesHelper.getSoundPreference()
+      //  _isSoundEnabled.value = sharedPreferencesHelper.getSoundPreference()
+        _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
         llmService = LlmService(httpClient, activeChatUrl)
         activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
     }
 
     override fun onCleared() {
         super.onCleared()
-        soundManager.release()
+     //   soundManager.release()
         httpClient.close() // Prevent leaks
     }
 
-    fun playCancelTone() {
+    /*fun playCancelTone() {
         soundManager.playCancelTone()
-    }
+    }*/
 
     fun setModel(model: String) {
         _activeChatModel.value = model
         _modelPreferenceToSave.value = model
     }
-
+    fun refreshNotiState() {
+        _isNotiEnabled.value =
+            sharedPreferencesHelper.getNotiPreference()  // Reload and default to false if null
+    }
     fun saveCurrentChat(title: String) {
         viewModelScope.launch {
             val sessionId = currentSessionId ?: repository.getNextSessionId() // Generate if new
@@ -363,12 +374,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
-                withContext(Dispatchers.Main) {
+               /* withContext(Dispatchers.Main) {
                     soundManager.playSuccessTone()
+                }*/
+                if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                    ForegroundService.updateNotificationStatus(
+                        activeChatModel.value ?: "Unknown Model", "Response Received."
+                    )
                 }
             } catch (e: Throwable) {
                 withContext(Dispatchers.Main) {
                     handleError(e, thinkingMessage)
+                    if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                        ForegroundService.updateNotificationStatus(
+                            activeChatModel.value ?: "Unknown Model", "Error!"
+                        )
+                    }
                 }
             }
         }
@@ -394,6 +415,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (!response.status.isSuccess()) {
                     val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details" }
+                    if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                        ForegroundService.updateNotificationStatus(
+                            activeChatModel.value ?: "Unknown Model", "Error!"
+                        )
+                    }
                     throw Exception("API Error: ${response.status} - $errorBody")
                 }
 
@@ -418,11 +444,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val index = list.indexOf(thinkingMessage)
             if (index != -1) list[index] = finalAiMessage
         }
-        soundManager.playSuccessTone()
+     //   soundManager.playSuccessTone()
+        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+            ForegroundService.updateNotificationStatus(
+                activeChatModel.value ?: "Unknown Model",
+                "Response Received."
+            )
+        }
     }
 
     private fun handleError(e: Throwable, thinkingMessage: FlexibleMessage) {
-        soundManager.playErrorTone()
+      //  soundManager.playErrorTone()
+        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+            ForegroundService.updateNotificationStatus(activeChatModel.value ?: "Unknown Model","Error!")
+        }
         if (e is CancellationException && e !is TimeoutCancellationException) {
             Log.w("ChatNetwork", "Request cancelled by user.", e)
             updateMessages { list ->

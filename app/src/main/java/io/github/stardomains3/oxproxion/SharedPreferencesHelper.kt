@@ -31,8 +31,9 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_CUSTOM_SYSTEM_MESSAGES = "custom_system_messages"
         private const val KEY_DEFAULT_SYSTEM_MESSAGES_SEEDED = "default_system_messages_seeded"
         private const val KEY_STREAMING_ENABLED = "streaming_enabled"
-        private const val KEY_SOUND_ENABLED = "sound_enabled"
+        //private const val KEY_SOUND_ENABLED = "sound_enabled"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        private const val KEY_NOTI_ENABLED = "noti_enabled"
     }
 
     init {
@@ -40,7 +41,7 @@ class SharedPreferencesHelper(context: Context) {
         mainPrefs = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
     }
 
-    fun saveSoundPreference(isEnabled: Boolean) {
+    /*fun saveSoundPreference(isEnabled: Boolean) {
         with(mainPrefs.edit()) {
             putBoolean(KEY_SOUND_ENABLED, isEnabled)
             apply()
@@ -49,7 +50,7 @@ class SharedPreferencesHelper(context: Context) {
 
     fun getSoundPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_SOUND_ENABLED, false)
-    }
+    }*/
 
     fun saveStreamingPreference(isEnabled: Boolean) {
         with(mainPrefs.edit()) {
@@ -156,7 +157,15 @@ class SharedPreferencesHelper(context: Context) {
     fun getPreferenceModelnew(): String {
         return mainPrefs.getString(KEY_MODEL_NEW_CHAT, "meta-llama/llama-4-maverick").toString()
     }
-
+    fun getNotiPreference(): Boolean {
+        return mainPrefs.getBoolean(KEY_NOTI_ENABLED, true)
+    }
+    fun saveNotiPreference(isEnabled: Boolean) {
+        with(mainPrefs.edit()) {
+            putBoolean(KEY_NOTI_ENABLED, isEnabled)
+            apply()
+        }
+    }
     fun getPreferenceModel(): String? {
         return mainPrefs.getString(KEY_MODEL_VALE, "mistralai/mistral-medium-3")
     }

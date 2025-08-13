@@ -2,10 +2,12 @@ package io.github.stardomains3.oxproxion
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.Animatable
@@ -37,6 +39,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
@@ -64,7 +67,13 @@ import kotlinx.serialization.json.buildJsonArray
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
-
+    private val notiStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "io.github.stardomains3.oxproxion.NOTI_STATE_CHANGED") {
+                viewModel.refreshNotiState()
+            }
+        }
+    }
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
@@ -83,7 +92,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
-    private lateinit var soundButton: MaterialButton
+    //private lateinit var soundButton: MaterialButton
+    private lateinit var notiButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var markwon: Markwon
@@ -103,7 +113,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
-        soundButton = view.findViewById(R.id.soundButton)
+      //  soundButton = view.findViewById(R.id.soundButton)
+        notiButton = view.findViewById(R.id.notiButton)
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
@@ -288,10 +299,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             streamButton.isSelected = isEnabled
         }
 
-        viewModel.isSoundEnabled.observe(viewLifecycleOwner) { isEnabled ->
+        /*viewModel.isSoundEnabled.observe(viewLifecycleOwner) { isEnabled ->
             soundButton.isSelected = isEnabled
+        }*/
+        viewModel.isNotiEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            notiButton.isSelected = isEnabled
+            if(isEnabled && !ForegroundService.isRunningForeground ){
+                startForegroundService()
+            }
+            else if (!isEnabled && ForegroundService.isRunningForeground){
+                stopForegroundService()
+            }
         }
-
         viewModel.scrollToBottomEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
                 if (chatAdapter.itemCount > 0) {
@@ -316,6 +335,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         // Ensure initial menu state is consistent (visible with overlay)
         showMenu()
+        LocalBroadcastManager.getInstance(requireContext())
+            .registerReceiver(notiStateReceiver,
+                IntentFilter("io.github.stardomains3.oxproxion.NOTI_STATE_CHANGED")
+            )
     }
 
     private fun updateSystemMessageButtonState() {
@@ -375,7 +398,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         sendChatButton.setOnClickListener {
             if (viewModel.isAwaitingResponse.value == true) {
                 viewModel.cancelCurrentRequest()
-                viewModel.playCancelTone()
+             //   viewModel.playCancelTone()
             } else {
                 // --- API Key Check ---
                 if (viewModel.activeChatApiKey.isBlank()) {
@@ -386,9 +409,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
                 val prompt = chatEditText.text.toString().trim()
                 if (prompt.isNotBlank() || selectedImageBytes != null) {
-                    if (!ForegroundService.isRunningForeground) {
+                   /* if (!ForegroundService.isRunningForeground) {
                         ChatServiceGate.shouldRunService = true
                         startForegroundService()
+                    }*/
+                    if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                        ForegroundService.updateNotificationStatusSilently( viewModel.activeChatModel.value ?: "Unknown Model","Prompt sent. Awaiting Response.")
                     }
                     chatEditText.setText("")
                     chatEditText.text.clear()
@@ -460,6 +486,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     else
                     {
                         viewModel.setModel(modelString)
+                        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                            ForegroundService.updateNotificationStatusSilently(modelString,"Model Changed")
+                        }
                     }
                 }
             }
@@ -488,12 +517,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     dialog.dismiss()
                 }
                 .setPositiveButton("Reset") { dialog, which ->
-                    if (ForegroundService.isRunningForeground) {
+                    if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                        ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","Open Chat is Ready.")
+                    }
+                    /*if (ForegroundService.isRunningForeground) {
                         stopForegroundService()
                     }
                     else{
                         ChatServiceGate.shouldRunService = false
-                    }
+                    }*/
                     viewModel.startNewChat()
                 }
                 .show()
@@ -605,10 +637,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             viewModel.toggleStreaming()
         }
 
-        soundButton.setOnClickListener {
+       /* soundButton.setOnClickListener {
             viewModel.toggleSound()
+        }*/
+        notiButton.setOnClickListener {
+            viewModel.toggleNoti()
         }
-
         menuButton.setOnLongClickListener {
             // This can be used for other future menu-related long-press actions
             true // Consume the long click
