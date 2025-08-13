@@ -613,6 +613,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             // This can be used for other future menu-related long-press actions
             true // Consume the long click
         }
+        sendChatButton.setOnLongClickListener {
+            if (!chatEditText.text.isBlank()) {
+                chatEditText.text.clear()
+            }
+
+            true
+        }
     }
 
     private fun isTouchOutsideHeader(x: Float, y: Float): Boolean {

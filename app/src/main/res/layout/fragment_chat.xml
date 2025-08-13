@@ -33,7 +33,7 @@
 
 
 
-            <com.google.android.material.button.MaterialButton
+           <!-- <com.google.android.material.button.MaterialButton
                 android:id="@+id/menuButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
                 app:icon="@drawable/ic_menudot"
@@ -53,7 +53,7 @@
                 android:layout_marginTop="52dp"
 
                 android:layout_marginStart="4dp"
-                />
+                />-->
 
 
             <LinearLayout
@@ -346,18 +346,36 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="8dp">
-
+            >
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/menuButton"
+                style="@style/Widget.Material3.Button.IconButton.Filled"
+                app:icon="@drawable/ic_menudot"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:iconGravity="textStart"
+                app:iconSize="24dp"
+                app:cornerRadius="16dp"
+                app:iconPadding="0dp"
+                android:padding="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                app:iconTint="#A8A8A8"
+                app:backgroundTint="@color/button_background_col"
+                />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/plusButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:layout_marginEnd="4dp"
                 app:backgroundTint="@color/button_background_col"
                 app:cornerRadius="16dp"
                 app:icon="@drawable/ic_imgup"
-                app:iconSize="32dp"
+                app:iconSize="24dp"
+                android:padding="2dp"
                 app:iconTint="#A8A8A8"
                 app:iconPadding="0dp"
                 app:iconGravity="textStart"
@@ -374,7 +392,7 @@
                 android:layout_weight="1"
                 android:hint="Type a message..."
                 android:fontFamily="@font/geologica_light"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:maxLines="5"
                 android:textCursorDrawable="@drawable/cursor_c"
                 android:textColorHighlight= "@color/spinner_item_color"
@@ -391,20 +409,20 @@
                 style="@style/Widget.Material3.Button.IconButton.Filled"
                 app:cornerRadius="16dp"
                 app:iconGravity="textStart"
-
                 app:iconPadding="0dp"
                 android:layout_marginLeft="4dp"
-                android:padding="8dp"
+                android:padding="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:insetLeft="0dp"
                 android:insetRight="0dp"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 app:icon="@drawable/ic_send"
-                app:iconSize="32dp"
+                app:iconSize="24dp"
                 app:iconTint="#A8A8A8"
                 app:backgroundTint="@color/button_background_col" />
+
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>
