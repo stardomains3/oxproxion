@@ -3,6 +3,7 @@ package io.github.stardomains3.oxproxion
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
@@ -149,7 +150,7 @@ class ChatAdapter(
     // ViewHolder for AI and "Thinking" messages
     inner class AssistantViewHolder(itemView: View, private val markwon: Markwon) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
-        // Get a reference to the new button
+        private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
         private val copyButton: ImageButton = itemView.findViewById(R.id.copyButton)
 
         fun bind(text: String) {
@@ -188,6 +189,16 @@ class ChatAdapter(
                     //   val clip = ClipData.newPlainText("Markdown", rawMarkdown)
                     //  clipboard.setPrimaryClip(clip)
                     // true // consume the long click
+                }
+                shareButton.setOnClickListener {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, rawMarkdown) // Share the raw markdown text
+                        putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message") // Optional subject
+                    }
+
+                        itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
+
                 }
             }
         }

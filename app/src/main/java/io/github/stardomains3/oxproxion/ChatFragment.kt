@@ -113,7 +113,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
-      //  soundButton = view.findViewById(R.id.soundButton)
+        //  soundButton = view.findViewById(R.id.soundButton)
         notiButton = view.findViewById(R.id.notiButton)
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
@@ -181,8 +181,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         plusButton = view.findViewById(R.id.plusButton)
         setupImagePicker()
         updateSystemMessageButtonState()
-
-        // Initialize the overlay view
         val rootView = view as FrameLayout // The root FrameLayout (fragment_container)
         overlayView = View(requireContext()).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -190,17 +188,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
             visibility = View.GONE
+            setBackgroundColor(requireContext().getColor(android.R.color.transparent))
+            // This listener logic is now correct
             setOnTouchListener { _, event ->
                 if (event.action == MotionEvent.ACTION_DOWN) {
-                    if (headerContainer.isVisible && isTouchOutsideHeader(event.rawX, event.rawY)) {
+                    if (headerContainer.isVisible && isTouchOutsideHeader(event.rawX, event.rawY) && !isTouchOnMenuButton(event.rawX, event.rawY)) {
                         hideMenu()
-                        true
-                    } else {
-                        false
+                        // Return false to pass the touch to the button underneath
+                        return@setOnTouchListener false
                     }
-                } else {
-                    false
                 }
+                // If touch is inside the header, let it pass through to the header
+                false
             }
         }
         rootView.addView(overlayView)
@@ -398,7 +397,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         sendChatButton.setOnClickListener {
             if (viewModel.isAwaitingResponse.value == true) {
                 viewModel.cancelCurrentRequest()
-             //   viewModel.playCancelTone()
+                //   viewModel.playCancelTone()
             } else {
                 // --- API Key Check ---
                 if (viewModel.activeChatApiKey.isBlank()) {
@@ -409,10 +408,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
                 val prompt = chatEditText.text.toString().trim()
                 if (prompt.isNotBlank() || selectedImageBytes != null) {
-                   /* if (!ForegroundService.isRunningForeground) {
-                        ChatServiceGate.shouldRunService = true
-                        startForegroundService()
-                    }*/
+                    /* if (!ForegroundService.isRunningForeground) {
+                         ChatServiceGate.shouldRunService = true
+                         startForegroundService()
+                     }*/
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         ForegroundService.updateNotificationStatusSilently( viewModel.activeChatModel.value ?: "Unknown Model","Prompt sent. Awaiting Response.")
                     }
@@ -637,9 +636,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             viewModel.toggleStreaming()
         }
 
-       /* soundButton.setOnClickListener {
-            viewModel.toggleSound()
-        }*/
+        /* soundButton.setOnClickListener {
+             viewModel.toggleSound()
+         }*/
         notiButton.setOnClickListener {
             viewModel.toggleNoti()
         }
@@ -665,6 +664,17 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val headerBottom = headerTop + headerContainer.height
 
         return x < headerLeft || x > headerRight || y < headerTop || y > headerBottom
+    }
+    private fun isTouchOnMenuButton(x: Float, y: Float): Boolean {
+        val location = IntArray(2)
+        menuButton.getLocationOnScreen(location)
+        val buttonLeft = location[0].toFloat()
+        val buttonTop = location[1].toFloat()
+        val buttonRight = buttonLeft + menuButton.width
+        val buttonBottom = buttonTop + menuButton.height
+
+        // Return true if the touch is INSIDE the button's bounds
+        return x >= buttonLeft && x <= buttonRight && y >= buttonTop && y <= buttonBottom
     }
 
     private fun showMenu() {
@@ -793,14 +803,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         super.onResume()
         updateSystemMessageButtonState()
         chatEditText.requestFocus()
-        if (viewModel.chatMessages.value.isNullOrEmpty()) {
-            chatEditText.post {
-                chatEditText.showKeyboard()
-            }
-        }
-        else {
-            chatEditText.post {
-                chatEditText.hideKeyboard()
+
+        if (viewModel.isChatLoading.value == false) {
+            if (viewModel.chatMessages.value.isNullOrEmpty()) {
+                chatEditText.post {
+                    chatEditText.showKeyboard()
+                }
+            } else {
+                chatEditText.post {
+                    chatEditText.hideKeyboard()
+                }
             }
         }
     }

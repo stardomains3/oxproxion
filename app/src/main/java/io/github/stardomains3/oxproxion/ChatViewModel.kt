@@ -12,6 +12,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.preparePost
@@ -33,6 +34,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -45,6 +48,27 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 
+@Serializable
+data class OpenRouterResponse(val data: List<ModelData>)
+
+@Serializable
+data class ModelData(
+    val id: String,
+    val name: String,
+    val architecture: Architecture,
+    @SerialName("created") val created: Long
+)
+
+@Serializable
+data class Architecture(
+    val input_modalities: List<String>
+)
+
+enum class SortOrder {
+    ALPHABETICAL,
+    BY_DATE
+}
+
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _errorMessage = MutableLiveData<String?>()
@@ -52,6 +76,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val json = Json { ignoreUnknownKeys = true }
     private val _sharedText = MutableStateFlow<String?>(null)
     val sharedText: StateFlow<String?> = _sharedText
+
+    private var allOpenRouterModels: List<LlmModel> = emptyList()
+    private val _openRouterModels = MutableLiveData<List<LlmModel>>()
+    val openRouterModels: LiveData<List<LlmModel>> = _openRouterModels
+    private val _sortOrder = MutableStateFlow(SortOrder.ALPHABETICAL)
+    val sortOrder: StateFlow<SortOrder> = _sortOrder
+
+    private val _customModelsUpdated = MutableLiveData<Event<Unit>>()
+    val customModelsUpdated: LiveData<Event<Unit>> = _customModelsUpdated
     fun isVisionModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
 
@@ -101,6 +134,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
+    private val _isChatLoading = MutableLiveData(false)
+    val isChatLoading: LiveData<Boolean> = _isChatLoading
     private var networkJob: Job? = null
 
 
@@ -140,7 +175,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         sharedPreferencesHelper = SharedPreferencesHelper(application)
-       // soundManager = SoundManager(application)
+        // soundManager = SoundManager(application)
         val chatDao = AppDatabase.getDatabase(application).chatDao()
         repository = ChatRepository(chatDao)
         httpClient = HttpClient(OkHttp) {
@@ -155,15 +190,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         _activeChatModel.value = sharedPreferencesHelper.getPreferenceModelnew()
         _isStreamingEnabled.value = sharedPreferencesHelper.getStreamingPreference()
-      //  _isSoundEnabled.value = sharedPreferencesHelper.getSoundPreference()
+        //  _isSoundEnabled.value = sharedPreferencesHelper.getSoundPreference()
         _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
         llmService = LlmService(httpClient, activeChatUrl)
         activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
+        _sortOrder.value = sharedPreferencesHelper.getSortOrder()
     }
 
     override fun onCleared() {
         super.onCleared()
-     //   soundManager.release()
+        //   soundManager.release()
         httpClient.close() // Prevent leaks
     }
 
@@ -200,29 +236,34 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadChat(sessionId: Long) {
+        _isChatLoading.value = true
         viewModelScope.launch {
-            // Parallel fetch for efficiency
-            val sessionDeferred = async { repository.getSessionById(sessionId) }
-            val messagesDeferred = async { repository.getMessagesForSession(sessionId) }
+            try {
+                // Parallel fetch for efficiency
+                val sessionDeferred = async { repository.getSessionById(sessionId) }
+                val messagesDeferred = async { repository.getMessagesForSession(sessionId) }
 
-            val session = sessionDeferred.await()
-            val messages = messagesDeferred.await()
+                val session = sessionDeferred.await()
+                val messages = messagesDeferred.await()
 
-            _chatMessages.postValue(messages.map {
-                FlexibleMessage(
-                    role = it.role,
-                    content = try {
-                        json.parseToJsonElement(it.content)
-                    } catch (e: Exception) {
-                        JsonPrimitive(it.content)
-                    }
-                )
-            })
-            currentSessionId = sessionId
+                _chatMessages.postValue(messages.map {
+                    FlexibleMessage(
+                        role = it.role,
+                        content = try {
+                            json.parseToJsonElement(it.content)
+                        } catch (e: Exception) {
+                            JsonPrimitive(it.content)
+                        }
+                    )
+                })
+                currentSessionId = sessionId
 
-            session?.let {
-                _activeChatModel.postValue(it.modelUsed)
-                _modelPreferenceToSave.postValue(it.modelUsed)
+                session?.let {
+                    _activeChatModel.postValue(it.modelUsed)
+                    _modelPreferenceToSave.postValue(it.modelUsed)
+                }
+            } finally {
+                _isChatLoading.postValue(false)
             }
         }
     }
@@ -374,9 +415,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
-               /* withContext(Dispatchers.Main) {
-                    soundManager.playSuccessTone()
-                }*/
+                /* withContext(Dispatchers.Main) {
+                     soundManager.playSuccessTone()
+                 }*/
                 if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                     ForegroundService.updateNotificationStatus(
                         activeChatModel.value ?: "Unknown Model", "Response Received."
@@ -444,7 +485,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val index = list.indexOf(thinkingMessage)
             if (index != -1) list[index] = finalAiMessage
         }
-     //   soundManager.playSuccessTone()
+        //   soundManager.playSuccessTone()
         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
             ForegroundService.updateNotificationStatus(
                 activeChatModel.value ?: "Unknown Model",
@@ -454,7 +495,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun handleError(e: Throwable, thinkingMessage: FlexibleMessage) {
-      //  soundManager.playErrorTone()
+        //  soundManager.playErrorTone()
         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
             ForegroundService.updateNotificationStatus(activeChatModel.value ?: "Unknown Model","Error!")
         }
@@ -559,5 +600,72 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun textConsumed() {
         _sharedText.value = null
+    }
+
+    fun setSortOrder(sortOrder: SortOrder) {
+        _sortOrder.value = sortOrder
+        sharedPreferencesHelper.saveSortOrder(sortOrder)
+        applySort()
+    }
+
+    private fun applySort() {
+        val sortedList = when (_sortOrder.value) {
+            SortOrder.ALPHABETICAL -> allOpenRouterModels.sortedBy { it.displayName.lowercase() }
+            SortOrder.BY_DATE -> allOpenRouterModels.sortedByDescending { it.created }
+        }
+        _openRouterModels.postValue(sortedList)
+    }
+
+    fun fetchOpenRouterModels() {
+        viewModelScope.launch {
+            try {
+                val response = httpClient.get("https://openrouter.ai/api/v1/models")
+                if (response.status.isSuccess()) {
+                    val responseBody = response.body<OpenRouterResponse>()
+                    allOpenRouterModels = responseBody.data.map {
+                        LlmModel(
+                            displayName = it.name,
+                            apiIdentifier = it.id,
+                            isVisionCapable = it.architecture.input_modalities.contains("image"),
+                            created = it.created
+                        )
+                    }
+                    saveOpenRouterModels(allOpenRouterModels)
+                    applySort()
+                } else {
+                    _errorMessage.postValue("Failed to fetch models: ${response.status}")
+                }
+            } catch (e: Exception) {
+                _errorMessage.postValue("Error fetching models: ${e.message}")
+            }
+        }
+    }
+
+    fun modelExists(apiIdentifier: String): Boolean {
+        val customModels = sharedPreferencesHelper.getCustomModels()
+        val builtInModels = getBuiltInModels()
+        return (customModels + builtInModels).any { it.apiIdentifier.equals(apiIdentifier, ignoreCase = true) }
+    }
+
+    fun addCustomModel(model: LlmModel) {
+        val customModels = sharedPreferencesHelper.getCustomModels().toMutableList()
+        if (!customModels.any { it.apiIdentifier.equals(model.apiIdentifier, ignoreCase = true) }) {
+            customModels.add(model)
+            sharedPreferencesHelper.saveCustomModels(customModels)
+            _customModelsUpdated.postValue(Event(Unit))
+        }
+    }
+
+    fun saveOpenRouterModels(models: List<LlmModel>) {
+        sharedPreferencesHelper.saveOpenRouterModels(models)
+    }
+
+    fun getOpenRouterModels() {
+        allOpenRouterModels = sharedPreferencesHelper.getOpenRouterModels()
+        if (allOpenRouterModels.isEmpty()) {
+            fetchOpenRouterModels()
+        } else {
+            applySort()
+        }
     }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- This is the infill color when the button is CHECKED -->
+    <item android:color="@color/chestnut" android:state_checked="true" android:alpha="0.4"/>
+
+    <!-- This is the color when the button is UNCHECKED (transparent for outlined style) -->
+    <item android:color="@android:color/transparent" />
+
+</selector>

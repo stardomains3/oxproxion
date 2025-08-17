@@ -31,14 +31,49 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_CUSTOM_SYSTEM_MESSAGES = "custom_system_messages"
         private const val KEY_DEFAULT_SYSTEM_MESSAGES_SEEDED = "default_system_messages_seeded"
         private const val KEY_STREAMING_ENABLED = "streaming_enabled"
+        private const val KEY_OPEN_ROUTER_MODELS = "open_router_models"
         //private const val KEY_SOUND_ENABLED = "sound_enabled"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEY_NOTI_ENABLED = "noti_enabled"
+        private const val KEY_INFO_BAR_DISMISSED = "info_bar_dismissed"
+        private const val KEY_SORT_ORDER = "sort_order"
     }
 
     init {
         apiKeysPrefs = context.getSharedPreferences(API_KEYS_PREFS_STORE, Context.MODE_PRIVATE)
         mainPrefs = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
+    }
+
+    fun saveSortOrder(sortOrder: SortOrder) {
+        mainPrefs.edit().putString(KEY_SORT_ORDER, sortOrder.name).apply()
+    }
+
+    fun getSortOrder(): SortOrder {
+        val sortOrderName = mainPrefs.getString(KEY_SORT_ORDER, SortOrder.BY_DATE.name)
+        return SortOrder.valueOf(sortOrderName ?: SortOrder.BY_DATE.name)
+    }
+
+    fun setOpenRouterInfoDismissed(dismissed: Boolean) {
+        mainPrefs.edit().putBoolean(KEY_INFO_BAR_DISMISSED, dismissed).apply()
+    }
+
+    fun hasDismissedOpenRouterInfo(): Boolean {
+        return mainPrefs.getBoolean(KEY_INFO_BAR_DISMISSED, false)
+    }
+
+    fun saveOpenRouterModels(models: List<LlmModel>) {
+        val json = gson.toJson(models)
+        mainPrefs.edit().putString(KEY_OPEN_ROUTER_MODELS, json).apply()
+    }
+
+    fun getOpenRouterModels(): List<LlmModel> {
+        val json = mainPrefs.getString(KEY_OPEN_ROUTER_MODELS, null)
+        return if (json != null) {
+            val type = object : TypeToken<List<LlmModel>>() {}.type
+            gson.fromJson(json, type)
+        } else {
+            emptyList()
+        }
     }
 
     /*fun saveSoundPreference(isEnabled: Boolean) {
@@ -158,7 +193,7 @@ class SharedPreferencesHelper(context: Context) {
         return mainPrefs.getString(KEY_MODEL_NEW_CHAT, "meta-llama/llama-4-maverick").toString()
     }
     fun getNotiPreference(): Boolean {
-        return mainPrefs.getBoolean(KEY_NOTI_ENABLED, true)
+        return mainPrefs.getBoolean(KEY_NOTI_ENABLED, false)
     }
     fun saveNotiPreference(isEnabled: Boolean) {
         with(mainPrefs.edit()) {

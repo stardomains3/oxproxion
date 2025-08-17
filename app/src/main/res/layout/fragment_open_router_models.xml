@@ -1,0 +1,102 @@
+<!-- res/layout/fragment_open_router_models.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:background="#000000">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="OpenRouter Models"
+        app:titleTextColor="@android:color/white"
+        android:background="#1C1C1E"
+        app:menu="@menu/open_router_models_menu"
+        app:navigationIcon="@drawable/ic_exit" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/infoCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="8dp"
+        app:cardBackgroundColor="#2C2C2E"
+        app:cardCornerRadius="8dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/infoText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Tap to add model. Long-press to open model webpage in your browser."
+                android:textColor="@android:color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/closeInfoButton"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginEnd="8dp"/>
+
+            <ImageView
+                android:id="@+id/closeInfoButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_close"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:contentDescription="Close"
+                app:tint="@android:color/white" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal">
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/sortBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleSelection="true"
+            >
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sortAlphabeticalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Alphabetical"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sortDateButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Newest"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewOpenRouterModels"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:cacheColorHint="@android:color/transparent"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        android:scrollbars="vertical"/>
+
+</LinearLayout>
