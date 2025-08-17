@@ -16,7 +16,8 @@
         app:title="System Message"
         app:titleTextColor="@android:color/white"
         android:background="#1C1C1E"
-        app:navigationIcon="@drawable/ic_exit" />
+        app:navigationIcon="@drawable/ic_exit"
+        app:menu="@menu/system_message_library_menu" />
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"

@@ -1,22 +1,85 @@
 package io.github.stardomains3.oxproxion
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.launch
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SystemMessageLibraryFragment : Fragment() {
 
     private lateinit var systemMessageAdapter: SystemMessageAdapter
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private val systemMessages = mutableListOf<SystemMessage>()
+
+    private val exportSystemMessagesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val customMessages = sharedPreferencesHelper.getCustomSystemMessages()
+                        val json = Json.encodeToString(customMessages)
+                        requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            outputStream.write(json.toByteArray())
+                        }
+                        Toast.makeText(requireContext(), "System messages exported successfully", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), "Error exporting system messages", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private val importSystemMessagesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val jsonString = requireContext().contentResolver.openInputStream(uri)?.use {
+                            it.bufferedReader().readText()
+                        }
+                        if (jsonString != null) {
+                            val importedMessages = Json.decodeFromString<List<SystemMessage>>(jsonString)
+                            val currentMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
+                            importedMessages.forEach { importedMessage ->
+                                if (!currentMessages.any { it.title == importedMessage.title }) {
+                                    currentMessages.add(importedMessage)
+                                }
+                            }
+                            sharedPreferencesHelper.saveCustomSystemMessages(currentMessages)
+                            loadSystemMessages()
+                            Toast.makeText(requireContext(), "System messages imported successfully", Toast.LENGTH_SHORT).show()
+                        } else {
+                            throw Exception("Failed to read file content.")
+                        }
+                    } catch (e: SerializationException) {
+                        Log.e("Import", "Import failed due to JSON format", e)
+                        Toast.makeText(requireContext(), "Import failed. Check file format.", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Log.e("Import", "Import failed", e)
+                        Toast.makeText(requireContext(), "Import failed.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,6 +97,20 @@ class SystemMessageLibraryFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
+        toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_import -> {
+                    importSystemMessages()
+                    true
+                }
+                R.id.action_export -> {
+                    exportSystemMessages()
+                    true
+                }
+                else -> false
+            }
+        }
+
         setupRecyclerView(view)
         loadSystemMessages()
 
@@ -43,6 +120,27 @@ class SystemMessageLibraryFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
+    }
+
+    private fun exportSystemMessages() {
+        if (sharedPreferencesHelper.getCustomSystemMessages().isEmpty()) {
+            Toast.makeText(requireContext(), "No system messages to export.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(Intent.EXTRA_TITLE, "system_messages.json")
+        }
+        exportSystemMessagesLauncher.launch(intent)
+    }
+
+    private fun importSystemMessages() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        importSystemMessagesLauncher.launch(intent)
     }
 
     private fun setupRecyclerView(view: View) {
