@@ -1,0 +1,1 @@
+Layout updates. Bug fixes. Hide/show keyboard and menu now up to user.

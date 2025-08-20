@@ -3,6 +3,10 @@
     <style name="Base.Theme.Oxproxion" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">#C2C2C2</item>
+        <item name="colorOnPrimary">#C2C2C2</item>
+
+        <item name="android:textColorHighlight">@color/your_orange_color</item>
     </style>
     <style name="RoundedCornersDialog" parent="Theme.MaterialComponents.DayNight.Dialog">
         <!-- Set the custom drawable as the window background -->

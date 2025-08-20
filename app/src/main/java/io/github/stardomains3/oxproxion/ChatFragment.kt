@@ -82,13 +82,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var modelNameTextView: TextView
     private lateinit var chatRecyclerView: RecyclerView
     private lateinit var chatEditText: EditText
-    private lateinit var sendChatButton: Button
-    private lateinit var resetChatButton: Button
-    private lateinit var saveChatButton: Button
-    private lateinit var openSavedChatsButton: Button
-    private lateinit var copyChatButton: Button
-    private lateinit var menuButton: Button
-    private lateinit var saveapiButton: Button
+    private lateinit var sendChatButton: MaterialButton
+    private lateinit var resetChatButton: MaterialButton
+    private lateinit var saveChatButton: MaterialButton
+    private lateinit var openSavedChatsButton: MaterialButton
+    private lateinit var copyChatButton: MaterialButton
+    private lateinit var menuButton: MaterialButton
+    private lateinit var saveapiButton: MaterialButton
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
@@ -118,9 +118,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
-        if (sendChatButton is MaterialButton) {
-            originalSendIcon = (sendChatButton as MaterialButton).icon
-        }
+        originalSendIcon = sendChatButton.icon
         resetChatButton = view.findViewById(R.id.resetChatButton)
         saveChatButton = view.findViewById(R.id.saveChatButton)
         openSavedChatsButton = view.findViewById(R.id.openSavedChatsButton)
@@ -219,11 +217,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 // BUG FIX END
             }
         }
-        modelNameTextView.isVisible = true
-        /*  Handler(Looper.getMainLooper()).postDelayed(1600) {
-              if(!buttonsContainer.isVisible){
-                  modelNameTextView.isVisible = false}
-          }*/
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.sharedText.filterNotNull().collect { text ->
@@ -237,8 +231,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
             val hasMessages = messages.isNotEmpty()
-            saveChatButton.isVisible = hasMessages
-            resetChatButton.isVisible = hasMessages
+            if(hasMessages){
+                resetChatButton.icon.alpha = 255
+                saveChatButton.icon.alpha = 255
+            }
+            else
+            {
+                resetChatButton.icon.alpha = 102
+                saveChatButton.icon.alpha = 102
+            }
+
+            saveChatButton.isEnabled = hasMessages
+            resetChatButton.isEnabled = hasMessages
             pdfChatButton.isVisible = hasMessages
             copyChatButton.isVisible = hasMessages
         }
@@ -330,10 +334,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
         }
-        menuButton.alpha = 0.6f
+
 
         // Ensure initial menu state is consistent (visible with overlay)
-        showMenu()
+
         LocalBroadcastManager.getInstance(requireContext())
             .registerReceiver(notiStateReceiver,
                 IntentFilter("io.github.stardomains3.oxproxion.NOTI_STATE_CHANGED")
@@ -679,14 +683,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
     private fun showMenu() {
         buttonsContainer.visibility = View.VISIBLE
-        modelNameTextView.isVisible = true
         headerContainer.isVisible = true
         overlayView?.visibility = View.VISIBLE
     }
 
     private fun hideMenu() {
         buttonsContainer.visibility = View.GONE
-        modelNameTextView.isVisible = false
         headerContainer.isVisible = false
         overlayView?.visibility = View.GONE
     }
@@ -804,7 +806,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         updateSystemMessageButtonState()
         chatEditText.requestFocus()
 
-        if (viewModel.isChatLoading.value == false) {
+        /*if (viewModel.isChatLoading.value == false) {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
                 chatEditText.post {
                     chatEditText.showKeyboard()
@@ -814,7 +816,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     chatEditText.hideKeyboard()
                 }
             }
-        }
+        }*/
     }
 
 

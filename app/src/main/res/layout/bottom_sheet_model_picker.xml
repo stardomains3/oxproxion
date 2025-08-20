@@ -15,7 +15,7 @@
         app:titleTextColor="@android:color/white"
         android:background="#1C1C1E"
         app:menu="@menu/bottom_sheet_model_picker_menu"
-        app:navigationIcon="@drawable/ic_exit" />
+        app:navigationIcon="@drawable/is_backarrow" />
 
     <!-- Changed from LinearLayout to CoordinatorLayout -->
     <androidx.coordinatorlayout.widget.CoordinatorLayout

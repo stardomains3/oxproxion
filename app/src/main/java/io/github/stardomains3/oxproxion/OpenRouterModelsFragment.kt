@@ -52,6 +52,7 @@ class OpenRouterModelsFragment : Fragment() {
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_refresh_models -> {
+                    Toast.makeText(requireContext(), "Refreshing models…", Toast.LENGTH_SHORT).show()
                     viewModel.fetchOpenRouterModels()
                     true
                 }

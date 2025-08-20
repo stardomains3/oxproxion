@@ -25,11 +25,6 @@ data class ChatRequest(
     val temperature: Double? = null
 )
 
-/*@Serializable
-data class Message(
-    val content: String,
-    val role: String
-)*/
 @Serializable
 data class Message(
     val role: String,

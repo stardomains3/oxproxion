@@ -13,7 +13,7 @@
         android:layout_height="?attr/actionBarSize"
         app:titleTextColor="@android:color/white"
         android:background="#1C1C1E"
-        app:navigationIcon="@drawable/ic_exit"
+        app:navigationIcon="@drawable/is_backarrow"
         app:menu="@menu/add_edit_system_message_menu" />
 
     <LinearLayout
