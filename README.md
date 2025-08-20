@@ -23,24 +23,29 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 Here are some screenshots of the app in action:
 
 ### Main Screen
-![Main App Screen](screenshots/mainscreen400.webp)
+![Main App Screen](screenshots/1.png)
 
 *A view of the app's primary interface.*
 
 ### Options
-![Options Screen](screenshots/options400.webp)
+![Options Screen](screenshots/2.png)
 
 *Customize your experience in the options menu.*
 
 ### System Messages
-![System Messages Screen](screenshots/sysmess400.webp)
+![System Messages Screen](screenshots/3.png)
 
 *Custom System Messages.*
 
 ### SOTA Models Galore! 
-![Models Screen](screenshots/models400.webp)
+![Models Screen](screenshots/4.png)
 
 *Add Models to your delight!*
+
+### Markdown 
+![Models Screen](screenshots/5.png)
+
+*Markdown delight!*
 
 ## ️ Technologies Used
 
