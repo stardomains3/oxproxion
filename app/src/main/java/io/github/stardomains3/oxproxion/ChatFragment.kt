@@ -74,6 +74,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
     }
+    private lateinit var helpButton: MaterialButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
@@ -131,7 +132,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         previewImageView = view.findViewById(R.id.previewImageView)
         removeAttachmentButton = view.findViewById(R.id.removeAttachmentButton)
         headerContainer = view.findViewById(R.id.headerContainer)
-
+        helpButton = view.findViewById(R.id.helpButton)
         arguments?.getString("shared_text")?.let { sharedText ->
             setSharedText(sharedText)
             arguments?.remove("shared_text") // To prevent re-processing
@@ -611,7 +612,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 showMenu()
             }
         }
-
+        helpButton.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, HelpFragment())
+                .addToBackStack(null)
+                .commit()
+        }
         saveapiButton.setOnClickListener {
             val dialog = SaveApiDialogFragment()
             dialog.show(childFragmentManager, "SaveApiDialogFragment")
