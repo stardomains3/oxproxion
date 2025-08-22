@@ -110,7 +110,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Image Button**: Appears for vision models. Click to attach a single image.
             
             ### Other Buttons
-            *   **Clear Chat**(button on bottom left): Starts a new chat with the current model.
+            *   **Clear Chat**(button on bottom left): Starts a new chat with the current model. Long-press to start a new chat without a warning alert.
             *   **System Message Button**: Opens your library of system messages.
             *   **Saved Chats**: Opens a list of your saved conversations.
             *   **Save Chat**: Saves the chat. You can name it yourself or let the AI generate a title.
@@ -157,7 +157,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Defaults**: Comes with "Default", "Spelling and Grammar corrector", and "Summarizer".
             *   **Add New**: Use the floating action button to create your own.
             *   **Manage**: **Long-press** a message to **Edit** or **Delete** it.
-            *   **Import/Export**: Use the menu bar icons to manage your System Messages.
+            *   **Import/Export**: Use the menu bar icons to manage your System Messages. When importing, if there is an System Message in the import file with the same name as an existing one, it will not be imported.
 
             ---
 

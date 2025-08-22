@@ -12,7 +12,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcherrobot"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Oxproxion">
+        android:theme="@style/Base.Theme.Oxproxion">
         <service android:name=".ForegroundService"
             android:exported="false"
             android:enabled="true"

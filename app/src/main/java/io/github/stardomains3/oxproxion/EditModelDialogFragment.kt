@@ -10,6 +10,7 @@ import android.widget.EditText
 import android.widget.Switch
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.DialogFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.switchmaterial.SwitchMaterial
 
@@ -21,7 +22,7 @@ class EditModelDialogFragment : DialogFragment() {
     private var existingModel: LlmModel? = null
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val builder = AlertDialog.Builder(requireContext())
+        val builder = MaterialAlertDialogBuilder(requireContext())
         val inflater = LayoutInflater.from(requireContext())
         val view = inflater.inflate(R.layout.dialog_add_model, null)
 

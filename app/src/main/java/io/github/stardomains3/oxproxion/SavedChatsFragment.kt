@@ -17,6 +17,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class SavedChatsFragment : Fragment() {
@@ -147,7 +148,7 @@ class SavedChatsFragment : Fragment() {
 
     private fun showOptionsDialog(session: ChatSession) {
         val options = arrayOf("Rename", "Delete")
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setItems(options) { dialog, which ->
                 when (which) {
                     0 -> showRenameDialog(session)
@@ -161,7 +162,7 @@ class SavedChatsFragment : Fragment() {
         val editText = EditText(requireContext()).apply {
             setText(session.title)
         }
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Rename Chat")
             .setView(editText)
             .setPositiveButton("Rename") { _, _ ->
@@ -175,7 +176,7 @@ class SavedChatsFragment : Fragment() {
     }
 
     private fun showDeleteConfirmationDialog(session: ChatSession) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete Chat")
             .setMessage("Are you sure you want to delete this chat session?")
             .setPositiveButton("Delete") { _, _ ->

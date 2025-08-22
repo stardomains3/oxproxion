@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class BotModelPickerFragment : Fragment() {
@@ -120,7 +121,7 @@ class BotModelPickerFragment : Fragment() {
     }
 
     private fun showDeleteConfirmationDialog(model: LlmModel) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete Model")
             .setMessage("Are you sure you want to delete '${model.displayName}'?")
             .setPositiveButton("Delete") { _, _ ->

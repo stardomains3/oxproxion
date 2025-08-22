@@ -17,6 +17,7 @@ class AddEditSystemMessageFragment : Fragment() {
     companion object {
         const val ARG_TITLE = "arg_title"
         const val ARG_PROMPT = "arg_prompt"
+        const val ARG_IS_DEFAULT = "arg_is_default"
     }
 
     override fun onCreateView(
@@ -49,6 +50,8 @@ class AddEditSystemMessageFragment : Fragment() {
             toolbar.title = "Add System Message"
         }
 
+        val isDefaultMessage = arguments?.getBoolean(ARG_IS_DEFAULT, false) ?: false
+
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_save_system_message -> {
@@ -56,20 +59,34 @@ class AddEditSystemMessageFragment : Fragment() {
                     val newPrompt = promptEditText.text.toString()
 
                     if (newTitle.isNotBlank() && newPrompt.isNotBlank()) {
-                        val newSystemMessage = SystemMessage(newTitle, newPrompt)
-                        val customSystemMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
+                        val newSystemMessage = SystemMessage(newTitle, newPrompt, isDefault = isDefaultMessage)
 
-                        if (originalTitle != null) {
-                            // Editing existing message
-                            val index = customSystemMessages.indexOfFirst { it.title == originalTitle }
-                            if (index != -1) {
-                                customSystemMessages[index] = newSystemMessage
+                        if (isDefaultMessage) {
+                            // Save as the new default system message
+                            sharedPreferencesHelper.saveDefaultSystemMessage(newSystemMessage)
+
+                            // Update selected message if it was the default
+                            val currentSelected = sharedPreferencesHelper.getSelectedSystemMessage()
+                            if (currentSelected.isDefault) {
+                                sharedPreferencesHelper.saveSelectedSystemMessage(newSystemMessage)
                             }
                         } else {
-                            // Adding new message
-                            customSystemMessages.add(newSystemMessage)
+                            // Handle custom messages as before
+                            val customSystemMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
+                            if (originalTitle != null) {
+                                val index = customSystemMessages.indexOfFirst { it.title == originalTitle }
+                                if (index != -1) {
+                                    val currentSelected = sharedPreferencesHelper.getSelectedSystemMessage()
+                                    if (currentSelected.title == originalTitle) {
+                                        sharedPreferencesHelper.saveSelectedSystemMessage(newSystemMessage)
+                                    }
+                                    customSystemMessages[index] = newSystemMessage
+                                }
+                            } else {
+                                customSystemMessages.add(newSystemMessage)
+                            }
+                            sharedPreferencesHelper.saveCustomSystemMessages(customSystemMessages)
                         }
-                        sharedPreferencesHelper.saveCustomSystemMessages(customSystemMessages)
                         parentFragmentManager.popBackStack()
                     }
                     true
@@ -77,5 +94,6 @@ class AddEditSystemMessageFragment : Fragment() {
                 else -> false
             }
         }
+
     }
 }

@@ -508,7 +508,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 .addToBackStack(null)
                 .commit()
         }
+        resetChatButton.setOnLongClickListener {
+            if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","Open Chat is Ready.")
+            }
 
+
+            viewModel.startNewChat()
+            true
+        }
         resetChatButton.setOnClickListener {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
                 return@setOnClickListener

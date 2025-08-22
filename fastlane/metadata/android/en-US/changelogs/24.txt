@@ -1,0 +1,4 @@
+- Made the default System Message editable.
+- Made Alert dialogs easier to see/read
+- Bug fixes
+- Made long-press on reset chat button to clear chat skipping Alert dialog

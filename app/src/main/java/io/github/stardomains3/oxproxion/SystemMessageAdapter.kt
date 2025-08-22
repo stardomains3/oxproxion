@@ -45,11 +45,9 @@ class SystemMessageAdapter(
         }
 
         holder.itemView.setOnLongClickListener {
-            if (systemMessage.isDefault) {
-                Toast.makeText(context, "Defaults can't be edited", Toast.LENGTH_SHORT).show()
-            } else {
-                onMenuClick(holder.itemView, systemMessage)
-            }
+
+            onMenuClick(holder.itemView, systemMessage)
+
             true
         }
     }

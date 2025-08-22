@@ -37,6 +37,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_NOTI_ENABLED = "noti_enabled"
         private const val KEY_INFO_BAR_DISMISSED = "info_bar_dismissed"
         private const val KEY_SORT_ORDER = "sort_order"
+        private const val KEY_DEFAULT_SYSTEM_MESSAGE = "default_system_message"
     }
 
     init {
@@ -257,7 +258,8 @@ class SharedPreferencesHelper(context: Context) {
         return if (json != null) {
             gson.fromJson(json, SystemMessage::class.java)
         } else {
-            SystemMessage("Default", "You are a helpful assistant.", isDefault = true)
+            // Return the saved default message instead of creating a new instance
+            getDefaultSystemMessage()
         }
     }
 
@@ -287,6 +289,21 @@ class SharedPreferencesHelper(context: Context) {
             saveCustomSystemMessages(customSystemMessages)
             mainPrefs.edit().putBoolean(KEY_DEFAULT_SYSTEM_MESSAGES_SEEDED, true).apply()
         }
+    }
+    fun getDefaultSystemMessage(): SystemMessage {
+        val json = mainPrefs.getString(KEY_DEFAULT_SYSTEM_MESSAGE, null)
+        return if (json != null) {
+            gson.fromJson(json, SystemMessage::class.java)
+        } else {
+            // Fallback to the original default
+            SystemMessage("Default", "You are a helpful assistant.", isDefault = true)
+        }
+    }
+
+    // Add this method to save the default system message
+    fun saveDefaultSystemMessage(systemMessage: SystemMessage) {
+        val json = gson.toJson(systemMessage)
+        mainPrefs.edit().putString(KEY_DEFAULT_SYSTEM_MESSAGE, json).apply()
     }
 }
 

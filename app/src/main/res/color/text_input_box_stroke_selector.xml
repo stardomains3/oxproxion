@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Focused state -->
+    <item android:state_focused="true" android:color="@color/your_orange_color"/>
+    <!-- Error state (picks up theme's colorError by default if not specified) -->
+    <item android:state_activated="true" android:color="?attr/colorError"/>
+    <!-- Disabled state (picks up theme's colorOnSurfaceVariant by default if not specified) -->
+    <item android:state_enabled="false" android:color="#2d2c31"/>
+    <!-- Default (unfocused, enabled) outline color -->
+    <item android:color="#2d2c31"/>
+</selector>

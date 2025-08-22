@@ -16,11 +16,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.collections.addAll
 
 class SystemMessageLibraryFragment : Fragment() {
 
@@ -34,13 +36,22 @@ class SystemMessageLibraryFragment : Fragment() {
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         val customMessages = sharedPreferencesHelper.getCustomSystemMessages()
-                        val json = Json.encodeToString(customMessages)
+                        val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
+
+                        // Create a new list with default message first, then custom messages
+                        val allMessages = mutableListOf<SystemMessage>().apply {
+                            // Add default message without the isDefault property
+                            add(SystemMessage(defaultMessage.title, defaultMessage.prompt))
+                            addAll(customMessages)
+                        }
+
+                        val json = Json.encodeToString(allMessages)
                         requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
                             outputStream.write(json.toByteArray())
                         }
-                        Toast.makeText(requireContext(), "System messages exported successfully", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "System Messages exported successfully", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
-                        Toast.makeText(requireContext(), "Error exporting system messages", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Error exporting System Messages", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -165,6 +176,12 @@ class SystemMessageLibraryFragment : Fragment() {
     private fun showPopupMenu(view: View, systemMessage: SystemMessage) {
         val popup = PopupMenu(context, view)
         popup.menuInflater.inflate(R.menu.model_item_menu, popup.menu)
+
+        // Enable edit option for default messages, disable delete
+        if (systemMessage.isDefault) {
+            popup.menu.findItem(R.id.delete_model).isVisible = false
+        }
+
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.edit_model -> {
@@ -172,7 +189,11 @@ class SystemMessageLibraryFragment : Fragment() {
                     true
                 }
                 R.id.delete_model -> {
-                    showDeleteConfirmationDialog(systemMessage)
+                    if (systemMessage.isDefault) {
+                        Toast.makeText(context, "Default system message cannot be deleted", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showDeleteConfirmationDialog(systemMessage)
+                    }
                     true
                 }
                 else -> false
@@ -186,6 +207,7 @@ class SystemMessageLibraryFragment : Fragment() {
             arguments = Bundle().apply {
                 putString(AddEditSystemMessageFragment.ARG_TITLE, systemMessage.title)
                 putString(AddEditSystemMessageFragment.ARG_PROMPT, systemMessage.prompt)
+                putBoolean(AddEditSystemMessageFragment.ARG_IS_DEFAULT, systemMessage.isDefault)
             }
         }
         parentFragmentManager.beginTransaction()
@@ -194,15 +216,23 @@ class SystemMessageLibraryFragment : Fragment() {
             .commit()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::systemMessageAdapter.isInitialized) {
+            systemMessageAdapter.selectedMessage = sharedPreferencesHelper.getSelectedSystemMessage()
+            loadSystemMessages()
+        }
+    }
     private fun loadSystemMessages() {
         systemMessages.clear()
-        systemMessages.add(SystemMessage("Default", "You are a helpful assistant.", isDefault = true))
+        // Use the stored default message instead of hardcoded one
+        systemMessages.add(sharedPreferencesHelper.getDefaultSystemMessage())
         systemMessages.addAll(sharedPreferencesHelper.getCustomSystemMessages())
         systemMessageAdapter.notifyDataSetChanged()
     }
 
     private fun showDeleteConfirmationDialog(systemMessage: SystemMessage) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete System Message")
             .setMessage("Are you sure you want to delete this system message?")
             .setPositiveButton("Delete") { _, _ ->
@@ -217,12 +247,14 @@ class SystemMessageLibraryFragment : Fragment() {
         if (customMessages.remove(systemMessage)) {
             sharedPreferencesHelper.saveCustomSystemMessages(customMessages)
             if (sharedPreferencesHelper.getSelectedSystemMessage() == systemMessage) {
-                val defaultMessage = SystemMessage("Default", "You are a helpful assistant.", isDefault = true)
+                // Use the saved default message instead of creating a new instance
+                val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
                 sharedPreferencesHelper.saveSelectedSystemMessage(defaultMessage)
                 systemMessageAdapter.selectedMessage = defaultMessage
             }
             loadSystemMessages()
         }
     }
+
 }
 

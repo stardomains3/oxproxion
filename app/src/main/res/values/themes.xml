@@ -2,11 +2,49 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.Oxproxion" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
         <item name="colorPrimary">#C2C2C2</item>
         <item name="colorOnPrimary">#C2C2C2</item>
-
         <item name="android:textColorHighlight">@color/your_orange_color</item>
+        <item name="materialAlertDialogTheme">@style/CustomMaterialAlertDialogTheme</item>
+        <item name="colorControlNormal">#C2C2C2</item>
+        <item name="android:colorControlNormal">#C2C2C2</item>
+        <item name="colorControlActivated">@color/your_orange_color</item>
+    </style>
+
+    <style name="CustomMaterialAlertDialogTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="android:backgroundDimAmount">0.8</item>
+        <item name="shapeAppearanceMediumComponent">@style/ff</item>
+        <item name="android:textColorPrimary">#C2C2C2</item>
+        <item name="colorPrimary">#C2C2C2</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/CustomDialogTitleText</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/CustomDialogBodyText</item>
+        <item name="android:colorAccent">@color/your_orange_color</item>
+    </style>
+
+    <style name="ff" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">22dp</item>
+    </style>
+
+    <style name="CustomDialogTheme" parent="ThemeOverlay.Material3.Dialog.Alert">
+        <item name="colorSurface">#471d0d</item>
+        <item name="android:background">#471d0d</item>
+        <item name="android:backgroundDimAmount">0.8</item>
+        <item name="android:textColorPrimary">#C2C2C2</item>
+        <item name="colorPrimary">#C2C2C2</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/CustomDialogTitleText</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/CustomDialogBodyText</item>
+    </style>
+
+    <style name="CustomDialogBodyText" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">16sp</item> <!-- Standard body size example -->
+        <item name="android:textColor">#C2C2C2</item> <!-- Light gray for message readability -->
+    </style>
+
+    <style name="CustomDialogTitleText" parent="MaterialAlertDialog.Material3.Title.Text">
+        <item name="android:textSize">24sp</item> <!-- Larger title size example -->
+        <item name="android:textColor">#C2C2C2</item> <!-- Reinforce color if needed -->
+        <item name="android:textStyle">bold</item>
     </style>
     <style name="RoundedCornersDialog" parent="Theme.MaterialComponents.DayNight.Dialog">
         <!-- Set the custom drawable as the window background -->
