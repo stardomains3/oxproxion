@@ -1,8 +1,19 @@
+<!-- res/menu/open_router_models_menu.xml -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Existing refresh item -->
     <item
         android:id="@+id/action_refresh_models"
         android:icon="@drawable/ic_refresh"
         android:title="Refresh"
         app:showAsAction="ifRoom" />
+
+    <!-- New search item -->
+    <item
+        android:id="@+id/action_search"
+        android:title="Search"
+        android:icon="@drawable/ic_search"
+    app:showAsAction="always|collapseActionView"
+    app:actionViewClass="androidx.appcompat.widget.SearchView" />
 </menu>

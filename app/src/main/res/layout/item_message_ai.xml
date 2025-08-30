@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:paddingVertical="4dp">
 
-    <!-- Inner group for icon + message, pinned to left with max 80% width -->
+    <!-- Inner group for icon + message, pinned to left with max 95% width -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/aiGroup"
         android:layout_width="0dp"
@@ -16,7 +16,7 @@
         app:layout_constraintWidth_percent="0.95"
         app:layout_constraintHorizontal_bias="0.0">
 
-        <!-- Icon/button on top -->
+        <!-- Copy Button -->
         <ImageButton
             android:id="@+id/copyButton"
             android:layout_width="32dp"
@@ -29,6 +29,7 @@
             app:tint="#2C2C2C"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
         <ImageButton
             android:id="@+id/shareButton"
             android:layout_width="32dp"
@@ -44,27 +45,53 @@
             app:layout_constraintTop_toTopOf="@id/copyButton"
             app:layout_constraintBottom_toBottomOf="@id/copyButton" />
 
-
-        <TextView
-            android:id="@+id/messageTextView"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/messageContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="start|top"
             android:background="@drawable/bg_ai_message"
-            android:fontFamily="@font/geologica_light"
             android:padding="12dp"
-            android:textColorHighlight="#756151"
-            android:text="AI message here"
-            android:textColor="#F8F8F8"
-            android:linksClickable="true"
-            android:textColorLink="@android:color/holo_blue_dark"
-            android:textIsSelectable="true"
-            android:textSize="16sp"
-            app:layout_constrainedWidth="true"
-            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/copyButton" />
+            app:layout_constraintTop_toBottomOf="@id/copyButton"
+            app:layout_constraintHorizontal_bias="0.0">
+
+            <!-- NEW: ImageView for generated images -->
+            <ImageView
+                android:id="@+id/generatedImageView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:layout_marginTop="8dp"
+                android:adjustViewBounds="true"
+                android:maxHeight="300dp"
+                android:scaleType="centerInside"
+                android:visibility="gone"
+                app:layout_constrainedWidth="true"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/messageTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="start|top"
+                android:fontFamily="@font/geologica_light"
+                android:textColorHighlight="#756151"
+                android:text="AI message here"
+                android:textColor="#F8F8F8"
+                android:linksClickable="true"
+                android:textColorLink="@android:color/holo_blue_dark"
+                android:textIsSelectable="true"
+                android:textSize="16sp"
+                app:layout_constrainedWidth="true"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/generatedImageView" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

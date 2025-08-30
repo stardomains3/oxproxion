@@ -5,7 +5,7 @@
     <color name="ora">#e3860a</color>
     <color name="default_color">#000000</color>
     <color name="focused_color">#8B8B8B</color>
-    <color name="pressed_color">#8B8B8B</color>
+    <color name="pressed_color">#3e3e3e</color>
     <color name="spinner_item_color">#516c6f</color>
     <color name="back">#121212</color>
     <color name="trackColorChecked">#3E5254</color>
@@ -17,5 +17,8 @@
     <color name="your_default_text_color">#DE000000</color>
     <color name="fab_bg_60">#33171717</color>
     <color name="chestnut">#6D2E0F</color>
+    <color name="ch">#2C2C2C</color>
+    <color name="tx">#C2C2C2</color>
+    <color name="threetwo">#323232</color>
 
 </resources>

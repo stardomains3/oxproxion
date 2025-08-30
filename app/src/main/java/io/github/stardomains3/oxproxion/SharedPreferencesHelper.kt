@@ -8,17 +8,21 @@ import android.util.Base64
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.json.Json
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import androidx.core.content.edit
 
 class SharedPreferencesHelper(context: Context) {
 
-    private val apiKeysPrefs: SharedPreferences
-    private val mainPrefs: SharedPreferences
-    private val gson = Gson()
+    private val apiKeysPrefs: SharedPreferences =
+        context.getSharedPreferences(API_KEYS_PREFS_STORE, Context.MODE_PRIVATE)
+    private val mainPrefs: SharedPreferences = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
+    private val json = Json { ignoreUnknownKeys = true }
+    private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
         private const val API_KEYS_PREFS_STORE = "ApiKeysPrefsStore"
@@ -31,31 +35,99 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_CUSTOM_SYSTEM_MESSAGES = "custom_system_messages"
         private const val KEY_DEFAULT_SYSTEM_MESSAGES_SEEDED = "default_system_messages_seeded"
         private const val KEY_STREAMING_ENABLED = "streaming_enabled"
-        private const val KEY_OPEN_ROUTER_MODELS = "open_router_models"
-        //private const val KEY_SOUND_ENABLED = "sound_enabled"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        private const val KEY_OPEN_ROUTER_MODELS = "open_router_models"
         private const val KEY_NOTI_ENABLED = "noti_enabled"
         private const val KEY_INFO_BAR_DISMISSED = "info_bar_dismissed"
         private const val KEY_SORT_ORDER = "sort_order"
         private const val KEY_DEFAULT_SYSTEM_MESSAGE = "default_system_message"
+        private const val KEY_MIGRATION_COMPLETE = "has_migrated_to_kotlin_serialization"
     }
 
     init {
-        apiKeysPrefs = context.getSharedPreferences(API_KEYS_PREFS_STORE, Context.MODE_PRIVATE)
-        mainPrefs = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
+        migrateFromGson()
+    }
+
+    private fun migrateFromGson() {
+        if (!mainPrefs.getBoolean(KEY_MIGRATION_COMPLETE, false)) {
+            Log.d("Migration", "Starting migration from Gson to Kotlin Serialization")
+
+            runCatching { migrateCustomModels() }.onFailure {
+                Log.e("Migration", "Failed to migrate custom models", it)
+            }
+            runCatching { migrateSystemMessages() }.onFailure {
+                Log.e("Migration", "Failed to migrate system messages", it)
+            }
+            runCatching { migrateOpenRouterModels() }.onFailure {
+                Log.e("Migration", "Failed to migrate OpenRouter models", it)
+            }
+            runCatching { migrateSelectedSystemMessage() }.onFailure {
+                Log.e("Migration", "Failed to migrate selected system message", it)
+            }
+            runCatching { migrateDefaultSystemMessage() }.onFailure {
+                Log.e("Migration", "Failed to migrate default system message", it)
+            }
+
+            mainPrefs.edit { putBoolean(KEY_MIGRATION_COMPLETE, true) }
+            Log.d("Migration", "Migration to Kotlin Serialization complete")
+        }
+    }
+
+
+    private fun migrateCustomModels() {
+        val oldJson = mainPrefs.getString(KEY_CUSTOM_MODELS, null)
+        if (oldJson != null) {
+            val type = object : TypeToken<List<LlmModel>>() {}.type
+            val oldModels: List<LlmModel> = gson.fromJson(oldJson, type)
+            saveCustomModels(oldModels)
+        }
+    }
+
+    private fun migrateSystemMessages() {
+        val oldJson = mainPrefs.getString(KEY_CUSTOM_SYSTEM_MESSAGES, null)
+        if (oldJson != null) {
+            val type = object : TypeToken<List<SystemMessage>>() {}.type
+            val oldMessages: List<SystemMessage> = gson.fromJson(oldJson, type)
+            saveCustomSystemMessages(oldMessages)
+        }
+    }
+
+    private fun migrateOpenRouterModels() {
+        val oldJson = mainPrefs.getString(KEY_OPEN_ROUTER_MODELS, null)
+        if (oldJson != null) {
+            val type = object : TypeToken<List<LlmModel>>() {}.type
+            val oldModels: List<LlmModel> = gson.fromJson(oldJson, type)
+            saveOpenRouterModels(oldModels)
+        }
+    }
+
+    private fun migrateSelectedSystemMessage() {
+        val oldJson = mainPrefs.getString(KEY_SELECTED_SYSTEM_MESSAGE, null)
+        if (oldJson != null) {
+            val oldMessage: SystemMessage = gson.fromJson(oldJson, SystemMessage::class.java)
+            saveSelectedSystemMessage(oldMessage)
+        }
+    }
+
+    private fun migrateDefaultSystemMessage() {
+        val oldJson = mainPrefs.getString(KEY_DEFAULT_SYSTEM_MESSAGE, null)
+        if (oldJson != null) {
+            val oldMessage: SystemMessage = gson.fromJson(oldJson, SystemMessage::class.java)
+            saveDefaultSystemMessage(oldMessage)
+        }
     }
 
     fun saveSortOrder(sortOrder: SortOrder) {
-        mainPrefs.edit().putString(KEY_SORT_ORDER, sortOrder.name).apply()
+        mainPrefs.edit { putString(KEY_SORT_ORDER, sortOrder.name) }
     }
 
     fun getSortOrder(): SortOrder {
-        val sortOrderName = mainPrefs.getString(KEY_SORT_ORDER, SortOrder.BY_DATE.name)
-        return SortOrder.valueOf(sortOrderName ?: SortOrder.BY_DATE.name)
+        val sortOrderName = mainPrefs.getString(KEY_SORT_ORDER, SortOrder.ALPHABETICAL.name)
+        return SortOrder.valueOf(sortOrderName ?: SortOrder.ALPHABETICAL.name)
     }
 
     fun setOpenRouterInfoDismissed(dismissed: Boolean) {
-        mainPrefs.edit().putBoolean(KEY_INFO_BAR_DISMISSED, dismissed).apply()
+        mainPrefs.edit { putBoolean(KEY_INFO_BAR_DISMISSED, dismissed) }
     }
 
     fun hasDismissedOpenRouterInfo(): Boolean {
@@ -63,40 +135,37 @@ class SharedPreferencesHelper(context: Context) {
     }
 
     fun saveOpenRouterModels(models: List<LlmModel>) {
-        val json = gson.toJson(models)
-        mainPrefs.edit().putString(KEY_OPEN_ROUTER_MODELS, json).apply()
+        val jsonString = json.encodeToString(models)
+        mainPrefs.edit { putString(KEY_OPEN_ROUTER_MODELS, jsonString) }
     }
 
     fun getOpenRouterModels(): List<LlmModel> {
-        val json = mainPrefs.getString(KEY_OPEN_ROUTER_MODELS, null)
-        return if (json != null) {
-            val type = object : TypeToken<List<LlmModel>>() {}.type
-            gson.fromJson(json, type)
+        val jsonString = mainPrefs.getString(KEY_OPEN_ROUTER_MODELS, null)
+        return if (jsonString != null) {
+            json.decodeFromString(jsonString)
         } else {
             emptyList()
         }
     }
 
-    /*fun saveSoundPreference(isEnabled: Boolean) {
-        with(mainPrefs.edit()) {
-            putBoolean(KEY_SOUND_ENABLED, isEnabled)
-            apply()
-        }
-    }
-
-    fun getSoundPreference(): Boolean {
-        return mainPrefs.getBoolean(KEY_SOUND_ENABLED, false)
-    }*/
-
     fun saveStreamingPreference(isEnabled: Boolean) {
-        with(mainPrefs.edit()) {
+        mainPrefs.edit {
             putBoolean(KEY_STREAMING_ENABLED, isEnabled)
-            apply()
         }
     }
 
     fun getStreamingPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_STREAMING_ENABLED, false)
+    }
+
+    fun getNotiPreference(): Boolean {
+        return mainPrefs.getBoolean(KEY_NOTI_ENABLED, false)
+    }
+
+    fun saveNotiPreference(isEnabled: Boolean) {
+        mainPrefs.edit {
+            putBoolean(KEY_NOTI_ENABLED, isEnabled)
+        }
     }
 
     // --- API Key Management ---
@@ -113,10 +182,9 @@ class SharedPreferencesHelper(context: Context) {
             val ivString = Base64.encodeToString(iv, Base64.DEFAULT)
             val encryptedKeyString = Base64.encodeToString(encryptedApiKey, Base64.DEFAULT)
 
-            with(apiKeysPrefs.edit()) {
+            apiKeysPrefs.edit {
                 putString("${alias}_encrypted", encryptedKeyString)
                 putString("${alias}_iv", ivString)
-                apply()
             }
         } catch (e: Exception) {
             Log.e("API_KEY_STORAGE", "Error encrypting $alias", e)
@@ -184,79 +252,69 @@ class SharedPreferencesHelper(context: Context) {
     // --- Model Preferences ---
 
     fun savePreferenceModelnewchat(value: String) {
-        with(mainPrefs.edit()) {
+        mainPrefs.edit(commit = true) {
             putString(KEY_MODEL_NEW_CHAT, value)
-            commit()
         }
     }
 
     fun getPreferenceModelnew(): String {
         return mainPrefs.getString(KEY_MODEL_NEW_CHAT, "meta-llama/llama-4-maverick").toString()
     }
-    fun getNotiPreference(): Boolean {
-        return mainPrefs.getBoolean(KEY_NOTI_ENABLED, false)
-    }
-    fun saveNotiPreference(isEnabled: Boolean) {
-        with(mainPrefs.edit()) {
-            putBoolean(KEY_NOTI_ENABLED, isEnabled)
-            apply()
-        }
-    }
+
     fun getPreferenceModel(): String? {
         return mainPrefs.getString(KEY_MODEL_VALE, "mistralai/mistral-medium-3")
     }
 
     fun getCustomModels(): MutableList<LlmModel> {
-        val json = mainPrefs.getString(KEY_CUSTOM_MODELS, null)
-        return if (json != null) {
-            val type = object : TypeToken<MutableList<LlmModel>>() {}.type
-            gson.fromJson(json, type)
+        val jsonString = mainPrefs.getString(KEY_CUSTOM_MODELS, null)
+        return if (jsonString != null) {
+            json.decodeFromString<MutableList<LlmModel>>(jsonString)
         } else {
             mutableListOf()
         }
     }
 
     fun saveCustomModels(models: List<LlmModel>) {
-        val json = gson.toJson(models)
-        mainPrefs.edit().putString(KEY_CUSTOM_MODELS, json).apply()
+        val jsonString = json.encodeToString(models)
+        mainPrefs.edit { putString(KEY_CUSTOM_MODELS, jsonString) }
     }
 
     fun seedDefaultModelsIfNeeded() {
         if (!mainPrefs.getBoolean(KEY_DEFAULT_MODELS_SEEDED, false)) {
             val defaultModels = listOf(
-                LlmModel("ChatGPT 4o Latest", "openai/chatgpt-4o-latest", true),
-                LlmModel("Kimi K2", "moonshotai/kimi-k2", false),
-                LlmModel("Grok 3", "x-ai/grok-3", false),
-                LlmModel("Mistral Medium 3", "mistralai/mistral-medium-3", true),
-                LlmModel("Deepseek R1 0528", "deepseek/deepseek-r1-0528", false),
-                LlmModel("Deepseek V3 0324", "deepseek/deepseek-chat-v3-0324", false),
-                LlmModel("Qwen3 235B 2507", "qwen/qwen3-235b-a22b-2507", false),
-                LlmModel("Ernie 4.5 300B", "baidu/ernie-4.5-300b-a47b", false),
-                LlmModel("Gemini 2.5 Flash", "google/gemini-2.5-flash", true),
-                LlmModel("Gemini 2.5 Pro", "google/gemini-2.5-pro", true),
-                LlmModel("Grok 4", "x-ai/grok-4", true),
-                LlmModel("GPT 4.1", "openai/gpt-4.1", true),
-                LlmModel("Claude Sonnet 4", "anthropic/claude-sonnet-4", true),
-                LlmModel("Perplexity Sonar Pro", "perplexity/sonar-pro", false)
+                LlmModel("OpenAI: ChatGPT-4o", "openai/chatgpt-4o-latest", true),
+                LlmModel("MoonshotAI: Kimi K2", "moonshotai/kimi-k2", false),
+                LlmModel("xAI: Grok 3", "x-ai/grok-3", false),
+                LlmModel("Mistral: Mistral Medium 3", "mistralai/mistral-medium-3", true),
+                LlmModel("Deepseek: R1 0528", "deepseek/deepseek-r1-0528", false),
+                LlmModel("Deepseek: V3 0324", "deepseek/deepseek-chat-v3-0324", false),
+                LlmModel("Qwen: Qwen3 235B A22B Instruct 2507", "qwen/qwen3-235b-a22b-2507", false),
+                LlmModel("Baidu: ERNIE 4.5 300B A47B", "baidu/ernie-4.5-300b-a47b", false),
+                LlmModel("Google: Gemini 2.5 Flash", "google/gemini-2.5-flash", true),
+                LlmModel("Google: Gemini 2.5 Pro", "google/gemini-2.5-pro", true),
+                LlmModel("xAI: Grok 4", "x-ai/grok-4", true),
+                LlmModel("OpenAI: GPT-4.1", "openai/gpt-4.1", true),
+                LlmModel("Anthropic: Claude Sonnet 4", "anthropic/claude-sonnet-4", true),
+                LlmModel("Perplexity: Sonar Pro", "perplexity/sonar-pro", false)
             )
             val customModels = getCustomModels()
             customModels.addAll(defaultModels)
             saveCustomModels(customModels)
-            mainPrefs.edit().putBoolean(KEY_DEFAULT_MODELS_SEEDED, true).apply()
+            mainPrefs.edit { putBoolean(KEY_DEFAULT_MODELS_SEEDED, true) }
         }
     }
 
     // --- System Message Preferences ---
 
     fun saveSelectedSystemMessage(systemMessage: SystemMessage) {
-        val json = gson.toJson(systemMessage)
-        mainPrefs.edit().putString(KEY_SELECTED_SYSTEM_MESSAGE, json).apply()
+        val jsonString = json.encodeToString(systemMessage)
+        mainPrefs.edit { putString(KEY_SELECTED_SYSTEM_MESSAGE, jsonString) }
     }
 
     fun getSelectedSystemMessage(): SystemMessage {
-        val json = mainPrefs.getString(KEY_SELECTED_SYSTEM_MESSAGE, null)
-        return if (json != null) {
-            gson.fromJson(json, SystemMessage::class.java)
+        val jsonString = mainPrefs.getString(KEY_SELECTED_SYSTEM_MESSAGE, null)
+        return if (jsonString != null) {
+            json.decodeFromString(jsonString)
         } else {
             // Return the saved default message instead of creating a new instance
             getDefaultSystemMessage()
@@ -264,46 +322,47 @@ class SharedPreferencesHelper(context: Context) {
     }
 
     fun getCustomSystemMessages(): List<SystemMessage> {
-        val json = mainPrefs.getString(KEY_CUSTOM_SYSTEM_MESSAGES, null)
-        return if (json != null) {
-            val type = object : TypeToken<List<SystemMessage>>() {}.type
-            gson.fromJson(json, type)
+        val jsonString = mainPrefs.getString(KEY_CUSTOM_SYSTEM_MESSAGES, null)
+        return if (jsonString != null) {
+            json.decodeFromString(jsonString)
         } else {
             emptyList()
         }
     }
 
     fun saveCustomSystemMessages(systemMessages: List<SystemMessage>) {
-        val json = gson.toJson(systemMessages)
-        mainPrefs.edit().putString(KEY_CUSTOM_SYSTEM_MESSAGES, json).apply()
+        val jsonString = json.encodeToString(systemMessages)
+        mainPrefs.edit { putString(KEY_CUSTOM_SYSTEM_MESSAGES, jsonString) }
     }
 
     fun seedDefaultSystemMessagesIfNeeded() {
         if (!mainPrefs.getBoolean(KEY_DEFAULT_SYSTEM_MESSAGES_SEEDED, false)) {
             val defaultSystemMessages = listOf(
                 SystemMessage("Spelling Corrector", "Correct the spelling and grammar of the following text. Only provide the corrected text, without any additional commentary or explanation.", isDefault = false),
-                SystemMessage("Summarizer", "Summarize the following text. Provide a concise summary, without any additional commentary or explanation.", isDefault = false)
-                )
+                SystemMessage("Summarizer", "Summarize the following text. Provide a concise summary, without any additional commentary or explanation. Markdown rendering is supported in your response", isDefault = false)
+            )
             val customSystemMessages = getCustomSystemMessages().toMutableList()
             customSystemMessages.addAll(defaultSystemMessages)
             saveCustomSystemMessages(customSystemMessages)
-            mainPrefs.edit().putBoolean(KEY_DEFAULT_SYSTEM_MESSAGES_SEEDED, true).apply()
+            mainPrefs.edit { putBoolean(KEY_DEFAULT_SYSTEM_MESSAGES_SEEDED, true) }
         }
     }
+
     fun getDefaultSystemMessage(): SystemMessage {
-        val json = mainPrefs.getString(KEY_DEFAULT_SYSTEM_MESSAGE, null)
-        return if (json != null) {
-            gson.fromJson(json, SystemMessage::class.java)
+        val jsonString = mainPrefs.getString(KEY_DEFAULT_SYSTEM_MESSAGE, null)
+        return if (jsonString != null) {
+            json.decodeFromString(jsonString)
         } else {
             // Fallback to the original default
-            SystemMessage("Default", "You are a helpful assistant.", isDefault = true)
+            SystemMessage("Default", "You are a helpful assistant. Markdown rendering is supported in your response", isDefault = true)
         }
     }
 
     // Add this method to save the default system message
     fun saveDefaultSystemMessage(systemMessage: SystemMessage) {
-        val json = gson.toJson(systemMessage)
-        mainPrefs.edit().putString(KEY_DEFAULT_SYSTEM_MESSAGE, json).apply()
+        val jsonString = json.encodeToString(systemMessage)
+        mainPrefs.edit { putString(KEY_DEFAULT_SYSTEM_MESSAGE, jsonString) }
     }
+
 }
 

@@ -22,7 +22,7 @@
 
     <style name="ff" parent="ShapeAppearance.MaterialComponents.MediumComponent">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">22dp</item>
+        <item name="cornerSize">16dp</item>
     </style>
 
     <style name="CustomDialogTheme" parent="ThemeOverlay.Material3.Dialog.Alert">

@@ -106,20 +106,21 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ### Sending Prompts
             *   **Text Box**: Enter your prompt.
             *   **Send Button**: Send your prompt to the LLM. **Long-press** it to clear the text box.
-            *   **Stop Button**: During an api call, press the Stop Button to end the api call.
-            *   **Image Button**: Appears for vision models. Click to attach a single image.
+            *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
+            *   **Image Button**: Appears for vision models. Click to attach a single image up to 4MB in size.
             
             ### Other Buttons
             *   **Clear Chat**(button on bottom left): Starts a new chat with the current model. Long-press to start a new chat without a warning alert.
-            *   **System Message Button**: Opens your library of system messages.
+            *   **System Message Button**: Opens your library of system messages. If you currently are on a non-default System Message you can long-press and it will auto switch to your default.
             *   **Saved Chats**: Opens a list of your saved conversations.
-            *   **Save Chat**: Saves the chat. You can name it yourself or let the AI generate a title.
+            *   **Save Chat**: Saves the chat. You can name it yourself or let the AI (openai/gpt-oss-20b used) generate a title.
             
             ---
 
             ##  Menu
 
-            Press the **menu button** (the one on the lower left with nine dots) to show or hide the main menu. It also hides if you tap outside of it.
+            Tap the **menu button** (the one on the lower left with nine dots) to show or hide the main menu. It also hides if you tap outside of it.
+            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to openai/gpt-oss-20b model to fix it and it will automatically correct the prompt.
 
             ### Contextual Buttons (Enabled during a chat)
             *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.
@@ -140,7 +141,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **"Select Model" Screen**: Shows your list of available models. The default is **Maverick Llama**. Tap a model in the list to change the model for the current chat.
             *   **Vision**: If the model supports image upload the icon to the left of the name will show an image icon.
             *   **Add a Model**: Use the floating action button to add a custom model.
-            *   **Manage**: **Long-press** a model to **Edit** or **Delete** it.
+            *   **Manage**: Tap the edit button on a model to **Edit** or **Delete** it.
             *   **Discover Models**: Tap the **cloud icon** to go to the **"OpenRouter Models"** screen.
 
             ### "OpenRouter Models" Screen
@@ -151,25 +152,38 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### "Saved Chats" Screen
             *   **Import/Export**: Use the menu bar icons to manage your saved chats.
-            *   **Manage**: **Long-press** a chat to **Rename** or **Delete** it.
+            *   **Manage**: Tap the edit button on a chat to **Rename** or **Delete** it.
 
             ### "System Message" Screen
             *   **Defaults**: Comes with "Default", "Spelling and Grammar corrector", and "Summarizer".
             *   **Add New**: Use the floating action button to create your own.
-            *   **Manage**: **Long-press** a message to **Edit** or **Delete** it.
-            *   **Import/Export**: Use the menu bar icons to manage your System Messages. When importing, if there is an System Message in the import file with the same name as an existing one, it will not be imported.
+            *   **Manage**: Tap the edit button on a message to **Edit** or **Delete** it.
+            *   **Import/Export**: Use the menu bar icons to manage your System Messages.
 
+            ---
+            
+            ## Image Generation Models
+            
+             *   Images are downloaded to your Downloads folder.
+             *   Tap on the generated image in the chat to open it in your default image viewer.
+             *   The generated images are not stored when you save the chat nor used when you make a PDF.
+             *   The generated images are not passed back in the chat. If you want the model to edit one you need to attach it manually.
+            
             ---
 
             ## ℹ️ Other Info
 
             *   An internet connection is required.
+            *   Review OpenRouter's and its model providers' pricing, privacy, and logging policies on their websites.
             *   The app is licensed under the Apache License 2.0.
             *   This app is not affiliated with OpenRouter.ai.
+            *   Pasting in to the prompt box strips any unnecessary rich text formatting automatically
             *   Costs are incurred with using OpenRouter models. Familiarize yourself with model costs at [https://openrouter.ai/models/](https://openrouter.ai/models/)
             *   Markdown content is well-supported in AI response chat messages.
             *   If you want to save your saved chats and/or System Messages, be sure to export them before you uninstall the app, otherwise they will be gone for good.
             *   Imports never overwrite: System Messages skip duplicates by title, while Saved Chats add new entries even when titles match, leaving all existing items intact.
+            *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
+            *   OpenRouter allows Presets which allow you to manage your LLM configurations—models, prompts, and provider routing. You can use Presets in oxproxion by just manually adding them in your model list. [https://openrouter.ai/docs/features/presets/](https://openrouter.ai/docs/features/presets/)
             
             ## What You Can Do With oxproxion
 

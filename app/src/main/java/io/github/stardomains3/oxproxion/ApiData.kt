@@ -22,7 +22,8 @@ data class ChatRequest(
     val toolChoice: String? = null,
     @SerialName("search_parameters")
     val searchParameters: SearchParameters? = null,
-    val temperature: Double? = null
+    val temperature: Double? = null,
+    val modalities: List<String>? = null
 )
 
 @Serializable
@@ -97,9 +98,20 @@ data class MessageResponse(
     val role: String,
     @SerialName("tool_calls")
     val toolCalls: List<ToolCall>? = null,
-    val annotations: List<Annotation>? = null // NEW: Added for citations
+    val annotations: List<Annotation>? = null,
+    val images: List<ImageResponse>? = null
 )
 
+@Serializable
+data class ImageResponse(
+    val type: String,  // e.g., "image_url"
+    @SerialName("image_url")
+    val image_url: ImageUrlResponse
+)
+@Serializable
+data class ImageUrlResponse(
+    val url: String  // The base64 data URL, e.g., "data:image/png;base64,..."
+)
 @Serializable
 data class UsageResponse(
     val prompt_tokens: Int,
@@ -209,7 +221,8 @@ data class StreamedDelta(
     val content: String? = null,
     @SerialName("tool_calls")
     val toolCalls: List<ToolCallChunk>? = null,
-    val annotations: List<Annotation>? = null // NEW: Added for citations in streaming
+    val annotations: List<Annotation>? = null,
+    val images: List<io.github.stardomains3.oxproxion.ImageResponse>? = null
 )
 
 // NEW: Added from my code for citations
@@ -227,4 +240,23 @@ data class UrlCitation(
     val content: String? = null,
     val start_index: Int,
     val end_index: Int
+)
+@Serializable
+data class ModerationErrorMetadata(
+    val reasons: List<String>,
+    val flagged_input: String,
+    val provider_name: String,
+    val model_slug: String
+)
+
+@Serializable
+data class OpenRouterError(
+    val code: Int,
+    val message: String,
+    val metadata: JsonObject? = null
+)
+
+@Serializable
+data class OpenRouterErrorResponse(
+    val error: OpenRouterError
 )

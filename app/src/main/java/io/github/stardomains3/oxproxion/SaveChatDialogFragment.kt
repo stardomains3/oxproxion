@@ -1,23 +1,18 @@
 package io.github.stardomains3.oxproxion
 
-import android.app.Dialog
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
-import androidx.core.os.bundleOf // Import for bundleOf
-import androidx.fragment.app.setFragmentResult // Import for setFragmentResult
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
-import androidx.core.graphics.toColorInt
+import androidx.fragment.app.setFragmentResult
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 
 // REMOVED: interface SaveChatDialogListener { ... }
@@ -28,7 +23,7 @@ class SaveChatDialogFragment : DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NORMAL, R.style.RoundedCornersDialog)
-        chatViewModel = ViewModelProvider(requireActivity()).get(ChatViewModel::class.java)
+        chatViewModel = ViewModelProvider(requireActivity())[ChatViewModel::class.java]
 
         // Optionally apply a dialog style for rounded corners, full width, etc.
         // For example: style = R.style.FullScreenDialog or a custom theme

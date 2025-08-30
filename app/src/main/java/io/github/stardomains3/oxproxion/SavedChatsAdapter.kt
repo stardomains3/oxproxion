@@ -3,6 +3,7 @@ package io.github.stardomains3.oxproxion
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -12,7 +13,7 @@ import java.util.*
 
 class SavedChatsAdapter(
     private val onClick: (ChatSession) -> Unit,
-    private val onLongClick: (ChatSession) -> Unit
+    private val onLongClick: (ChatSession, View) -> Unit
 ) : ListAdapter<ChatSession, SavedChatsAdapter.ChatSessionViewHolder>(ChatSessionDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatSessionViewHolder {
@@ -29,10 +30,11 @@ class SavedChatsAdapter(
     class ChatSessionViewHolder(
         itemView: View,
         val onClick: (ChatSession) -> Unit,
-        val onLongClick: (ChatSession) -> Unit
+        val onLongClick: (ChatSession, View) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
         private val titleTextView: TextView = itemView.findViewById(R.id.savedChatTitle)
         private val timestampTextView: TextView = itemView.findViewById(R.id.savedChatTimestamp)
+        private val editIcon: ImageView = itemView.findViewById(R.id.iconEditt)
         private var currentSession: ChatSession? = null
 
         init {
@@ -41,11 +43,16 @@ class SavedChatsAdapter(
                     onClick(it)
                 }
             }
-            itemView.setOnLongClickListener {
+            /*itemView.setOnLongClickListener {
                 currentSession?.let {
-                    onLongClick(it)
+                    onLongClick(it, itemView)
                 }
                 true
+            }*/
+            editIcon.setOnClickListener {
+                currentSession?.let {
+                    onLongClick(it, editIcon) // Pass the icon as anchor view
+                }
             }
         }
 

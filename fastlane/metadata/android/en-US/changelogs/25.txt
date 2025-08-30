@@ -1,0 +1,5 @@
+- Image Generation models supported
+- Tables in PDF now render well
+- Search inside OpenRouter and local model lists
+- UI improvements
+- Bug fixes and other enhancements

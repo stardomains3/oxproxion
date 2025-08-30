@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Copy any existing properties from bg_ai_message.xml, e.g., corner radius and solid color -->
+    <solid android:color="#2C2C2C" /> <!-- e.g., #333333 for dark theme -->
+    <corners android:radius="16dp" /> <!-- Adjust to match your existing bubble -->
+
+    <!-- Add the outline (stroke) -->
+    <stroke
+        android:width="3dp"
+        android:color="#8c1911" /> <!-- Yellow for visibility; change to green (#00FF00) or theme color -->
+</shape>

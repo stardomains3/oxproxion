@@ -1,18 +1,15 @@
 package io.github.stardomains3.oxproxion
 
-import android.app.AlertDialog
 import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.PorterDuff
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.EditText
-import android.widget.Switch
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.switchmaterial.SwitchMaterial
 
 class EditModelDialogFragment : DialogFragment() {
 

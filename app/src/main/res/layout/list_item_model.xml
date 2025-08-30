@@ -30,6 +30,16 @@
             android:textColor="@android:color/white"
             android:textSize="16sp"
             tools:text="Model Name (e.g., GPT-4o)" />
+        <ImageView
+            android:id="@+id/iconEdit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/ic_editnote"
+            android:background="@drawable/br_gray"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Edit model"
+            android:padding="8dp"/>
     </LinearLayout>
 
     <View

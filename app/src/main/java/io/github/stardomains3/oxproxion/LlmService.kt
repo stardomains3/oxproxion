@@ -27,11 +27,11 @@ class LlmService(
     companion object {
         private const val SUGGESTION_TIMEOUT_MS = 15_000L
         private const val TAG = "LlmService"
-        private const val DEFAULT_TITLE_MODEL = "mistralai/mistral-tiny"
+        private const val DEFAULT_TITLE_MODEL = "openai/gpt-oss-20b"
     }
 
     suspend fun getSuggestedChatTitle(chatContent: String, apiKey: String): String? {
-        val prompt = "Respond only with a 1 to 5 word title for a save title for this chat. $chatContent"
+        val prompt = "Respond only with a 1 to 8 word title for a save title for this chat. Do not use Markdown in your response. $chatContent"
         val messages = listOf(
             FlexibleMessage(role = "user", content = JsonPrimitive(prompt))
         )

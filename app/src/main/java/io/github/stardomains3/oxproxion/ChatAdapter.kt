@@ -1,5 +1,6 @@
 package io.github.stardomains3.oxproxion
 
+import android.animation.ObjectAnimator
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -12,8 +13,16 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.net.toUri
 import androidx.recyclerview.widget.RecyclerView
+import coil.ImageLoader
+import coil.request.ImageRequest
 import io.noties.markwon.Markwon
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -23,7 +32,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class ChatAdapter(
-    private val markwon: Markwon
+    private val markwon: Markwon,
+    private val viewModel: ChatViewModel
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private fun getMessageText(content: JsonElement): String {
@@ -114,7 +124,7 @@ class ChatAdapter(
 
         when (holder) {
             is UserViewHolder -> holder.bind(message)
-            is AssistantViewHolder -> holder.bind(contentText)
+            is AssistantViewHolder -> holder.bind(message,position)
         }
     }
 
@@ -152,10 +162,54 @@ class ChatAdapter(
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
         private val copyButton: ImageButton = itemView.findViewById(R.id.copyButton)
+        private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
+        val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
 
-        fun bind(text: String) {
+        fun bind(message: FlexibleMessage, position: Int) {
+            val text = getMessageText(message.content)
             markwon.setMarkdown(messageTextView, text)
             messageTextView.movementMethod = LinkMovementMethod.getInstance()
+            val isThinking = text == "thinking..."
+            val isError = message.role == "assistant" && text.startsWith("**Error:**")
+            if (isError) {
+                messageContainer.setBackgroundResource(R.drawable.bg_error_message)
+            }
+            else{
+                messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
+            }
+            if (isThinking) {
+                val pulse = ObjectAnimator.ofFloat(messageContainer, "alpha", 0.2f, 1f).apply {
+                    duration = 800
+                    repeatCount = ObjectAnimator.INFINITE
+                    repeatMode = ObjectAnimator.REVERSE
+                }
+                pulse.start()
+            } else {
+                messageContainer.alpha = 1f // Reset alpha when not thinking
+                messageContainer.clearAnimation() // Stop any ongoing animations
+            }
+            val imageUri = viewModel.generatedImages[position]  // Access temp map from ViewModel
+            if (imageUri != null) {
+                generatedImageView.visibility = View.VISIBLE
+                val request = ImageRequest.Builder(itemView.context)
+                    .data(imageUri)
+                    .target(generatedImageView)
+                    .build()
+                ImageLoader(itemView.context).enqueue(request)  // Use Coil to load
+                generatedImageView.setOnClickListener {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(imageUri.toUri(), "image/*")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        itemView.context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(itemView.context, "Could not open image", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                generatedImageView.visibility = View.GONE
+            }
             val rawMarkdown = text
             // Special handling for the copy button
             if (text == "thinking...") {
@@ -176,19 +230,25 @@ class ChatAdapter(
                     //   Toast.makeText(itemView.context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                 }
                 copyButton.setOnLongClickListener {
-                    val generator = PdfGenerator(itemView.context)
-                    val pdfUri = generator.generateMarkdownPdf(rawMarkdown)
-                    if (pdfUri != null) {
-                        // Optional: Show toast or notification
-                        Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
+                    // Launch on main thread (UI), but do the work on IO
+                    CoroutineScope(Dispatchers.Main).launch {
+                        val pdfUri = withContext(Dispatchers.IO) {
+                            try {
+                                val generator = PdfGenerator(itemView.context)
+                                generator.generateMarkdownPdf(rawMarkdown)
+                            } catch (e: Exception) {
+                                //Log.e("ChatAdapter", "PDF generation failed", e)
+                                null
+                            }
+                        }
+
+                        if (pdfUri != null) {
+                            Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
+                        }
                     }
                     true // Consume the long click
-                    //   val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    //   val clip = ClipData.newPlainText("Markdown", rawMarkdown)
-                    //  clipboard.setPrimaryClip(clip)
-                    // true // consume the long click
                 }
                 shareButton.setOnClickListener {
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -203,4 +263,14 @@ class ChatAdapter(
             }
         }
     }
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        if (holder is AssistantViewHolder) {
+            holder.messageContainer.clearAnimation()  // Stop any running animations
+            holder.messageContainer.alpha = 1f        // Reset transparency to normal
+            // You might also want to reset the background here if needed:
+            holder.messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
+        }
+    }
+
 }

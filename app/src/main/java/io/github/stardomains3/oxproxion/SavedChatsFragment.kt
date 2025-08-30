@@ -2,15 +2,18 @@ package io.github.stardomains3.oxproxion
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -111,8 +114,8 @@ class SavedChatsFragment : Fragment() {
                 }*/
                 parentFragmentManager.popBackStack()
             },
-            onLongClick = { session ->
-                showOptionsDialog(session)
+            onLongClick = { session, view ->
+            showOptionsDialog(session, view)
             }
         )
         recyclerView.adapter = savedChatsAdapter
@@ -146,17 +149,95 @@ class SavedChatsFragment : Fragment() {
         importChatsLauncher.launch(intent)
     }
 
-    private fun showOptionsDialog(session: ChatSession) {
-        val options = arrayOf("Rename", "Delete")
-        MaterialAlertDialogBuilder(requireContext())
-            .setItems(options) { dialog, which ->
-                when (which) {
-                    0 -> showRenameDialog(session)
-                    1 -> showDeleteConfirmationDialog(session)
-                }
-            }
-            .show()
+    private fun showOptionsDialog(session: ChatSession, anchorView: View) {
+        val inflater = LayoutInflater.from(requireContext())
+        val menuView = inflater.inflate(R.layout.saved_popup_layout, null)
+
+        val popupWindow = PopupWindow(
+            menuView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        // Setup background and positioning
+        popupWindow.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+        popupWindow.isOutsideTouchable = true
+
+        val rootView = requireActivity().window.decorView.findViewById<ViewGroup>(android.R.id.content)
+        val dimView = View(requireContext()).apply {
+            setBackgroundColor(Color.argb(204, 0, 0, 0))
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+        rootView.addView(dimView)
+
+        popupWindow.setOnDismissListener {
+            rootView.removeView(dimView)
+        }
+
+        val renameOption = menuView.findViewById<TextView>(R.id.menu_edit)
+        val deleteOption = menuView.findViewById<TextView>(R.id.menu_delete)
+
+        renameOption.setOnClickListener {
+            popupWindow.dismiss()
+            showRenameDialog(session)
+        }
+
+        deleteOption.setOnClickListener {
+            popupWindow.dismiss()
+            showDeleteConfirmationDialog(session)
+        }
+
+        // Measure the popup content to get its dimensions
+        menuView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val popupWidth = menuView.measuredWidth
+        val popupHeight = menuView.measuredHeight
+
+        // Get the location of the anchor view on screen
+        val location = IntArray(2)
+        anchorView.getLocationOnScreen(location)
+        val anchorX = location[0]
+        val anchorY = location[1]
+        val anchorWidth = anchorView.width
+        val anchorHeight = anchorView.height
+
+        // Get screen dimensions
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        // Calculate available space
+        val spaceBelow = screenHeight - anchorY - anchorHeight
+        val spaceAbove = anchorY
+        val spaceRight = screenWidth - anchorX - anchorWidth
+        val spaceLeft = anchorX
+
+        // Determine vertical position (above or below anchor)
+        val showAbove = spaceBelow < popupHeight && spaceAbove >= popupHeight
+        val yOffset = if (showAbove) {
+            -anchorHeight - popupHeight
+        } else {
+            0
+        }
+
+        // Determine horizontal position (left or right of anchor)
+        val showLeft = spaceRight < popupWidth && spaceLeft >= popupWidth
+        val xOffset = if (showLeft) {
+            -popupWidth + anchorWidth
+        } else {
+            0
+        }
+
+        // Show the popup with calculated offsets
+        popupWindow.showAsDropDown(anchorView, xOffset, yOffset)
     }
+
 
     private fun showRenameDialog(session: ChatSession) {
         val editText = EditText(requireContext()).apply {

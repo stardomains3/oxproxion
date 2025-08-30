@@ -1,8 +1,6 @@
 package io.github.stardomains3.oxproxion
 
 import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
 
 class SoundManager(context: Context) {
 

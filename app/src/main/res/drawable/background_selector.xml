@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/drawable/background_selector.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <!-- Pressed state (only when enabled) -->
+    <item android:state_pressed="true" android:state_enabled="true" android:drawable="@drawable/bg_rounded_pressed" />
+
+
+    <!-- Selected state (only when enabled) -->
+    <item android:state_selected="true" android:state_enabled="true" android:drawable="@drawable/bg_rounded_selected" />
+
+    <!-- Default state (enabled but none of the above) -->
+    <item android:state_enabled="true" android:drawable="@drawable/bg_rounded_text" />
+
+    <!-- Fallback default -->
+    <item android:drawable="@drawable/bg_rounded_text" />
+</selector>

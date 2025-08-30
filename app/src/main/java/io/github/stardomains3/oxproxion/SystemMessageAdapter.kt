@@ -1,11 +1,10 @@
 package io.github.stardomains3.oxproxion
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
@@ -35,7 +34,7 @@ class SystemMessageAdapter(
             holder.title.setTextColor(ContextCompat.getColor(context, R.color.white)) // Assuming default is white
             holder.prompt.setTextColor(ContextCompat.getColor(context, R.color.white)) // Assuming default is white
         }
-        holder.itemView.setBackgroundColor(Color.TRANSPARENT)
+       // holder.itemView.setBackgroundColor(Color.TRANSPARENT)
 
 
         holder.itemView.setOnClickListener {
@@ -44,18 +43,22 @@ class SystemMessageAdapter(
             notifyDataSetChanged()
         }
 
-        holder.itemView.setOnLongClickListener {
+       /* holder.itemView.setOnLongClickListener {
 
             onMenuClick(holder.itemView, systemMessage)
 
             true
+        }*/
+        holder.menuButton.setOnClickListener {
+            onMenuClick(holder.menuButton, systemMessage)
         }
-    }
+        }
 
     override fun getItemCount() = systemMessages.size
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val title: TextView = view.findViewById(R.id.system_message_title)
         val prompt: TextView = view.findViewById(R.id.system_message_prompt)
+        val menuButton: ImageView = view.findViewById(R.id.menu_button)
     }
 }

@@ -2,22 +2,40 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:padding="16dp"
     android:background="?android:attr/selectableItemBackground">
 
-    <TextView
-        android:id="@+id/savedChatTitle"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textColor="@android:color/white"
-        android:textStyle="bold"/>
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/savedChatTimestamp"
-        android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/savedChatTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/savedChatTimestamp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"/>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/iconEditt"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textColor="@android:color/darker_gray"/>
+        android:layout_marginStart="16dp"
+        android:src="@drawable/ic_editnote"
+        android:background="@drawable/br_gray"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Edit chat"
+        android:padding="8dp"/>
 </LinearLayout>

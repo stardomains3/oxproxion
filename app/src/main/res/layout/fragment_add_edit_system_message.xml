@@ -22,24 +22,39 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <EditText
-            android:id="@+id/edit_text_system_message_title"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Title"
-            android:textColor="#C2C2C2"
-            android:theme="@style/MyEditTextTheme"
-            android:textColorHint="#888888"/>
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        <EditText
-            android:id="@+id/edit_text_system_message_prompt"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_system_message_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#C2C2C2"
+                android:theme="@style/MyEditTextTheme"
+                android:textColorHint="#888888"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+
+
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:gravity="top"
-            android:theme="@style/MyEditTextTheme"
+            android:layout_marginTop="8dp"
             android:hint="System Message Prompt"
-            android:textColor="#C2C2C2"
-            android:textColorHint="#888888"/>
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_system_message_prompt"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="top"
+                android:theme="@style/MyEditTextTheme"
+                android:textColor="#C2C2C2"
+                android:textColorHint="#888888"/>
+        </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 </LinearLayout>

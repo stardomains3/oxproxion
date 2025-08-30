@@ -2,15 +2,18 @@ package io.github.stardomains3.oxproxion
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.PopupMenu
+import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,9 +23,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlin.collections.addAll
 
 class SystemMessageLibraryFragment : Fragment() {
 
@@ -69,22 +70,31 @@ class SystemMessageLibraryFragment : Fragment() {
                         if (jsonString != null) {
                             val importedMessages = Json.decodeFromString<List<SystemMessage>>(jsonString)
                             val currentMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
+                            // Fetch the single default message for duplicate checking
+                            val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
+
                             importedMessages.forEach { importedMessage ->
-                                if (!currentMessages.any { it.title == importedMessage.title }) {
+                                // Check for duplicates against current custom messages AND the single default message
+                                val isDuplicateInCustoms = currentMessages.any { it.title == importedMessage.title }
+                                val isDuplicateInDefault = (importedMessage.title == defaultMessage.title)
+
+                                if (!isDuplicateInCustoms && !isDuplicateInDefault) {
                                     currentMessages.add(importedMessage)
                                 }
+                                // Optional: Log skipped duplicates
+                                // else { Log.d("Import", "Skipped duplicate: ${importedMessage.title}") }
                             }
                             sharedPreferencesHelper.saveCustomSystemMessages(currentMessages)
                             loadSystemMessages()
-                            Toast.makeText(requireContext(), "System messages imported successfully", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "System Messages imported successfully", Toast.LENGTH_SHORT).show()
                         } else {
                             throw Exception("Failed to read file content.")
                         }
                     } catch (e: SerializationException) {
-                        Log.e("Import", "Import failed due to JSON format", e)
+                        // Log.e("Import", "Import failed due to JSON format", e)
                         Toast.makeText(requireContext(), "Import failed. Check file format.", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
-                        Log.e("Import", "Import failed", e)
+                        //Log.e("Import", "Import failed", e)
                         Toast.makeText(requireContext(), "Import failed.", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -173,7 +183,7 @@ class SystemMessageLibraryFragment : Fragment() {
         }
     }
 
-    private fun showPopupMenu(view: View, systemMessage: SystemMessage) {
+    /*private fun showPopupMenu(view: View, systemMessage: SystemMessage) {
         val popup = PopupMenu(context, view)
         popup.menuInflater.inflate(R.menu.model_item_menu, popup.menu)
 
@@ -200,8 +210,93 @@ class SystemMessageLibraryFragment : Fragment() {
             }
         }
         popup.show()
-    }
+    }*/
 
+    private fun showPopupMenu(anchorView: View, systemMessage: SystemMessage) {
+        val inflater = LayoutInflater.from(anchorView.context)
+        val menuView = inflater.inflate(R.layout.menu_popup_layout, null)
+
+        val popupWindow = PopupWindow(
+            menuView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        // Setup background - Important for dismissing when touching outside
+        popupWindow.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+        popupWindow.isOutsideTouchable = true
+        val rootView = requireActivity().window.decorView.findViewById<ViewGroup>(android.R.id.content)
+        val dimView = View(requireContext()).apply {
+            setBackgroundColor(Color.argb(204, 0, 0, 0)) // 150 = ~60% opacity
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+        rootView.addView(dimView)
+        // Remove dim when popup is dismissed
+        popupWindow.setOnDismissListener {
+            rootView.removeView(dimView)
+        }
+        val editItem = menuView.findViewById<TextView>(R.id.menu_edit)
+        val deleteItem = menuView.findViewById<TextView>(R.id.menu_delete)
+
+        // Enable edit option for default messages, disable delete
+        if (systemMessage.isDefault) {
+            deleteItem.visibility = View.GONE
+        }
+
+        editItem.setOnClickListener {
+            popupWindow.dismiss()
+            navigateToEditScreen(systemMessage)
+        }
+
+        deleteItem.setOnClickListener {
+            popupWindow.dismiss()
+            if (systemMessage.isDefault) {
+                Toast.makeText(context, "Default system message cannot be deleted", Toast.LENGTH_SHORT).show()
+            } else {
+                showDeleteConfirmationDialog(systemMessage)
+            }
+        }
+
+        // --- SMART POSITIONING LOGIC ---
+
+        // Measure the popup content to get its height
+        menuView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val popupHeight = menuView.measuredHeight
+
+        // Get the location of the anchor view on screen
+        val location = IntArray(2)
+        anchorView.getLocationOnScreen(location)
+        val anchorY = location[1]
+        val anchorHeight = anchorView.height
+
+        // Get screen height
+        val displayMetrics = DisplayMetrics()
+        (context as Activity).windowManager.defaultDisplay.getMetrics(displayMetrics)
+        val screenHeight = displayMetrics.heightPixels
+
+        // Calculate available space below and above the anchor
+        val spaceBelow = screenHeight - anchorY - anchorHeight
+        val spaceAbove = anchorY
+
+        // Decide whether to show above or below based on available space
+        val showAbove = spaceBelow < popupHeight && spaceAbove >= popupHeight
+
+        // Show the popup in the correct position
+        if (showAbove) {
+            // Show above the anchor view
+            popupWindow.showAsDropDown(anchorView, 0, -anchorHeight - popupHeight)
+        } else {
+            // Show below the anchor view (default behavior)
+            popupWindow.showAsDropDown(anchorView)
+        }
+    }
     private fun navigateToEditScreen(systemMessage: SystemMessage) {
         val fragment = AddEditSystemMessageFragment().apply {
             arguments = Bundle().apply {

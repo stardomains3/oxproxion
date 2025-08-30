@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/popup_rounded_bg">
+
+    <TextView
+        android:id="@+id/menu_edit"
+        style="?android:attr/listMenuViewStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:drawablePadding="8dp"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:text="Edit"
+        app:drawableStartCompat="@drawable/ic_edit" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider" />
+
+    <TextView
+        android:id="@+id/menu_delete"
+        style="?android:attr/listMenuViewStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:drawablePadding="8dp"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:text="Delete"
+        app:drawableStartCompat="@drawable/ic_new_chat" />
+
+</LinearLayout>

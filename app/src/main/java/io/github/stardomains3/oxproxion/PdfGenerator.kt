@@ -1,5 +1,6 @@
 package io.github.stardomains3.oxproxion
 
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -15,17 +16,28 @@ import android.graphics.pdf.PdfDocument
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.Layout
-import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.Base64
+import android.util.DisplayMetrics
 import android.util.Log
+import android.util.TypedValue
+import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.widget.FrameLayout
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.appcompat.widget.AppCompatTextView
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.toColorInt
+import androidx.core.graphics.withClip
+import androidx.core.graphics.withSave
+import androidx.core.graphics.withTranslation
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
 import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tables.TableTheme
 import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.syntax.Prism4jThemeDarkula
@@ -39,27 +51,41 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
 class PdfGenerator(private val context: Context) {
-
+    private data class MdBlock(val isTable: Boolean, val content: String)
     private val pageMargin = 22f
     private val bubblePadding = 20f
     private val bubbleCornerRadius = 30f
     private val bubbleSpacing = 20f
     private val iconSize = 36f  // Increase to 48f or 72f if you want larger (but still crisp) icons
     private val iconSpacing = 8f
-   // private val markwon = Markwon.builder(context)
-     //   .build()
-   val prism4j = Prism4j(ExampleGrammarLocator())
+    //private val markwon = Markwon.builder(context)
+    //  .build()
+
+    val prism4j = Prism4j(ExampleGrammarLocator())
     // val theme = Prism4jThemeDefault.create()
     val theme = Prism4jThemeDarkula.create()
     val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
+    val customTheme = TableTheme.buildWithDefaults(context) // Or TableTheme.buildWithDefaults(context) if you want default values first
+        .tableBorderColor(Color.LTGRAY)
+        .tableBorderWidth(2)
+        .tableCellPadding(1)
+
+        .tableHeaderRowBackgroundColor("#121314".toColorInt())
+
+        //.borderWidth(2f)
+        .build()
     private val markwon = Markwon.builder(context)
         .usePlugin(HtmlPlugin.create())
         .usePlugin(StrikethroughPlugin.create())
         .usePlugin(syntaxHighlightPlugin)
-        .usePlugin(TablePlugin.create(context))      // <-- Add Tables plugin
+        // .usePlugin(TablePlugin.create(context))
+        .usePlugin(TablePlugin.create(customTheme))
+
         .usePlugin(TaskListPlugin.create(context))    // <-- Add Task List plugin
         .usePlugin(object : AbstractMarkwonPlugin() {
             override fun configureTheme(builder: MarkwonTheme.Builder) {
@@ -67,48 +93,100 @@ class PdfGenerator(private val context: Context) {
                     .codeTextColor(Color.LTGRAY)
                     .codeBackgroundColor(Color.DKGRAY)
                     .codeBlockBackgroundColor(Color.DKGRAY)
-                    .blockQuoteColor(Color.BLACK)
+                    //.blockQuoteColor(Color.BLACK)
                     .isLinkUnderlined(true)
+
             }
         })
         .build()
 
-    fun generateStyledChatPdfWithImages(context: Context, messages: List<FlexibleMessage>, modelName: String): String? {
-        return generatePdf(messages, modelName)
-    }
-
-    fun generateStyledChatPdf(context: Context, chatText: String, modelName: String): String? {
-        val messages = parseChatTextToMessages(chatText)
-        return generatePdf(messages, modelName)
-    }
     fun generateMarkdownPdf(markdown: String): String? {
         try {
             val processedMarkdown = processMarkdownLinks(markdown)
-            val styledText = markwon.toMarkdown(processedMarkdown)
             val margin = 20f
-            val page_width = 595
-            val paint = TextPaint().apply {
-                color = Color.parseColor("#d0d0d0")
-                textSize = 28f
+            val pageWidth = 595
+            val contentWidth = (pageWidth - (margin * 2)).toInt()
+
+            // Split markdown into blocks for proper rendering
+            val blocks = splitMarkdownIntoBlocks(processedMarkdown)
+            val renderedTables = hashMapOf<Int, Bitmap>()
+
+            // Pre-render table bitmaps
+            blocks.forEachIndexed { index, block ->
+                if (block.isTable) {
+                    val act = context as? Activity
+                        ?: throw IllegalStateException("PdfGenerator requires an Activity context to render tables")
+                    val bmp = renderMarkdownToBitmapAttachedBlocking(
+                        act,
+                        block.content,
+                        contentWidth,
+                        "#d0d0d0".toColorInt(),
+                        26f
+                    )
+                    renderedTables[index] = bmp
+                }
             }
-            val contentWidth = (page_width - (margin * 2)).toInt()
-            val layout = StaticLayout.Builder.obtain(
-                styledText, 0, styledText.length, paint, contentWidth
-            )
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .setLineSpacing(0f, 1f)
-                .setIncludePad(false)
-                .build()
-            val page_height = (layout.height + (margin * 2)).toInt()
+
+            // Calculate total height needed
+            var totalHeight = margin
+            val textPaint = TextPaint().apply {
+                color = "#d0d0d0".toColorInt()
+                textSize = 26f
+            }
+
+            blocks.forEachIndexed { index, block ->
+                if (block.isTable) {
+                    totalHeight += renderedTables[index]!!.height
+                } else {
+                    if (block.content.isNotBlank()) {
+                        val spanned = markwon.toMarkdown(block.content)
+                        val layout = StaticLayout.Builder.obtain(
+                            spanned, 0, spanned.length, textPaint, contentWidth
+                        )
+                            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                            .setLineSpacing(0f, 1f)
+                            .setIncludePad(false)
+                            .build()
+                        totalHeight += layout.height
+                    }
+                }
+                if (index < blocks.size - 1) totalHeight += 8f // spacing between blocks
+            }
+            totalHeight += margin
+
+            // Create PDF with calculated height
             val document = PdfDocument()
-            val pageInfo = PdfDocument.PageInfo.Builder(page_width, page_height, 1).create()
+            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, totalHeight.toInt(), 1).create()
             val page = document.startPage(pageInfo)
             val canvas = page.canvas
-            canvas.drawColor(Color.parseColor("#121314"))
-            canvas.save()
-            canvas.translate(margin, margin)
-            layout.draw(canvas)
-            canvas.restore()
+            canvas.drawColor("#121314".toColorInt())
+
+            // Render content
+            var currentY = margin
+            blocks.forEachIndexed { index, block ->
+                if (block.isTable) {
+                    val bmp = renderedTables[index]!!
+                    canvas.drawBitmap(bmp, margin, currentY, null)
+                    currentY += bmp.height
+                } else {
+                    if (block.content.isNotBlank()) {
+                        val spanned = markwon.toMarkdown(block.content)
+                        val layout = StaticLayout.Builder.obtain(
+                            spanned, 0, spanned.length, textPaint, contentWidth
+                        )
+                            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                            .setLineSpacing(0f, 1f)
+                            .setIncludePad(false)
+                            .build()
+                        canvas.withTranslation(margin, currentY) {
+                            layout.draw(this)
+                        }
+                        currentY += layout.height
+                    }
+                }
+                if (index < blocks.size - 1) currentY += 8f // spacing between blocks
+            }
+
             document.finishPage(page)
 
             val contentValues = ContentValues().apply {
@@ -131,8 +209,26 @@ class PdfGenerator(private val context: Context) {
         } catch (e: IOException) {
             Log.e("PdfGenerator", "Error creating Markdown PDF", e)
             return null
+        } catch (e: Exception) {
+            Log.e("PdfGenerator", "Error rendering Markdown PDF", e)
+            return null
         }
     }
+
+
+
+
+
+    fun generateStyledChatPdfWithImages(context: Context, messages: List<FlexibleMessage>, modelName: String): String? {
+        return generatePdf(messages, modelName)
+    }
+
+    fun generateStyledChatPdf(context: Context, chatText: String, modelName: String): String? {
+        val messages = parseChatTextToMessages(chatText)
+        return generatePdf(messages, modelName)
+    }
+
+
 
     private fun parseChatTextToMessages(chatText: String): List<FlexibleMessage> {
         val messages = mutableListOf<FlexibleMessage>()
@@ -169,14 +265,14 @@ class PdfGenerator(private val context: Context) {
         val titleHeight = titlePaint.fontSpacing
         totalHeight += titleHeight + bubbleSpacing
 
-        val messagesToRender = messages.filterNot { it.content is JsonPrimitive && (it.content as JsonPrimitive).content == "thinking..." }
+        val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "thinking..." }
 
         messagesToRender.forEachIndexed { index, message ->
             val isUser = message.role == "user"
             var textContent = ""
             var imageBitmap: Bitmap? = null
             if (message.content is JsonArray) {
-                val contentArray = message.content as JsonArray
+                val contentArray = message.content
                 textContent = contentArray.firstNotNullOfOrNull { item ->
                     (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "text" }?.get("text")?.jsonPrimitive?.content
                 } ?: ""
@@ -187,7 +283,7 @@ class PdfGenerator(private val context: Context) {
                     imageBitmap = decodeImage(imageUrl)
                 }
             } else if (message.content is JsonPrimitive) {
-                textContent = (message.content as JsonPrimitive).content
+                textContent = message.content.content
             }
             textContent = processMarkdownLinks(textContent)
             totalHeight += calculateTotalMessageHeight(textContent, imageBitmap, pageWidth, if (isUser) userIconDrawable != null else aiIconDrawable != null)
@@ -199,12 +295,12 @@ class PdfGenerator(private val context: Context) {
 
         try {
             val document = PdfDocument()
-            val pageInfo = PdfDocument.PageInfo.Builder(PageSize.A4.width().toInt(), totalHeight.toInt(), 1).create()
+            val pageInfo = PdfDocument.PageInfo.Builder(PageSize.A4.width(), totalHeight.toInt(), 1).create()
             val page = document.startPage(pageInfo)
             val canvas = page.canvas
 
             // Set background color
-            canvas.drawColor(Color.parseColor("#000000"))
+            canvas.drawColor("#000000".toColorInt())
 
             // Draw title
             val titleX = canvas.width / 2f
@@ -219,7 +315,7 @@ class PdfGenerator(private val context: Context) {
 
                 // Extract text and image
                 if (message.content is JsonArray) {
-                    val contentArray = message.content as JsonArray
+                    val contentArray = message.content
                     textContent = contentArray.firstNotNullOfOrNull { item ->
                         (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "text" }?.get("text")?.jsonPrimitive?.content
                     } ?: ""
@@ -230,7 +326,7 @@ class PdfGenerator(private val context: Context) {
                         imageBitmap = decodeImage(imageUrl)
                     }
                 } else if (message.content is JsonPrimitive) {
-                    textContent = (message.content as JsonPrimitive).content
+                    textContent = message.content.content
                 }
                 textContent = processMarkdownLinks(textContent)
 
@@ -256,7 +352,7 @@ class PdfGenerator(private val context: Context) {
     private fun processMarkdownLinks(markdown: String): String {
         // Regex to match Markdown links: [text](url)
         // Handles optional spaces around text and url
-        val pattern = Pattern.compile("\\[\\s*([^\\]]+?)\\s*\\]\\(\\s*([^\\)]+?)\\s*\\)")
+        val pattern = Pattern.compile("\\[\\s*([^]]+?)\\s*]\\(\\s*([^)]+?)\\s*\\)")
         val matcher = pattern.matcher(markdown)
         val sb = StringBuffer()
         while (matcher.find()) {
@@ -278,7 +374,6 @@ class PdfGenerator(private val context: Context) {
     }
 
     private fun calculateBubbleHeight(text: String, image: Bitmap?, pageWidth: Float): Float {
-        var height = 0f
         val textPaint = TextPaint().apply {
             color = Color.WHITE
             textSize = 26f
@@ -288,23 +383,45 @@ class PdfGenerator(private val context: Context) {
         val bubbleWidth = availableWidth * 0.96f
         val bubbleContentWidth = bubbleWidth - (bubblePadding * 2)
 
-        if (text.isNotBlank()) {
-            // Parse markdown for height calculation
-            val spannedText: Spanned = markwon.toMarkdown(text)
-            val staticLayout = StaticLayout.Builder.obtain(spannedText, 0, spannedText.length, textPaint, bubbleContentWidth.toInt())
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .build()
-            height += staticLayout.height
+        var height = 0f
+        val blocks = splitMarkdownIntoBlocks(text)
+
+        blocks.forEachIndexed { idx, block ->
+            if (block.isTable) {
+                val act = context as? Activity
+                    ?: throw IllegalStateException("PdfGenerator requires an Activity context to render tables")
+                val bmp = renderMarkdownToBitmapAttachedBlocking(
+                    act,
+                    block.content,
+                    bubbleContentWidth.toInt(),
+                    Color.WHITE,
+                    26f
+                )
+                height += bmp.height
+            } else {
+                if (block.content.isNotBlank()) {
+                    val spanned = markwon.toMarkdown(block.content)
+                    val layout = StaticLayout.Builder
+                        .obtain(spanned, 0, spanned.length, textPaint, bubbleContentWidth.toInt())
+                        .setAlignment(Layout.Alignment.ALIGN_NORMAL) // keep left
+                        .setIncludePad(false)
+                        .build()
+                    height += layout.height
+                }
+            }
+            if (idx < blocks.size - 1) height += 8f // small gap between blocks
         }
+
         if (image != null) {
+            val scaledWidth = minOf(image.width.toFloat(), bubbleContentWidth)
             val aspectRatio = image.height.toFloat() / image.width.toFloat()
-            val scaledWidth = if (image.width > bubbleContentWidth) bubbleContentWidth else image.width.toFloat()
+            if (text.isNotBlank()) height += bubbleSpacing
             height += scaledWidth * aspectRatio
-            if (text.isNotBlank()) height += bubbleSpacing // spacing between text and image
         }
 
         return height + (bubblePadding * 2)
     }
+
 
     private fun drawMessage(canvas: Canvas, text: String, image: Bitmap?, isUser: Boolean, startY: Float, iconDrawable: Drawable?) {
         var currentY = startY
@@ -323,9 +440,8 @@ class PdfGenerator(private val context: Context) {
     }
 
     private fun drawBubble(canvas: Canvas, text: String, image: Bitmap?, isUser: Boolean, startY: Float) {
-        val bubblePaint = Paint().apply {
-            color = if (isUser) Color.parseColor("#36454F") else Color.parseColor("#2C2C2C")
-            isAntiAlias = true
+        val bubblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (isUser) "#36454F".toColorInt() else "#2C2C2C".toColorInt()
         }
         val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
@@ -333,61 +449,98 @@ class PdfGenerator(private val context: Context) {
         }
 
         val availableWidth = canvas.width - (pageMargin * 2)
-        val bubbleWidth = availableWidth * 0.96f // Bubbles take up 96% of available width
+        val bubbleWidth = availableWidth * 0.96f
         val bubbleContentWidth = bubbleWidth - (bubblePadding * 2)
 
-        var textLayout: StaticLayout? = null
-        if (text.isNotBlank()) {
-            // Parse markdown text to Spanned
-            val spannedText: Spanned = markwon.toMarkdown(text)
+        // Measure blocks again for final height
+        val blocks = splitMarkdownIntoBlocks(text)
 
-            textLayout = StaticLayout.Builder.obtain(spannedText, 0, spannedText.length, textPaint, bubbleContentWidth.toInt())
-                .setAlignment(if (isUser) Layout.Alignment.ALIGN_OPPOSITE else Layout.Alignment.ALIGN_NORMAL)
-                .build()
+        // Pre-render table bitmaps so we know their height (cache if you want)
+        val renderedTables = hashMapOf<Int, Bitmap>()
+        blocks.forEachIndexed { index, block ->
+            if (block.isTable) {
+                val act = context as? Activity
+                    ?: throw IllegalStateException("PdfGenerator requires an Activity context to render tables")
+                val bmp = renderMarkdownToBitmapAttachedBlocking(
+                    act,
+                    block.content,
+                    bubbleContentWidth.toInt(),
+                    Color.WHITE,
+                    26f
+                )
+                renderedTables[index] = bmp
+            }
+        }
+
+        // Compute total bubble height
+        var contentHeights = 0f
+        blocks.forEachIndexed { index, block ->
+            contentHeights += if (block.isTable) {
+                renderedTables[index]!!.height.toFloat()
+            } else {
+                if (block.content.isNotBlank()) {
+                    val spanned = markwon.toMarkdown(block.content)
+                    val layout = StaticLayout.Builder
+                        .obtain(spanned, 0, spanned.length, textPaint, bubbleContentWidth.toInt())
+                        .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                        .setIncludePad(false)
+                        .build()
+                    layout.height.toFloat()
+                } else 0f
+            }
+            if (index < blocks.size - 1) contentHeights += 8f
         }
 
         var imagePartHeight = 0f
-        var scaledWidth = 0f
+        var scaledImageWidth = 0f
         if (image != null) {
-            val aspectRatio = image.height.toFloat() / image.width.toFloat()
-            scaledWidth = if (image.width > bubbleContentWidth) bubbleContentWidth else image.width.toFloat()
-            imagePartHeight = scaledWidth * aspectRatio
+            scaledImageWidth = minOf(image.width.toFloat(), bubbleContentWidth)
+            imagePartHeight = scaledImageWidth * (image.height.toFloat() / image.width.toFloat())
         }
 
-        val textPartHeight = textLayout?.height?.toFloat() ?: 0f
-        val bubbleHeight = textPartHeight + imagePartHeight + (bubblePadding * 2) + if (text.isNotBlank() && image != null) bubbleSpacing else 0f
+        val bubbleHeight = contentHeights + imagePartHeight + (bubblePadding * 2) +
+                if (text.isNotBlank() && image != null) bubbleSpacing else 0f
 
         val bubbleLeft = if (isUser) canvas.width - pageMargin - bubbleWidth else pageMargin
         val bubbleRect = RectF(bubbleLeft, startY, bubbleLeft + bubbleWidth, startY + bubbleHeight)
 
-        // Save canvas state and clip to bubble bounds to prevent overflow
-        canvas.save()
-        canvas.clipRect(bubbleRect)
+        canvas.withClip(bubbleRect) {
+            drawRoundRect(bubbleRect, bubbleCornerRadius, bubbleCornerRadius, bubblePaint)
 
-        // Draw bubble background
-        canvas.drawRoundRect(bubbleRect, bubbleCornerRadius, bubbleCornerRadius, bubblePaint)
+            var y = startY + bubblePadding
 
-        var currentContentY = startY + bubblePadding
+            // Image first if any
+            if (image != null) {
+                val imageLeft = bubbleLeft + bubblePadding
+                val dst = RectF(imageLeft, y, imageLeft + scaledImageWidth, y + imagePartHeight)
+                drawBitmap(image, null, dst, null)
+                y += imagePartHeight + if (blocks.isNotEmpty()) bubbleSpacing else 0f
+            }
 
-        // Draw image
-        if (image != null) {
-            val imageLeft = bubbleLeft + bubblePadding
-            val dstRect = RectF(imageLeft, currentContentY, imageLeft + scaledWidth, currentContentY + imagePartHeight)
-            canvas.drawBitmap(image, null, dstRect, null)
-            currentContentY += imagePartHeight + if (text.isNotBlank()) bubbleSpacing else 0f
+            // Draw blocks in order
+            blocks.forEachIndexed { index, block ->
+                if (block.isTable) {
+                    val bmp = renderedTables[index]!!
+                    drawBitmap(bmp, bubbleLeft + bubblePadding, y, null)
+                    y += bmp.height
+                } else {
+                    if (block.content.isNotBlank()) {
+                        val spanned = markwon.toMarkdown(block.content)
+                        val layout = StaticLayout.Builder
+                            .obtain(spanned, 0, spanned.length, textPaint, bubbleContentWidth.toInt())
+                            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                            .setIncludePad(false)
+                            .build()
+                        withSave {
+                            translate(bubbleLeft + bubblePadding, y)
+                            layout.draw(this)
+                        }
+                        y += layout.height
+                    }
+                }
+                if (index < blocks.size - 1) y += 8f
+            }
         }
-
-        // Draw text with markdown formatting
-        if (textLayout != null) {
-            canvas.save()
-            val textX = bubbleLeft + bubblePadding
-            canvas.translate(textX, currentContentY)
-            textLayout.draw(canvas)
-            canvas.restore()
-        }
-
-        // Restore canvas state
-        canvas.restore()
     }
 
     private fun decodeImage(imageUrl: String): Bitmap? {
@@ -400,9 +553,134 @@ class PdfGenerator(private val context: Context) {
             null
         }
     }
+    private fun splitMarkdownIntoBlocks(md: String): List<MdBlock> {
+        val lines = md.lines()
+        val out = mutableListOf<MdBlock>()
+        val buf = StringBuilder()
 
-    // A simple PageSize class to hold dimensions, similar to iText's
+        fun flushText() {
+            if (buf.isNotEmpty()) {
+                out += MdBlock(false, buf.toString().trimEnd())
+                buf.clear()
+            }
+        }
+
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i]
+            val isHeaderRow = line.contains('|') && line.count { it == '|' } >= 2
+            val isSep = if (i + 1 < lines.size) isTableSeparatorLine(lines[i + 1]) else false
+
+            if (isHeaderRow && isSep) {
+                flushText()
+                val table = StringBuilder()
+                table.appendLine(line)
+                table.appendLine(lines[i + 1])
+                i += 2
+                // collect table body (consecutive lines that look like rows)
+                while (i < lines.size && looksLikeTableRow(lines[i])) {
+                    table.appendLine(lines[i])
+                    i++
+                }
+                out += MdBlock(true, table.toString().trimEnd())
+                // do not i++ here because while loop advanced
+                continue
+            } else {
+                buf.appendLine(line)
+            }
+            i++
+        }
+        flushText()
+        return out
+    }
+
+    private fun isTableSeparatorLine(s: String): Boolean {
+        // permissive: composed of pipes, colons, dashes and spaces and has at least 3 dashes
+        if (s.isBlank()) return false
+        if (!s.all { it == '|' || it == ':' || it == '-' || it.isWhitespace() }) return false
+        return s.count { it == '-' } >= 3
+    }
+
+    private fun looksLikeTableRow(s: String): Boolean {
+        // a row if it has at least two pipes
+        return s.contains('|') && s.count { it == '|' } >= 2
+    }
+
+    private fun renderMarkdownToBitmapAttachedBlocking(
+        activity: Activity,
+        markdownTable: String,
+        widthPx: Int,
+        textColor: Int,
+        textSizePx: Float
+    ): Bitmap {
+        val root = activity.findViewById<ViewGroup>(android.R.id.content)
+
+        val host = FrameLayout(activity).apply {
+            layoutParams = ViewGroup.LayoutParams(widthPx, ViewGroup.LayoutParams.WRAP_CONTENT)
+            x = -widthPx.toFloat() - 100
+            y = -10000f
+        }
+
+        val tv = AppCompatTextView(activity).apply {
+            setTextColor(textColor)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizePx)
+            // Keep these sharpness improvements:
+            paint.isAntiAlias = true
+            paint.isSubpixelText = true
+            paint.isFilterBitmap = true
+            paint.isDither = true
+        }
+
+        val latch = CountDownLatch(1)
+        var bmp: Bitmap? = null
+
+        activity.runOnUiThread {
+            host.addView(tv)
+            root.addView(host)
+            markwon.setMarkdown(tv, "\n$markdownTable\n")
+
+            val listener = object : ViewTreeObserver.OnGlobalLayoutListener {
+                private var passCount = 0
+                private val maxPasses = 10
+
+                override fun onGlobalLayout() {
+                    val measuredHeight = host.measuredHeight
+                    if (measuredHeight > 0 && passCount < maxPasses) {
+                        passCount++
+                        host.requestLayout()
+                    } else {
+                        if (host.viewTreeObserver.isAlive) {
+                            host.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        }
+
+                        val finalWidth = host.width.coerceAtLeast(1)
+                        val finalHeight = host.height.coerceAtLeast(1)
+
+                        // Create bitmap WITHOUT density scaling (removed that line)
+                        bmp = createBitmap(finalWidth, finalHeight).apply {
+                            setHasAlpha(true) // Keep transparency for cleaner edges
+                        }
+
+                        // val canvas = Canvas(bmp)
+                        val canvas = Canvas(bmp).apply {
+                            density = DisplayMetrics.DENSITY_XXHIGH
+                        }
+                        host.draw(canvas)
+
+                        root.removeView(host)
+                        latch.countDown()
+                    }
+                }
+            }
+            host.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        }
+
+        latch.await(3, TimeUnit.SECONDS)
+        return requireNotNull(bmp) { "Failed to render table bitmap, the operation timed out." }
+    }
+
     object PageSize {
         val A4 = Rect(0, 0, 595, 842)
     }
 }
+

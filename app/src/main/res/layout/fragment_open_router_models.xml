@@ -38,7 +38,7 @@
                 android:id="@+id/infoText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Tap to add model. Long-press to open model webpage in your browser."
+                android:text="Tap a model to add it to your list. Tap the icon to the right to open the model's webpage in your browser."
                 android:textColor="@android:color/white"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/closeInfoButton"

@@ -8,7 +8,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
@@ -23,7 +22,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.WindowInsets
-import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -64,6 +62,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import androidx.core.net.toUri
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -78,6 +77,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
+    private lateinit var genButton: MaterialButton
     private var originalSendIcon: Drawable? = null
     private val viewModel: ChatViewModel by activityViewModels()
     private lateinit var modelNameTextView: TextView
@@ -178,6 +178,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         setupClickListeners()
         pdfGenerator = PdfGenerator(requireContext())
         plusButton = view.findViewById(R.id.plusButton)
+        genButton = view.findViewById(R.id.genButton)
         setupImagePicker()
         updateSystemMessageButtonState()
         val rootView = view as FrameLayout // The root FrameLayout (fragment_container)
@@ -207,6 +208,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             if (model != null) {
                 modelNameTextView.text = formatModelName(model)
                 plusButton.visibility = if (viewModel.isVisionModel(model)) View.VISIBLE else View.GONE
+                genButton.visibility = if (viewModel.isImageGenerationModel(model)) View.VISIBLE else View.GONE
 
                 // BUG FIX START: Clear staged image if new model is not a vision model
                 if (selectedImageBytes != null && !viewModel.isVisionModel(model)) {
@@ -261,7 +263,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.isAwaitingResponse.observe(viewLifecycleOwner) { isAwaiting ->
             sendChatButton.isEnabled = true
 
-            val materialButton = sendChatButton as? MaterialButton ?: return@observe
+            val materialButton = sendChatButton
 
             if (isAwaiting) {
                 if (areAnimationsEnabled(requireContext())) {
@@ -367,7 +369,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     }
 
     private fun setupRecyclerView() {
-        chatAdapter = ChatAdapter(markwon)
+        chatAdapter = ChatAdapter(markwon,viewModel)
         chatRecyclerView.apply {
             adapter = chatAdapter
             layoutManager = LinearLayoutManager(requireContext()).apply {
@@ -510,7 +512,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         resetChatButton.setOnLongClickListener {
             if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","Open Chat is Ready.")
+                ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","oxproxion is ready.")
             }
 
 
@@ -530,7 +532,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
                 .setPositiveButton("Reset") { dialog, which ->
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                        ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","Open Chat is Ready.")
+                        ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","oxproxion is ready.")
                     }
                     /*if (ForegroundService.isRunningForeground) {
                         stopForegroundService()
@@ -599,7 +601,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
         }
-
+        chatEditText.setOnReceiveContentListener(
+            arrayOf("text/*")
+        ) { view, payload ->
+            if (payload.clip != null) {
+                val text = payload.clip.getItemAt(0).text?.toString() ?: ""
+                val editable = chatEditText.editableText
+                val start = chatEditText.selectionStart
+                val end = chatEditText.selectionEnd
+                editable.replace(start, end, text)
+                null
+            } else {
+                payload
+            }
+        }
         copyChatButton.setOnClickListener {
             val chatText = viewModel.getFormattedChatHistory()
             if (chatText.isNotBlank()) {
@@ -619,6 +634,35 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             } else {
                 showMenu()
             }
+        }
+        menuButton.setOnLongClickListener {
+            val inputText = chatEditText.text.toString().trim()
+            if (inputText.isBlank()) {
+                Toast.makeText(requireContext(), "No text to correct", Toast.LENGTH_SHORT).show()
+            } else if (viewModel.activeChatApiKey.isBlank()) {
+                Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT).show()
+            } else {
+                menuButton.isSelected = true
+                menuButton.setIconResource(R.drawable.ic_magic)
+
+                lifecycleScope.launch {
+                    val corrected = viewModel.correctText(inputText)
+                    if (corrected != null && corrected.isNotBlank()) {
+                        chatEditText.setText(corrected)
+                        chatEditText.setSelection(corrected.length)
+                    } else {
+                        Toast.makeText(
+
+                            requireContext(),
+                            "Correction failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    menuButton.setIconResource(R.drawable.ic_menudot)
+                    menuButton.isSelected = false
+                }
+            }
+            true
         }
         helpButton.setOnClickListener {
             parentFragmentManager.beginTransaction()
@@ -641,7 +685,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         modelNameTextView.setOnLongClickListener {
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://openrouter.ai/models"))
+                val intent = Intent(Intent.ACTION_VIEW, "https://openrouter.ai/models".toUri())
                 startActivity(intent)
             } catch (e: Exception) {
                 // Handle case where a web browser is not available
@@ -660,14 +704,19 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         notiButton.setOnClickListener {
             viewModel.toggleNoti()
         }
-        menuButton.setOnLongClickListener {
-            // This can be used for other future menu-related long-press actions
-            true // Consume the long click
+        systemMessageButton.setOnLongClickListener {
+            val defaultMessage = SharedPreferencesHelper(requireContext()).getDefaultSystemMessage()
+            SharedPreferencesHelper(requireContext()).saveSelectedSystemMessage(defaultMessage)
+            systemMessageButton.isSelected = false
+            // Toast.makeText(requireContext(), "System message reset to default", Toast.LENGTH_SHORT).show()
+            true
         }
         sendChatButton.setOnLongClickListener {
-            if (!chatEditText.text.isBlank()) {
+           /* if (!chatEditText.text.isBlank()) {
                 chatEditText.text.clear()
-            }
+            }*/
+            chatEditText.setText("")
+            chatEditText.text.clear()
 
             true
         }
@@ -734,10 +783,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     uri?.let { u ->
                         requireContext().contentResolver.openInputStream(u)?.use { stream ->
                             val bytes = stream.readBytes()
-                            if (bytes.size > 2_300_000) {
+                            if (bytes.size > 4_000_000) {
                                 Toast.makeText(
                                     requireContext(),
-                                    "Image too large (max 2.3MB)",
+                                    "Image too large (max 4MB)",
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 return@use

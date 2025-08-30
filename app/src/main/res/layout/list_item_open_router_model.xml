@@ -38,5 +38,15 @@
             android:textColor="@android:color/darker_gray"
             android:textSize="14sp"/>
     </LinearLayout>
+    <ImageView
+        android:id="@+id/iconORweb"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:src="@drawable/ic_outbound"
+        android:background="@drawable/br_gray"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Open model"
+        android:padding="8dp"/>
 
 </LinearLayout>
