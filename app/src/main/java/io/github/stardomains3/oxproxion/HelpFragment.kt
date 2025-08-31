@@ -113,7 +113,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Clear Chat**(button on bottom left): Starts a new chat with the current model. Long-press to start a new chat without a warning alert.
             *   **System Message Button**: Opens your library of system messages. If you currently are on a non-default System Message you can long-press and it will auto switch to your default.
             *   **Saved Chats**: Opens a list of your saved conversations.
-            *   **Save Chat**: Saves the chat. You can name it yourself or let the AI (openai/gpt-oss-20b used) generate a title. Only text chats can be saved.
+            *   **Save Chat**: Saves the chat. You can name it yourself or let the AI (qwen/qwen3-30b-a3b-instruct-2507 is used) generate a title. Only text chats can be saved.
             
             ---
 

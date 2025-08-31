@@ -1,5 +1,8 @@
+<!-- res/menu/saved_chats_menu.xml -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Existing items -->
     <item
         android:id="@+id/action_import"
         android:title="Import"
@@ -10,4 +13,12 @@
         android:title="Export"
         android:icon="@drawable/ic_export"
         app:showAsAction="ifRoom" />
+
+    <!-- New search item -->
+    <item
+        android:id="@+id/action_search"
+        android:title="Search"
+        android:icon="@drawable/ic_search"
+        app:showAsAction="always|collapseActionView"
+        app:actionViewClass="androidx.appcompat.widget.SearchView" />
 </menu>

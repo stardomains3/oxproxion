@@ -35,4 +35,8 @@ class ChatRepository(private val chatDao: ChatDao) {
     suspend fun getAllSessionsWithMessages(): List<SessionWithMessages> {
         return chatDao.getAllSessionsWithMessages()
     }
+    suspend fun searchSessions(query: String): List<ChatSession> {
+        val sessionIds = chatDao.searchSessionIds("%$query%")
+        return sessionIds.mapNotNull { chatDao.getSessionById(it) }
+    }
 }

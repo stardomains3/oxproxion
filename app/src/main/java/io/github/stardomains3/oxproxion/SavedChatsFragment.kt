@@ -13,7 +13,6 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -22,12 +21,18 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
+import androidx.core.graphics.drawable.toDrawable
+import androidx.appcompat.widget.SearchView  // NEW: For search functionality
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 class SavedChatsFragment : Fragment() {
 
     private val viewModel: ChatViewModel by activityViewModels()
     private val savedChatsViewModel: SavedChatsViewModel by viewModels()
     private lateinit var savedChatsAdapter: SavedChatsAdapter
+    private lateinit var searchView: SearchView  // NEW: Reference to SearchView
+    private var allSessions: List<ChatSession> = emptyList()  // NEW: Store the full list for filtering
 
     private val exportChatsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -97,34 +102,73 @@ class SavedChatsFragment : Fragment() {
                     exportChats()
                     true
                 }
+                R.id.action_search -> {
+                    // NEW: Handle search expansion (if needed)
+                    true
+                }
                 else -> false
             }
         }
 
+
+        // NEW: Setup SearchView
+        val searchItem = toolbar.menu.findItem(R.id.action_search)
+        if (searchItem != null) {
+            searchView = searchItem.actionView as SearchView
+            searchView.queryHint = "Search chats..."
+
+            // NEW: For debouncing
+            var searchJob: Job? = null
+
+            searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    // NEW: Cancel previous job and start a new one with delay
+                    searchJob?.cancel()
+                    searchJob = viewLifecycleOwner.lifecycleScope.launch {
+                        delay(400)  // Wait 300ms
+                        filterSessions(newText ?: "")
+                    }
+                    return true
+                }
+            })
+        } else {
+            Toast.makeText(requireContext(), "Search not available", Toast.LENGTH_SHORT).show()
+        }
+
+
         savedChatsAdapter = SavedChatsAdapter(
             onClick = { session ->
                 viewModel.loadChat(session.id)
-               /* if (ForegroundService.isRunningForeground){
-                    try {
-                        ForegroundService.stopService()
-
-                    } catch (e: Exception) {
-                        Log.e("ChatFragment", "Failed to stop foreground service", e)
-                    }
-                }*/
                 parentFragmentManager.popBackStack()
             },
-            onLongClick = { session, view ->
-            showOptionsDialog(session, view)
+            onLongClick = { session, view ->  // ← Now you get the view!
+                showOptionsDialog(session, view)  // ← Pass the view to your dialog
             }
         )
+
         recyclerView.adapter = savedChatsAdapter
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
+        // UPDATED: Observe allSessions and apply current search filter
         savedChatsViewModel.allSessions.observe(viewLifecycleOwner) { sessions ->
-            sessions?.let {
-                savedChatsAdapter.submitList(it)
+            allSessions = sessions ?: emptyList()  // NEW: Store full list
+            filterSessions(searchView.query.toString())  // NEW: Apply current search
+        }
+    }
+
+    // NEW: Function to filter sessions based on search query
+    private fun filterSessions(query: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val filteredSessions = if (query.isEmpty()) {
+                allSessions  // Show all sessions
+            } else {
+                savedChatsViewModel.searchSessions(query)  // NEW: Use optimized search
             }
+            savedChatsAdapter.submitList(filteredSessions)
         }
     }
 
@@ -238,12 +282,14 @@ class SavedChatsFragment : Fragment() {
         popupWindow.showAsDropDown(anchorView, xOffset, yOffset)
     }
 
-
     private fun showRenameDialog(session: ChatSession) {
-        val editText = EditText(requireContext()).apply {
+        val editText = EditText(requireContext()).apply {  //, R.style.MyEditTextTheme
             setText(session.title)
+            setSelection(session.title.length)
         }
-        MaterialAlertDialogBuilder(requireContext())
+        // AlertDialog.Builder(requireContext())
+        // MaterialAlertDialogBuilder(requireContext(), R.style.MyCustomAlertDialogTheme)
+        MaterialAlertDialogBuilder(requireContext())// R.style.CustomMaterialAlertDialogTheme)
             .setTitle("Rename Chat")
             .setView(editText)
             .setPositiveButton("Rename") { _, _ ->
@@ -257,6 +303,8 @@ class SavedChatsFragment : Fragment() {
     }
 
     private fun showDeleteConfirmationDialog(session: ChatSession) {
+        //  AlertDialog.Builder(requireContext())
+        //  MaterialAlertDialogBuilder(requireContext(), R.style.MyCustomAlertDialogTheme)
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete Chat")
             .setMessage("Are you sure you want to delete this chat session?")

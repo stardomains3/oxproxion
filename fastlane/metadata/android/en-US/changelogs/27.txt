@@ -1,0 +1,2 @@
+- Saved Chats are searchable
+- Icon theme support

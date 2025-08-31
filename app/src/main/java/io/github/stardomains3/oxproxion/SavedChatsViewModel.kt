@@ -63,4 +63,7 @@ class SavedChatsViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
     }
+    suspend fun searchSessions(query: String): List<ChatSession> {
+        return repository.searchSessions(query)
+    }
 }

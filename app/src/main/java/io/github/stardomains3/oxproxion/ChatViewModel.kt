@@ -225,21 +225,57 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun saveCurrentChat(title: String) {
         viewModelScope.launch {
-            val sessionId = currentSessionId ?: repository.getNextSessionId() // Generate if new
+            val sessionId = currentSessionId ?: repository.getNextSessionId()
             val session = ChatSession(
                 id = sessionId,
                 title = title,
                 modelUsed = _activeChatModel.value ?: ""
             )
-            val messages = _chatMessages.value?.map {
+
+            // Get the current messages
+            val originalMessages = _chatMessages.value ?: emptyList()
+
+            // Only process if there are images; otherwise, use originals
+            val messagesToSave = if (hasImagesInChat()) {
+                originalMessages.map { message ->
+                    // Strip images from the JsonElement content
+                    val cleanedContent = removeImagesFromJsonElement(message.content)
+                    message.copy(content = cleanedContent)  // Create a cleaned FlexibleMessage
+                }
+            } else {
+                originalMessages  // No images, so no changes needed
+            }
+
+            // Map to ChatMessage as usual (now with cleaned content)
+            val chatMessages = messagesToSave.map {
                 ChatMessage(
                     sessionId = sessionId,
                     role = it.role,
                     content = json.encodeToString(JsonElement.serializer(), it.content)
                 )
-            } ?: emptyList()
-            repository.insertSessionAndMessages(session, messages)
-            currentSessionId = sessionId // Update after save
+            }
+
+            repository.insertSessionAndMessages(session, chatMessages)
+            currentSessionId = sessionId
+        }
+    }
+    private fun removeImagesFromJsonElement(element: JsonElement): JsonElement {
+        return when (element) {
+            is JsonArray -> {
+                // Filter out objects where "type" == "image_url"
+                val filteredItems = element.filterNot { item ->
+                    (item as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "image_url"
+                }.map { removeImagesFromJsonElement(it) }  // Recurse for any nested structures
+                JsonArray(filteredItems)
+            }
+            is JsonObject -> {
+                // If it's an object, recurse on its values (in case images are nested elsewhere)
+                val cleanedMap = element.mapValues { (_, value) ->
+                    removeImagesFromJsonElement(value)
+                }
+                JsonObject(cleanedMap)
+            }
+            else -> element  // Primitives stay as-is
         }
     }
 

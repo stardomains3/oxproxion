@@ -235,18 +235,22 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             chatAdapter.setMessages(messages)
             //  chatRecyclerView.post { updateScrollButtons() }
             val hasMessages = messages.isNotEmpty()
-            val hasImages = viewModel.hasImagesInChat()  // Check for images in the chat
-            val canSave = hasMessages && !hasImages  // Only allow saving if there are messages AND no images
+            if(hasMessages){
+                resetChatButton.icon.alpha = 255
+                saveChatButton.icon.alpha = 255
+            }
+            else
+            {
+                resetChatButton.icon.alpha = 102
+                saveChatButton.icon.alpha = 102
+            }
 
-            // Enable/disable buttons
-            saveChatButton.isEnabled = canSave  // Disable if images are present
-            resetChatButton.isEnabled = hasMessages  // Reset is still allowed even with images
+            saveChatButton.isEnabled = hasMessages
+            resetChatButton.isEnabled = hasMessages
             pdfChatButton.isVisible = hasMessages
             copyChatButton.isVisible = hasMessages
 
-            // Adjust alpha based on enabled state (simplified as per your suggestion)
-            saveChatButton.icon.alpha = if (saveChatButton.isEnabled) 255 else 102
-            resetChatButton.icon.alpha = if (resetChatButton.isEnabled) 255 else 102
+
         }
 
 

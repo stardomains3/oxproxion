@@ -29,6 +29,13 @@ interface ChatDao {
 
     @Query("SELECT * FROM chat_sessions ORDER BY timestamp DESC")
     fun getAllSessions(): LiveData<List<ChatSession>>
+    @Query("""
+    SELECT DISTINCT s.id 
+    FROM chat_sessions s 
+    LEFT JOIN chat_messages m ON s.id = m.sessionId 
+    WHERE s.title LIKE :query OR m.content LIKE :query
+""")
+    suspend fun searchSessionIds(query: String): List<Long>
 
     @Transaction
     @Query("SELECT * FROM chat_sessions")
