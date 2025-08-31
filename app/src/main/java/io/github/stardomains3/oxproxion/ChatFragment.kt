@@ -233,22 +233,22 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         // --- Observe LiveData ---
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
+            //  chatRecyclerView.post { updateScrollButtons() }
             val hasMessages = messages.isNotEmpty()
-            if(hasMessages){
-                resetChatButton.icon.alpha = 255
-                saveChatButton.icon.alpha = 255
-            }
-            else
-            {
-                resetChatButton.icon.alpha = 102
-                saveChatButton.icon.alpha = 102
-            }
+            val hasImages = viewModel.hasImagesInChat()  // Check for images in the chat
+            val canSave = hasMessages && !hasImages  // Only allow saving if there are messages AND no images
 
-            saveChatButton.isEnabled = hasMessages
-            resetChatButton.isEnabled = hasMessages
+            // Enable/disable buttons
+            saveChatButton.isEnabled = canSave  // Disable if images are present
+            resetChatButton.isEnabled = hasMessages  // Reset is still allowed even with images
             pdfChatButton.isVisible = hasMessages
             copyChatButton.isVisible = hasMessages
+
+            // Adjust alpha based on enabled state (simplified as per your suggestion)
+            saveChatButton.icon.alpha = if (saveChatButton.isEnabled) 255 else 102
+            resetChatButton.icon.alpha = if (resetChatButton.isEnabled) 255 else 102
         }
+
 
         fun areAnimationsEnabled(context: Context): Boolean {
             val resolver = context.contentResolver
@@ -792,10 +792,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                                 return@use
                             }
                             val mime = requireContext().contentResolver.getType(u)
-                            val ext = when (mime) {
-                                "image/jpeg" -> "jpeg"
-                                "image/png" -> "png"
-                                "image/webp" -> "webp"
+                            when (mime) {
+                                "image/jpeg", "image/png", "image/webp" -> {
+                                    // Valid MIME type - proceed
+                                }
                                 else -> {
                                     Toast.makeText(
                                         requireContext(),
@@ -827,14 +827,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
 
             val allowedMimeTypes: Array<String> = when {
-                model.lowercase().contains("google") || model.lowercase().contains("chatgpt-4o-latest")|| model.lowercase().contains("claude-sonnet-4")|| model.lowercase().contains("gpt-4.1")|| model.lowercase().contains("gemini") || model.lowercase().contains("maverick")|| model.lowercase().contains("mistral-medium-3") -> {
-                    arrayOf("image/jpeg", "image/png", "image/webp")
-                }
                 model.lowercase().contains("grok") -> {
                     arrayOf("image/jpeg", "image/png")
                 }
                 else -> {
-                    arrayOf("image/*")
+                    // For all other models (e.g., Google, ChatGPT, etc.)
+                    arrayOf("image/jpeg", "image/png", "image/webp")
                 }
             }
 
@@ -847,6 +845,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             imagePicker.launch(intent)
         }
     }
+
 
     private fun startForegroundService() {
         try {

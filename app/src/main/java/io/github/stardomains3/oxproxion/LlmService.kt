@@ -27,11 +27,11 @@ class LlmService(
     companion object {
         private const val SUGGESTION_TIMEOUT_MS = 15_000L
         private const val TAG = "LlmService"
-        private const val DEFAULT_TITLE_MODEL = "openai/gpt-oss-20b"
+        private const val DEFAULT_TITLE_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
     }
 
     suspend fun getSuggestedChatTitle(chatContent: String, apiKey: String): String? {
-        val prompt = "Respond only with a 1 to 8 word title for a save title for this chat. Do not use Markdown in your response. $chatContent"
+        val prompt = "Respond only with a 1 to 8 word title for a save title for this chat. Do not use Markdown in your response. Chat Contents: ```$chatContent```"
         val messages = listOf(
             FlexibleMessage(role = "user", content = JsonPrimitive(prompt))
         )
@@ -41,8 +41,9 @@ class LlmService(
                 val chatRequest = ChatRequest(
                     model = DEFAULT_TITLE_MODEL,
                     messages = messages,
-                    max_tokens = 20,
-                    temperature = 0.7
+                    max_tokens = 100,
+                    temperature = 0.7,
+                    stream = false
                 )
 
                 val response = httpClient.post(baseUrl) {
@@ -52,9 +53,10 @@ class LlmService(
                 }
 
                 if (!response.status.isSuccess()) {
-                    val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details" }
-                    Log.e(TAG, "API Error getting title: ${response.status} - $errorBody")
-                    return@withTimeout null
+                    val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details available" }
+                    val errorMessage = "Error: API request failed with status ${response.status.value} - $errorBody"
+                    // Log.e(TAG, errorMessage)  // Uncomment if you want to log it
+                    return@withTimeout errorMessage
                 }
 
                 val chatResponse = response.body<ChatResponse>()
