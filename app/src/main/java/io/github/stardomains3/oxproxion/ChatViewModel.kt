@@ -867,7 +867,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val base64Data = imageUrl.substringAfter(",")
                     val imageBytes = Base64.getDecoder().decode(base64Data)
                     val timestamp = System.currentTimeMillis()  // Add timestamp for uniqueness
-                    val filename = "generated_image_${timestamp}_${index + 1}.png"  // Updated filename
+                   // val filename = "generated_image_${timestamp}_${index + 1}.png"  // Updated filename
+                    val filename = "generated_image_${timestamp}.png"
                     val values = ContentValues().apply {
                         put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
                         put(MediaStore.MediaColumns.MIME_TYPE, "image/png")

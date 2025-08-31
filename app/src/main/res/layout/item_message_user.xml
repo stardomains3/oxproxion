@@ -63,7 +63,7 @@
                 android:textColor="#F8F8F8"
                 android:textColorHighlight="#756151"
                 android:textIsSelectable="true"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 app:layout_constrainedWidth="true"
                 app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintEnd_toEndOf="parent"

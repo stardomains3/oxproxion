@@ -580,15 +580,27 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }, 500)
 
             lifecycleScope.launch {
+                // Toast.makeText(requireContext(), "Generating PDF...", Toast.LENGTH_SHORT).show()
                 val modelIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                 val modelName = viewModel.getModelDisplayName(modelIdentifier)
                 val filePath = withContext(Dispatchers.IO) {
                     try {
-                        if (viewModel.hasImagesInChat()) {
-                            pdfGenerator.generateStyledChatPdfWithImages(requireContext(), messages, modelName)
-                        } else {
-                            val markdownText = viewModel.getFormattedChatHistory()
-                            pdfGenerator.generateStyledChatPdf(requireContext(), markdownText, modelName)
+                        val messages = viewModel.chatMessages.value ?: emptyList()
+                        val generatedImages = viewModel.generatedImages  // Access the map from ViewModel
+                        when {
+                            generatedImages.isNotEmpty() -> {
+                                // Third case: Generated images (URIs in map) - use new function
+                                pdfGenerator.generateStyledChatPdfWithGeneratedImages(requireContext(), messages, modelName, generatedImages)
+                            }
+                            viewModel.hasImagesInChat() -> {
+                                // First case: Uploaded images (base64 in content)
+                                pdfGenerator.generateStyledChatPdfWithImages(requireContext(), messages, modelName)
+                            }
+                            else -> {
+                                // Second case: No images
+                                val markdownText = viewModel.getFormattedChatHistory()
+                                pdfGenerator.generateStyledChatPdf(requireContext(), markdownText, modelName)
+                            }
                         }
                     } catch (e: Exception) {
                         Log.e("ChatFragment", "PDF generation failed", e)

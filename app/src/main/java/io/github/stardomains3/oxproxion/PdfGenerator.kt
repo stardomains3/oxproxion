@@ -228,6 +228,148 @@ class PdfGenerator(private val context: Context) {
         return generatePdf(messages, modelName)
     }
 
+    fun generateStyledChatPdfWithGeneratedImages(
+        context: Context,
+        messages: List<FlexibleMessage>,
+        modelName: String,
+        generatedImages: Map<Int, String>
+    ): String? {
+        val file = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            "chat_${System.currentTimeMillis()}.pdf"
+        )
+        val userIconDrawable: Drawable? = AppCompatResources.getDrawable(context, R.drawable.ic_person3)
+        val aiIconDrawable: Drawable? = AppCompatResources.getDrawable(context, R.drawable.ic_tune3)
+
+        // Calculate total height (similar to generateStyledChatPdfWithImages)
+        var totalHeight = pageMargin
+        val pageWidth = PageSize.A4.width().toFloat()
+        val titlePaint = TextPaint().apply {
+            color = Color.WHITE
+            textSize = 28f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        val titleHeight = titlePaint.fontSpacing
+        totalHeight += titleHeight + bubbleSpacing
+
+        val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "thinking..." }
+        messagesToRender.forEachIndexed { index, message ->
+            val isUser = message.role == "user"
+            var textContent = ""
+            var imageBitmap: Bitmap? = null
+
+            // Extract text from content (same as original)
+            if (message.content is JsonArray) {
+                textContent = message.content.firstNotNullOfOrNull { item ->
+                    (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "text" }?.get("text")?.jsonPrimitive?.content
+                } ?: ""
+            } else if (message.content is JsonPrimitive) {
+                textContent = message.content.content
+            }
+            textContent = processMarkdownLinks(textContent)
+            // Extract uploaded image (base64 from content)
+            var uploadedImageBitmap: Bitmap? = null
+            if (message.content is JsonArray) {
+                val imageUrl = message.content.firstNotNullOfOrNull { item ->
+                    (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "image_url" }?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.content
+                }
+                if (imageUrl != null) {
+                    uploadedImageBitmap = decodeImage(imageUrl)  // Reuse existing decodeImage
+                }
+            }
+
+            // Prioritize: Use generated image if available, else uploaded
+            val finalImageBitmap = if (!isUser && generatedImages.containsKey(index)) {
+                loadBitmapFromUri(context, generatedImages[index])
+            } else {
+                uploadedImageBitmap
+            }
+
+
+            totalHeight += calculateTotalMessageHeight(textContent, finalImageBitmap, pageWidth, if (isUser) userIconDrawable != null else aiIconDrawable != null)
+            if (index < messagesToRender.size - 1) {
+                totalHeight += bubbleSpacing
+            }
+        }
+        totalHeight += pageMargin + bubbleSpacing
+
+        try {
+            val document = PdfDocument()
+            val pageInfo = PdfDocument.PageInfo.Builder(PageSize.A4.width(), totalHeight.toInt(), 1).create()
+            val page = document.startPage(pageInfo)
+            val canvas = page.canvas
+            canvas.drawColor("#000000".toColorInt())
+
+            // Draw title
+            val titleX = canvas.width / 2f
+            var currentY = pageMargin + titlePaint.fontMetrics.top.let { -it }
+            canvas.drawText(modelName, titleX, currentY, titlePaint)
+            currentY += titlePaint.fontSpacing + bubbleSpacing
+
+            messagesToRender.forEachIndexed { index, message ->
+                val isUser = message.role == "user"
+                var textContent = ""
+                var imageBitmap: Bitmap? = null
+
+                // Extract text (same as above)
+                if (message.content is JsonArray) {
+                    textContent = message.content.firstNotNullOfOrNull { item ->
+                        (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "text" }?.get("text")?.jsonPrimitive?.content
+                    } ?: ""
+                } else if (message.content is JsonPrimitive) {
+                    textContent = message.content.content
+                }
+                textContent = processMarkdownLinks(textContent)
+// Extract uploaded image (base64 from content)
+                var uploadedImageBitmap: Bitmap? = null
+                if (message.content is JsonArray) {
+                    val imageUrl = message.content.firstNotNullOfOrNull { item ->
+                        (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "image_url" }?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.content
+                    }
+                    if (imageUrl != null) {
+                        uploadedImageBitmap = decodeImage(imageUrl)  // Reuse existing decodeImage
+                    }
+                }
+
+// Prioritize: Use generated image if available, else uploaded
+                val finalImageBitmap = if (!isUser && generatedImages.containsKey(index)) {
+                    loadBitmapFromUri(context, generatedImages[index])
+                } else {
+                    uploadedImageBitmap
+                }
+
+
+
+                // Draw the message (reuses existing drawMessage and drawBubble logic)
+                val messageHeight = calculateTotalMessageHeight(textContent, finalImageBitmap, canvas.width.toFloat(), if (isUser) userIconDrawable != null else aiIconDrawable != null)
+                drawMessage(canvas, textContent, finalImageBitmap, isUser, currentY, if (isUser) userIconDrawable else aiIconDrawable)
+                currentY += messageHeight + bubbleSpacing
+            }
+
+            document.finishPage(page)
+            FileOutputStream(file).use { document.writeTo(it) }
+            document.close()
+            return file.absolutePath
+        } catch (e: IOException) {
+            Log.e("PdfGenerator", "Error creating PDF with generated images", e)
+            return null
+        }
+    }
+
+    // Helper function to load bitmap from URI
+    private fun loadBitmapFromUri(context: Context, uriString: String?): Bitmap? {
+        if (uriString == null) return null
+        return try {
+            val uri = android.net.Uri.parse(uriString)
+            val inputStream = context.contentResolver.openInputStream(uri)
+            BitmapFactory.decodeStream(inputStream)
+        } catch (e: Exception) {
+            Log.e("PdfGenerator", "Failed to load bitmap from URI: $uriString", e)
+            null
+        }
+    }
+
 
 
     private fun parseChatTextToMessages(chatText: String): List<FlexibleMessage> {
