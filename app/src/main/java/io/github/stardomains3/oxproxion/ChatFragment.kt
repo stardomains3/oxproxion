@@ -376,7 +376,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatAdapter = ChatAdapter(markwon,viewModel)
         chatRecyclerView.apply {
             adapter = chatAdapter
-            layoutManager = LinearLayoutManager(requireContext()).apply {
+           // layoutManager = LinearLayoutManager(requireContext()).apply {
+            layoutManager = NonScrollingOnFocusLayoutManager(requireContext()).apply {
                 stackFromEnd = true
             }
         }
