@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
@@ -56,7 +57,13 @@ class SaveChatDialogFragment : DialogFragment() {
         val buttonSave = view.findViewById<MaterialButton>(R.id.button_save)
         val buttonCancel = view.findViewById<MaterialButton>(R.id.button_cancel)
         val buttonLlmSuggestName = view.findViewById<MaterialButton>(R.id.button_suggest_title)
+        val noticeTextView = view.findViewById<TextView>(R.id.notice_text_view)  // Find the notice TextView
 
+        if (chatViewModel.generatedImages.isNotEmpty()|| chatViewModel.hasImagesInChat()) {
+            noticeTextView.visibility = View.VISIBLE
+        } else {
+            noticeTextView.visibility = View.GONE
+        }
 
         buttonSave.setOnClickListener {
             val title = editTextTitle.text.toString()

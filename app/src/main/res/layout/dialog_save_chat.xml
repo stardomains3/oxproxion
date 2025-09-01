@@ -13,7 +13,6 @@
         android:text="Save Chat"
         android:textColor="#C2C2C2"
         android:textAppearance="?attr/textAppearanceHeadline6"
-
         android:layout_marginBottom="16dp" />
 
     <com.google.android.material.textfield.TextInputLayout
@@ -23,8 +22,6 @@
         app:boxStrokeColor="#C2C2C2"
         app:hintTextColor="#C2C2C2"
         android:id="@+id/edit_text_lay"
-
-
         app:boxBackgroundMode="outline">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -34,11 +31,10 @@
             android:textSize="20sp"
             android:inputType="textCapSentences"
             android:fontFamily="@font/geologica_light"
-
             android:textColor="#ffffff"
-
             android:singleLine="true" />
     </com.google.android.material.textfield.TextInputLayout>
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/button_suggest_title"
         android:layout_width="match_parent"
@@ -47,13 +43,24 @@
         android:layout_marginTop="8dp"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         app:icon="@drawable/ic_auto" />
+
+    <TextView
+        android:id="@+id/notice_text_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Notice: If images are in the chat, they are not saved."
+        android:textColor="#C2C2C2"
+        android:textSize="15sp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone" />  <!-- Hidden by default; shown conditionally -->
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="end"
         android:layout_marginTop="24dp">
-        \
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_cancel"
