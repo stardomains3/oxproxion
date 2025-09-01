@@ -154,8 +154,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder
                         .codeTextColor(Color.LTGRAY)
-                        .codeBackgroundColor(Color.DKGRAY)
-                        .codeBlockBackgroundColor(Color.DKGRAY)
+                        .codeBackgroundColor(Color.BLACK)
+                        .codeBlockBackgroundColor(Color.BLACK)
                         .blockQuoteColor(Color.BLACK)
                         .isLinkUnderlined(true)
                 }
@@ -631,18 +631,19 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 payload
             }
         }
+
         copyChatButton.setOnClickListener {
-            val chatText = viewModel.getFormattedChatHistory()
+            val chatText = viewModel.getFormattedChatHistoryPlainText()  // Use the new plain-text function
             if (chatText.isNotBlank()) {
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Chat History", chatText)
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(requireContext(), "Chat Copied!", Toast.LENGTH_SHORT).show()
-            }
-            else{
+            } else {
                 Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
             }
         }
+
 
         menuButton.setOnClickListener {
             if (headerContainer.isVisible) {
@@ -799,7 +800,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     uri?.let { u ->
                         requireContext().contentResolver.openInputStream(u)?.use { stream ->
                             val bytes = stream.readBytes()
-                            if (bytes.size > 4_000_000) {
+                            if (bytes.size > 12_000_000) {
                                 Toast.makeText(
                                     requireContext(),
                                     "Image too large (max 4MB)",

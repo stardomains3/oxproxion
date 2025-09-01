@@ -253,13 +253,12 @@ class ChatAdapter(
                 shareButton.setOnClickListener {
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, rawMarkdown) // Share the raw markdown text
-                        putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message") // Optional subject
+                        putExtra(Intent.EXTRA_TEXT, messageTextView.text.toString())  // Use the same plain text as the copy button
+                        putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message")  // Optional subject
                     }
-
-                        itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
-
+                    itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
                 }
+
             }
         }
     }

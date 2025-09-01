@@ -91,8 +91,8 @@ class PdfGenerator(private val context: Context) {
             override fun configureTheme(builder: MarkwonTheme.Builder) {
                 builder
                     .codeTextColor(Color.LTGRAY)
-                    .codeBackgroundColor(Color.DKGRAY)
-                    .codeBlockBackgroundColor(Color.DKGRAY)
+                    .codeBackgroundColor(Color.BLACK)
+                    .codeBlockBackgroundColor(Color.BLACK)
                     //.blockQuoteColor(Color.BLACK)
                     .isLinkUnderlined(true)
 

@@ -51,6 +51,8 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.putJsonArray
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.text.TextContentRenderer
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.Base64
@@ -326,6 +328,28 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 else -> null
             }
         }?.joinToString("\n\n") ?: ""
+    }
+    fun getFormattedChatHistoryPlainText(): String {
+        return _chatMessages.value?.mapNotNull { message ->
+            val contentText = getMessageText(message.content).trim()
+            if (contentText.isEmpty() || contentText == "thinking...") null
+            else {
+                val plainText = stripMarkdown(contentText)  // Strip Markdown here
+                when (message.role) {
+                    "user" -> "User: $plainText"
+                    "assistant" -> "AI: $plainText"
+                    else -> null
+                }
+            }
+        }?.joinToString("\n\n") ?: ""
+    }
+
+    // Helper function to strip Markdown using CommonMark
+    private fun stripMarkdown(text: String): String {
+        val parser = Parser.builder().build()
+        val document = parser.parse(text)
+        val renderer = TextContentRenderer.builder().build()
+        return renderer.render(document).trim()
     }
 
     fun cancelCurrentRequest() {

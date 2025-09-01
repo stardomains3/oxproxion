@@ -1,0 +1,3 @@
+- Fixed issue with share and copy chat buttons not presenting the text in expected fashion
+- Code blocks now have black background for to read easier
+- Updated help screen to keep current
