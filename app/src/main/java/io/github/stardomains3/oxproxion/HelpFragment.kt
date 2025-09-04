@@ -2,6 +2,7 @@ package io.github.stardomains3.oxproxion
 
 import android.graphics.Color
 import android.os.Bundle
+import android.text.method.LinkMovementMethod
 import android.view.View
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -186,6 +187,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   Pasting in to the prompt box strips any unnecessary rich text formatting automatically.
             *   Costs are incurred with using OpenRouter models. Familiarize yourself with model costs at [https://openrouter.ai/models/](https://openrouter.ai/models/)
             *   Markdown content is well-supported in AI response chat messages.
+            *   oxproxion app does not have trackers, analytics, nor ads.
             *   If you want to save your saved chats and/or System Messages, be sure to export them before you uninstall the app, otherwise they will be gone for good.
             *   Imports are programmed to not overwrite: System Messages skip duplicates by title, while Saved Chats add new entries even when titles match, leaving all existing items intact.
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
@@ -234,5 +236,6 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
         """.trimIndent()
 
         markwon.setMarkdown(helpContentTextView, markdownContent)
+        helpContentTextView.movementMethod = LinkMovementMethod.getInstance()
     }
 }

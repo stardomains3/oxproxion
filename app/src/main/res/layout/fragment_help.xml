@@ -28,7 +28,10 @@
             android:id="@+id/helpContentTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@android:color/white"
+            android:linksClickable="true"
+            android:textColorHighlight="#756151"
+            android:textColorLink="@android:color/holo_blue_dark"
+            android:textColor="#F8F8F8"
             android:textIsSelectable="true"
             android:textSize="16sp"
             tools:text="Markdown content will be here." />
