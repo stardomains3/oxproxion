@@ -8,7 +8,6 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 class ForegroundService : Service() {
 
@@ -180,8 +179,5 @@ class ForegroundService : Service() {
         // Save
         prefsHelper.saveNotiPreference(newNotiState)
 
-        // NEW: Send local broadcast to notify ViewModel/Fragment of change
-        val broadcastIntent = Intent("io.github.stardomains3.oxproxion.NOTI_STATE_CHANGED")  // Use a unique action string
-        LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
     }
 }

@@ -202,6 +202,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isStreamingEnabled.value = sharedPreferencesHelper.getStreamingPreference()
         //  _isSoundEnabled.value = sharedPreferencesHelper.getSoundPreference()
         _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
+        sharedPreferencesHelper.mainPrefs.registerOnSharedPreferenceChangeListener { _, key ->
+            if (key == "noti_enabled") {  // Use the actual key from your companion object
+                _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
+            }
+        }
         llmService = LlmService(httpClient, activeChatUrl)
         activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
         _sortOrder.value = sharedPreferencesHelper.getSortOrder()
@@ -221,10 +226,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _activeChatModel.value = model
         _modelPreferenceToSave.value = model
     }
-    fun refreshNotiState() {
-        _isNotiEnabled.value =
-            sharedPreferencesHelper.getNotiPreference()  // Reload and default to false if null
-    }
+
     fun saveCurrentChat(title: String) {
         viewModelScope.launch {
             val sessionId = currentSessionId ?: repository.getNextSessionId()
@@ -742,7 +744,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                     // Build raw JSON payload (curl-equivalent, no shared classes)
                     val requestBody = buildJsonObject {
-                        put("model", JsonPrimitive("openai/gpt-oss-20b"))
+                        put("model", JsonPrimitive("mistralai/mistral-small-3.2-24b-instruct"))
                         put("top_p", JsonPrimitive(1.0))
                         put("temperature", JsonPrimitive(0))
                         // put("model", JsonPrimitive("openai/gpt-oss-20b"))

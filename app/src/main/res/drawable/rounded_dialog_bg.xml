@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Set the background color to match your app's theme (e.g., a dark color based on your layout's colors like #C2C2C2 or #ffffff). Adjust as needed. -->
+    <solid android:color="#323232" /> <!-- Example: Dark background; change to your preferred color -->
+    <!-- Define the corner radius for rounding -->
+    <corners android:radius="16dp" /> <!-- Adjust the radius (e.g., 8dp, 12dp, 20dp) for more/less rounding -->
+</shape>

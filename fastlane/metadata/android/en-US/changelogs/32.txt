@@ -1,0 +1,5 @@
+- Added Extended Dock preference
+- Extended Dock adds Paste, Paste-Go, Speech-to-Text, and Clear prompt box buttons
+- Changed magic prompt correction button model to "mistralai/mistral-small-3.2-24b-instruct"
+- Updated a dependency
+- UI and bug fixes

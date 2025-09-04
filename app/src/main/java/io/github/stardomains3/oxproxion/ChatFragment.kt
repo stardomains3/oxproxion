@@ -1,13 +1,13 @@
 package io.github.stardomains3.oxproxion
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
@@ -16,6 +16,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import android.util.Base64
 import android.util.Log
 import android.view.MotionEvent
@@ -29,15 +30,19 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.doOnPreDraw
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
@@ -62,17 +67,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import androidx.core.net.toUri
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
-    private val notiStateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "io.github.stardomains3.oxproxion.NOTI_STATE_CHANGED") {
-                viewModel.refreshNotiState()
-            }
-        }
-    }
+    private lateinit var speechLauncher: ActivityResultLauncher<Intent>
+    private val REQUEST_RECORD_AUDIO_PERMISSION = 200
+
     private lateinit var helpButton: MaterialButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
@@ -85,6 +85,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var chatEditText: EditText
     private lateinit var sendChatButton: MaterialButton
     private lateinit var resetChatButton: MaterialButton
+    private lateinit var utilityButton: MaterialButton
+    private lateinit var clearButton: MaterialButton
+    private lateinit var speechButton: MaterialButton
+    private lateinit var extendButton: MaterialButton
     private lateinit var saveChatButton: MaterialButton
     private lateinit var openSavedChatsButton: MaterialButton
     private lateinit var copyChatButton: MaterialButton
@@ -110,12 +114,28 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         sharedPreferencesHelper = SharedPreferencesHelper(requireContext())
+        speechLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data = result.data
+                val results = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                if (!results.isNullOrEmpty()) {
+                    val recognizedText = results[0]
+                    chatEditText.setText(recognizedText)
+                    chatEditText.setSelection(chatEditText.text.length)
+                    //   updateButtonVisibility()  // Update your buttons
+                }
+            }
+        }
         // --- Initialize Views from fragment_chat.xml ---
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
         //  soundButton = view.findViewById(R.id.soundButton)
         notiButton = view.findViewById(R.id.notiButton)
+        extendButton = view.findViewById(R.id.extendButton)
+        clearButton = view.findViewById(R.id.clearButton)
+        utilityButton = view.findViewById(R.id.utilityButton)
+        speechButton = view.findViewById(R.id.speechButton)
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
@@ -172,7 +192,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     // Optional: chatEditText.removeTextChangedListener(this) // Remove after first hide
                 }
             }
-            override fun afterTextChanged(s: android.text.Editable?) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                updateButtonVisibility()
+            }
         })
 
         setupClickListeners()
@@ -181,6 +203,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         genButton = view.findViewById(R.id.genButton)
         setupImagePicker()
         updateSystemMessageButtonState()
+        updateInitialUI()
         val rootView = view as FrameLayout // The root FrameLayout (fragment_container)
         overlayView = View(requireContext()).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -341,14 +364,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
         }
-
-
-        // Ensure initial menu state is consistent (visible with overlay)
-
-        LocalBroadcastManager.getInstance(requireContext())
-            .registerReceiver(notiStateReceiver,
-                IntentFilter("io.github.stardomains3.oxproxion.NOTI_STATE_CHANGED")
-            )
     }
 
     private fun updateSystemMessageButtonState() {
@@ -722,6 +737,29 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         notiButton.setOnClickListener {
             viewModel.toggleNoti()
         }
+        extendButton.setOnClickListener {
+            val currentState = sharedPreferencesHelper.getExtPreference()
+            val newState = !currentState
+            sharedPreferencesHelper.saveExtPreference(newState)
+
+            // Update UI directly (same logic as updateInitialUI)
+            extendButton.isSelected = newState
+            utilityButton.visibility = if (newState) View.VISIBLE else View.GONE
+
+            val hasText = !chatEditText.text.isNullOrEmpty()
+            if (newState) {
+                if (hasText) {
+                    clearButton.visibility = View.VISIBLE
+                    speechButton.visibility = View.GONE
+                } else {
+                    clearButton.visibility = View.GONE
+                    speechButton.visibility = View.VISIBLE
+                }
+            } else {
+                clearButton.visibility = View.GONE
+                speechButton.visibility = View.GONE
+            }
+        }
         systemMessageButton.setOnLongClickListener {
             val defaultMessage = SharedPreferencesHelper(requireContext()).getDefaultSystemMessage()
             SharedPreferencesHelper(requireContext()).saveSelectedSystemMessage(defaultMessage)
@@ -737,6 +775,57 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             chatEditText.text.clear()
 
             true
+        }
+        utilityButton.setOnClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                val item = clip.getItemAt(0)
+                val text = item.text
+                if (text != null) {
+                    // Safe to paste as text
+                    val start = chatEditText.selectionStart
+                    val end = chatEditText.selectionEnd
+                    chatEditText.text.replace(start, end, text.toString())
+                } else {
+                    // Clipboard item is not text (e.g., image, URI, etc.)
+                    Toast.makeText(requireContext(), "Clipboard does not contain text", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Nothing to paste", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        utilityButton.setOnLongClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                val item = clip.getItemAt(0)
+                val text = item.text
+                if (text != null) {
+                    // Safe to paste as text
+                    val start = chatEditText.selectionStart
+                    val end = chatEditText.selectionEnd
+                    chatEditText.text.replace(start, end, text.toString())
+                    sendChatButton.performClick()
+                } else {
+                    // Clipboard item is not text (e.g., image, URI, etc.)
+                    Toast.makeText(requireContext(), "Clipboard does not contain text", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Nothing to paste", Toast.LENGTH_SHORT).show()
+            }
+            true
+        }
+        speechButton.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
+            } else {
+                startSpeechRecognition()
+            }
+        }
+        clearButton.setOnClickListener {
+            chatEditText.text.clear()
         }
     }
 
@@ -761,7 +850,40 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         // Return true if the touch is INSIDE the button's bounds
         return x >= buttonLeft && x <= buttonRight && y >= buttonTop && y <= buttonBottom
     }
+    private fun updateInitialUI() {
+        val isExtended = sharedPreferencesHelper.getExtPreference()
+        val hasText = !chatEditText.text.isNullOrEmpty()
 
+        extendButton.isSelected = isExtended
+        utilityButton.visibility = if (isExtended) View.VISIBLE else View.GONE
+
+        if (isExtended) {
+            if (hasText) {
+                clearButton.visibility = View.VISIBLE
+                speechButton.visibility = View.GONE
+            } else {
+                clearButton.visibility = View.GONE
+                speechButton.visibility = View.VISIBLE
+            }
+        } else {
+            clearButton.visibility = View.GONE
+            speechButton.visibility = View.GONE
+        }
+    }
+
+    private fun updateButtonVisibility() {
+        // If both buttons are already gone (extended OFF), do nothing
+        if (clearButton.isGone && speechButton.isGone) return
+
+        val hasText = !chatEditText.text.isNullOrEmpty()
+        if (hasText) {
+            clearButton.visibility = View.VISIBLE
+            speechButton.visibility = View.GONE
+        } else {
+            clearButton.visibility = View.GONE
+            speechButton.visibility = View.VISIBLE
+        }
+    }
     private fun showMenu() {
         buttonsContainer.visibility = View.VISIBLE
         headerContainer.isVisible = true
@@ -864,7 +986,19 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
     }
 
-
+    private fun startSpeechRecognition() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak now...")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+        try {
+            speechLauncher.launch(intent)  // Use the launcher instead of startActivityForResult
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Speech recognition not supported", Toast.LENGTH_SHORT).show()
+        }
+    }
     private fun startForegroundService() {
         try {
             val serviceIntent = Intent(requireContext(), ForegroundService::class.java)

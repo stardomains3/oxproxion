@@ -52,6 +52,7 @@
     </style>
     <style name="RoundedCornersDialog" parent="Theme.MaterialComponents.DayNight.Dialog">
         <!-- Set the custom drawable as the window background -->
+        <item name="android:backgroundDimAmount">0.8</item>
         <item name="android:windowBackground">@drawable/rounded_dialog_background</item>
         <!-- Optional: Remove default title bar if not using AlertDialog.Builder's title -->
         <item name="android:windowNoTitle">true</item>

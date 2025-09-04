@@ -121,7 +121,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ##  Menu
 
             Tap the **menu button** (the one on the lower left with nine dots) to show or hide the main menu. The menu will also hide if you tap outside of it.
-            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to openai/gpt-oss-20b model to fix it and it will automatically correct the prompt.
+            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "mistralai/mistral-small-3.2-24b-instruct" to fix it and it will automatically correct the prompt.
 
             ### Contextual Buttons (Enabled during a chat)
             *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.
@@ -131,6 +131,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Stream Button**: Toggles streaming responses on or off.
             *   **API Key Button**: Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
             *   **Notification Button**: Activates a foreground service to prevent the app from closing in the background and enables you to customize the notification.
+            *   **Extended Dock Button**: Toggles extended dock on or off. If on, an extra row is added to the bottom dock. On the right is a Paste button, which when pressed pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. On the left is either a Speech-to-Text button when the prompt box is empty, or a Clear Prompt button when the prompt box has some text.
 
             ---
 

@@ -20,7 +20,7 @@ class SharedPreferencesHelper(context: Context) {
 
     private val apiKeysPrefs: SharedPreferences =
         context.getSharedPreferences(API_KEYS_PREFS_STORE, Context.MODE_PRIVATE)
-    private val mainPrefs: SharedPreferences = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
+     val mainPrefs: SharedPreferences = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
     private val gson = Gson() // Kept temporarily for migration only
 
@@ -38,6 +38,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEY_OPEN_ROUTER_MODELS = "open_router_models"
         private const val KEY_NOTI_ENABLED = "noti_enabled"
+        private const val KEY_EXT_ENABLED = "ext_enabled"
         private const val KEY_INFO_BAR_DISMISSED = "info_bar_dismissed"
         private const val KEY_SORT_ORDER = "sort_order"
         private const val KEY_DEFAULT_SYSTEM_MESSAGE = "default_system_message"
@@ -165,6 +166,15 @@ class SharedPreferencesHelper(context: Context) {
     fun saveNotiPreference(isEnabled: Boolean) {
         mainPrefs.edit {
             putBoolean(KEY_NOTI_ENABLED, isEnabled)
+        }
+    }
+    fun getExtPreference(): Boolean {
+        return mainPrefs.getBoolean(KEY_EXT_ENABLED, false)
+    }
+
+    fun saveExtPreference(isEnabled: Boolean) {
+        mainPrefs.edit {
+            putBoolean(KEY_EXT_ENABLED, isEnabled)
         }
     }
 

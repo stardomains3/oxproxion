@@ -48,7 +48,7 @@ Here are some screenshots of the app in action:
 
 *Markdown delight!*
 
-### Options
+### Options with Extended Dock on
 ![Options Screen](screenshots/8.png)
 
 *Customize your experience in the options menu.*

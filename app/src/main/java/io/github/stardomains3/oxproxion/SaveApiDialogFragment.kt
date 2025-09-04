@@ -1,10 +1,12 @@
 package io.github.stardomains3.oxproxion
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import com.google.android.material.button.MaterialButton
@@ -27,7 +29,8 @@ class SaveApiDialogFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        dialog?.window?.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+        dialog?.window?.setDimAmount(0.8f)
         val sharedPreferencesHelper = SharedPreferencesHelper(requireContext())
         val editTextApiKey = view.findViewById<TextInputEditText>(R.id.edit_text_title)
         val buttonSave = view.findViewById<MaterialButton>(R.id.button_saveapi)
