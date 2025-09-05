@@ -29,7 +29,20 @@
             app:tint="#2C2C2C"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-
+        <ImageButton
+            android:id="@+id/aipdfButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Make PDF"
+            android:padding="4dp"
+            android:src="@drawable/ic_pdfnew"
+            app:tint="#2C2C2C"
+            app:layout_constraintStart_toEndOf="@id/copyButton"
+            app:layout_constraintTop_toTopOf="@id/copyButton"
+            app:layout_constraintBottom_toBottomOf="@id/copyButton" />
         <ImageButton
             android:id="@+id/shareButton"
             android:layout_width="32dp"
@@ -41,9 +54,9 @@
             android:padding="4dp"
             android:src="@drawable/ic_share"
             app:tint="#2C2C2C"
-            app:layout_constraintStart_toEndOf="@id/copyButton"
-            app:layout_constraintTop_toTopOf="@id/copyButton"
-            app:layout_constraintBottom_toBottomOf="@id/copyButton" />
+            app:layout_constraintStart_toEndOf="@id/aipdfButton"
+            app:layout_constraintTop_toTopOf="@id/aipdfButton"
+            app:layout_constraintBottom_toBottomOf="@id/aipdfButton" />
         <ImageButton
             android:id="@+id/ttsButton"
             android:layout_width="32dp"

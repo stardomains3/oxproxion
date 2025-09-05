@@ -28,6 +28,7 @@ import android.widget.FrameLayout
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import androidx.core.graphics.toColorInt
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withSave
@@ -99,7 +100,146 @@ class PdfGenerator(private val context: Context) {
             }
         })
         .build()
+    fun generateMarkdownPdfWithImage(markdown: String, imageUri: String): String? {
+        try {
+            val processedMarkdown = processMarkdownLinks(markdown)
+            val margin = 20f
+            val pageWidth = 595
+            val contentWidth = (pageWidth - (margin * 2)).toInt()
 
+            // Split markdown into blocks for proper rendering
+            val blocks = splitMarkdownIntoBlocks(processedMarkdown)
+            val renderedTables = hashMapOf<Int, Bitmap>()
+
+            // Pre-render table bitmaps (same as original)
+            blocks.forEachIndexed { index, block ->
+                if (block.isTable) {
+                    val act = context as? Activity
+                        ?: throw IllegalStateException("PdfGenerator requires an Activity context to render tables")
+                    val bmp = renderMarkdownToBitmapAttachedBlocking(
+                        act,
+                        block.content,
+                        contentWidth,
+                        "#d0d0d0".toColorInt(),
+                        26f
+                    )
+                    renderedTables[index] = bmp
+                }
+            }
+
+            // Load the generated image from URI
+            val imageBitmap = loadBitmapFromUri(context, imageUri)
+            val imageHeight = imageBitmap?.let { (it.height.toFloat() / it.width.toFloat()) * contentWidth } ?: 0f
+
+            // Calculate total height needed (image first, then text + spacing)
+            var totalHeight = margin
+            val textPaint = TextPaint().apply {
+                color = "#d0d0d0".toColorInt()
+                textSize = 26f
+            }
+
+            // Add image height first
+            if (imageBitmap != null) {
+                totalHeight += imageHeight
+            }
+
+            // Calculate text height and add spacing if both image and text exist
+            var textHeight = 0f
+            blocks.forEachIndexed { index, block ->
+                if (block.isTable) {
+                    textHeight += renderedTables[index]!!.height
+                } else {
+                    if (block.content.isNotBlank()) {
+                        val spanned = markwon.toMarkdown(block.content)
+                        val layout = StaticLayout.Builder.obtain(
+                            spanned, 0, spanned.length, textPaint, contentWidth
+                        )
+                            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                            .setLineSpacing(0f, 1f)
+                            .setIncludePad(false)
+                            .build()
+                        textHeight += layout.height
+                    }
+                }
+                if (index < blocks.size - 1) textHeight += 8f // spacing between blocks
+            }
+            if (imageBitmap != null && textHeight > 0) {
+                totalHeight += 20f // Padding between image and text
+            }
+            totalHeight += textHeight + margin
+
+            // Create PDF with calculated height
+            val document = PdfDocument()
+            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, totalHeight.toInt(), 1).create()
+            val page = document.startPage(pageInfo)
+            val canvas = page.canvas
+            canvas.drawColor("#121314".toColorInt())
+
+            // Render content: Image first, then text
+            var currentY = margin
+
+            // Render the image (if present)
+            if (imageBitmap != null) {
+                val scaledBitmap = imageBitmap.scale(contentWidth, imageHeight.toInt())
+                canvas.drawBitmap(scaledBitmap, margin, currentY, null)
+                currentY += imageHeight
+                if (textHeight > 0) {
+                    currentY += 20f // Padding between image and text
+                }
+            }
+
+            // Render text blocks
+            blocks.forEachIndexed { index, block ->
+                if (block.isTable) {
+                    val bmp = renderedTables[index]!!
+                    canvas.drawBitmap(bmp, margin, currentY, null)
+                    currentY += bmp.height
+                } else {
+                    if (block.content.isNotBlank()) {
+                        val spanned = markwon.toMarkdown(block.content)
+                        val layout = StaticLayout.Builder.obtain(
+                            spanned, 0, spanned.length, textPaint, contentWidth
+                        )
+                            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                            .setLineSpacing(0f, 1f)
+                            .setIncludePad(false)
+                            .build()
+                        canvas.withTranslation(margin, currentY) {
+                            layout.draw(this)
+                        }
+                        currentY += layout.height
+                    }
+                }
+                if (index < blocks.size - 1) currentY += 8f // spacing between blocks
+            }
+
+            document.finishPage(page)
+
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "${System.currentTimeMillis()}.pdf")
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            }
+            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            if (uri == null) {
+                document.close()
+                return null
+            }
+            context.contentResolver.openOutputStream(uri).use { outputStream ->
+                if (outputStream != null) {
+                    document.writeTo(outputStream)
+                }
+            }
+            document.close()
+            return uri.toString()
+        } catch (e: IOException) {
+            Log.e("PdfGenerator", "Error creating Markdown PDF with image", e)
+            return null
+        } catch (e: Exception) {
+            Log.e("PdfGenerator", "Error rendering Markdown PDF with image", e)
+            return null
+        }
+    }
     fun generateMarkdownPdf(markdown: String): String? {
         try {
             val processedMarkdown = processMarkdownLinks(markdown)

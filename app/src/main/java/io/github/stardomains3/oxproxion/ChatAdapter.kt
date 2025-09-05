@@ -30,6 +30,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.collections.get
 
 class ChatAdapter(
     private val markwon: Markwon,
@@ -174,6 +175,7 @@ class ChatAdapter(
     ) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
+        private val aipdfButton: ImageButton = itemView.findViewById(R.id.aipdfButton)
         private val copyButton: ImageButton = itemView.findViewById(R.id.copyButton)
          val ttsButton: ImageButton = itemView.findViewById(R.id.ttsButton)  // Added for TTS
         private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
@@ -243,7 +245,32 @@ class ChatAdapter(
                     Toast.makeText(itemView.context, "No text to speak", Toast.LENGTH_SHORT).show()
                 }
             }
+            aipdfButton.setOnClickListener {
+                CoroutineScope(Dispatchers.Main).launch {
+                    val pdfUri = withContext(Dispatchers.IO) {
+                        try {
+                            val generator = PdfGenerator(itemView.context)
+                            val imageUri = viewModel.generatedImages[position]  // Check for generated image
+                            if (imageUri != null) {
+                                // Case #2: Has generated image (with or without text)
+                                generator.generateMarkdownPdfWithImage(rawMarkdown, imageUri)
+                            } else {
+                                // Case #1: Text-only
+                                generator.generateMarkdownPdf(rawMarkdown)
+                            }
+                        } catch (e: Exception) {
+                            // Log.e("ChatAdapter", "PDF generation failed", e)
+                            null
+                        }
+                    }
 
+                    if (pdfUri != null) {
+                        Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
             // Special handling for the copy button
             if (text == "thinking...") {
                 // Hide the copy button when the AI is thinking

@@ -104,7 +104,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Copy User Message**: Tap the **user icon** to copy your message.
             *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps.
             *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response.
-            *   **Create PDF of Response**: **Long-press** the **robot icon** to save just that response as a PDF in your device's Downloads folder.
+            *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder.
 
             ### Sending Prompts
             *   **Text Box**: Enter your prompt.
@@ -123,7 +123,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ##  Menu
 
             Tap the **menu button** (the one on the lower left with nine dots) to show or hide the main menu. The menu will also hide if you tap outside of it.
-            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "mistralai/mistral-small-3.2-24b-instruct" to fix it and it will automatically correct the prompt.
+            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "mistralai/mistral-small-3.2-24b-instruct" to fix it and it will automatically correct the prompt in the prompt box.
 
             ### Contextual Buttons (Enabled during a chat)
             *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.

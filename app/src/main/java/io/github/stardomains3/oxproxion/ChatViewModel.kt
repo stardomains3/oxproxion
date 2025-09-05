@@ -284,6 +284,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadChat(sessionId: Long) {
+        generatedImages.clear()
         _isChatLoading.value = true
         viewModelScope.launch {
             try {

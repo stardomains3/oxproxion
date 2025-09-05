@@ -1,0 +1,2 @@
+- Added a pdf button for single AI response. PDf will now included any generated image.
+- Bug fix when loading saved chat after image generation
