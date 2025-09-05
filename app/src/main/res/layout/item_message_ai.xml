@@ -44,6 +44,20 @@
             app:layout_constraintStart_toEndOf="@id/copyButton"
             app:layout_constraintTop_toTopOf="@id/copyButton"
             app:layout_constraintBottom_toBottomOf="@id/copyButton" />
+        <ImageButton
+            android:id="@+id/ttsButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Speak text"
+            android:padding="4dp"
+            android:src="@drawable/ic_volume_up"
+            app:tint="#2C2C2C"
+            app:layout_constraintStart_toEndOf="@id/shareButton"
+            app:layout_constraintTop_toTopOf="@id/shareButton"
+            app:layout_constraintBottom_toBottomOf="@id/shareButton" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/messageContainer"

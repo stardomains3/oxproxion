@@ -33,8 +33,12 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class ChatAdapter(
     private val markwon: Markwon,
-    private val viewModel: ChatViewModel
+    private val viewModel: ChatViewModel,
+    private val onSpeakText: (String, Int) -> Unit  // Added for TTS
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    var isSpeaking = false
+    var currentSpeakingPosition = -1
+    var currentHolder: AssistantViewHolder? = null
 
     private fun getMessageText(content: JsonElement): String {
         if (content is JsonPrimitive) return content.content
@@ -53,6 +57,11 @@ class ChatAdapter(
             }
         }
         return null
+    }
+
+    fun updateTtsState(speaking: Boolean, position: Int) {
+        isSpeaking = speaking
+        currentSpeakingPosition = position
     }
 
     private val messages = mutableListOf<FlexibleMessage>()
@@ -90,7 +99,6 @@ class ChatAdapter(
         }
     }
 
-
     override fun getItemViewType(position: Int): Int {
         val message = messages[position]
         return when (message.role) {
@@ -113,7 +121,7 @@ class ChatAdapter(
             }
             else -> { // Both AI and Thinking use the same base layout
                 val view = inflater.inflate(R.layout.item_message_ai, parent, false)
-                AssistantViewHolder(view, markwon)
+                AssistantViewHolder(view, markwon, onSpeakText)
             }
         }
     }
@@ -124,7 +132,7 @@ class ChatAdapter(
 
         when (holder) {
             is UserViewHolder -> holder.bind(message)
-            is AssistantViewHolder -> holder.bind(message,position)
+            is AssistantViewHolder -> holder.bind(message, position, isSpeaking, currentSpeakingPosition)
         }
     }
 
@@ -135,6 +143,7 @@ class ChatAdapter(
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val copyButtonuser: ImageButton = itemView.findViewById(R.id.copyButtonuser)
         private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
+
         fun bind(message: FlexibleMessage) {
             messageTextView.text = getMessageText(message.content)
 
@@ -158,14 +167,22 @@ class ChatAdapter(
     }
 
     // ViewHolder for AI and "Thinking" messages
-    inner class AssistantViewHolder(itemView: View, private val markwon: Markwon) : RecyclerView.ViewHolder(itemView) {
+    inner class AssistantViewHolder(
+        itemView: View,
+        private val markwon: Markwon,
+        private val onSpeakText: (String, Int) -> Unit
+    ) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
         private val copyButton: ImageButton = itemView.findViewById(R.id.copyButton)
+         val ttsButton: ImageButton = itemView.findViewById(R.id.ttsButton)  // Added for TTS
         private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
 
-        fun bind(message: FlexibleMessage, position: Int) {
+        fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
+            if (position == currentPosition) {
+                currentHolder = this
+            }
             val text = getMessageText(message.content)
             markwon.setMarkdown(messageTextView, text)
             messageTextView.movementMethod = LinkMovementMethod.getInstance()
@@ -173,8 +190,7 @@ class ChatAdapter(
             val isError = message.role == "assistant" && text.startsWith("**Error:**")
             if (isError) {
                 messageContainer.setBackgroundResource(R.drawable.bg_error_message)
-            }
-            else{
+            } else {
                 messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
             }
             if (isThinking) {
@@ -211,6 +227,23 @@ class ChatAdapter(
                 generatedImageView.visibility = View.GONE
             }
             val rawMarkdown = text
+
+            // Update TTS button icon based on state
+            val iconRes = if (isSpeaking && position == currentPosition) {
+                R.drawable.ic_stop_circle  // Your stop icon
+            } else {
+                R.drawable.ic_volume_up  // Your play/speaker icon
+            }
+            ttsButton.setImageResource(iconRes)
+            ttsButton.setOnClickListener {
+                val textToSpeak = messageTextView.text.toString()
+                if (textToSpeak.isNotEmpty()) {
+                    onSpeakText(textToSpeak, position)
+                } else {
+                    Toast.makeText(itemView.context, "No text to speak", Toast.LENGTH_SHORT).show()
+                }
+            }
+
             // Special handling for the copy button
             if (text == "thinking...") {
                 // Hide the copy button when the AI is thinking
@@ -258,10 +291,10 @@ class ChatAdapter(
                     }
                     itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
                 }
-
             }
         }
     }
+
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
         if (holder is AssistantViewHolder) {
@@ -271,5 +304,4 @@ class ChatAdapter(
             holder.messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
         }
     }
-
 }

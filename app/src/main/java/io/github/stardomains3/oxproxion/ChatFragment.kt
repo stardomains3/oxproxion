@@ -17,6 +17,8 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
 import android.util.Log
 import android.view.MotionEvent
@@ -72,7 +74,9 @@ import kotlinx.serialization.json.buildJsonArray
 class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private val REQUEST_RECORD_AUDIO_PERMISSION = 200
-
+    private lateinit var textToSpeech: TextToSpeech
+    private var isSpeaking = false
+    private var currentSpeakingPosition = -1
     private lateinit var helpButton: MaterialButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
@@ -157,7 +161,21 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             setSharedText(sharedText)
             arguments?.remove("shared_text") // To prevent re-processing
         }
-
+        textToSpeech = TextToSpeech(requireContext()) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                textToSpeech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {}
+                    override fun onDone(utteranceId: String?) {
+                        requireActivity().runOnUiThread { onSpeechFinished() }  // Run on main thread
+                    }
+                    override fun onError(utteranceId: String?) {
+                        requireActivity().runOnUiThread { onSpeechFinished() }  // Run on main thread
+                    }
+                })
+            } else {
+                Toast.makeText(requireContext(), "TTS failed", Toast.LENGTH_SHORT).show()
+            }
+        }
         val prism4j = Prism4j(ExampleGrammarLocator())
         // val theme = Prism4jThemeDefault.create()
         val theme = Prism4jThemeDarkula.create()
@@ -388,10 +406,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     }
 
     private fun setupRecyclerView() {
-        chatAdapter = ChatAdapter(markwon,viewModel)
+        chatAdapter = ChatAdapter(markwon, viewModel) {  text, position ->
+            speakText(text, position)// Callback for TTS
+        }
         chatRecyclerView.apply {
             adapter = chatAdapter
-           // layoutManager = LinearLayoutManager(requireContext()).apply {
             layoutManager = NonScrollingOnFocusLayoutManager(requireContext()).apply {
                 stackFromEnd = true
             }
@@ -412,7 +431,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             requestFocus()
         }
     }
-
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::textToSpeech.isInitialized) {
+            textToSpeech.stop()
+            textToSpeech.shutdown()
+        }
+    }
     @SuppressLint("ClickableViewAccessibility")
     private fun setupClickListeners() {
         removeAttachmentButton.setOnClickListener {
@@ -818,6 +843,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             true
         }
         speechButton.setOnClickListener {
+            chatEditText.hideKeyboard()
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
             } else {
@@ -870,7 +896,64 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             speechButton.visibility = View.GONE
         }
     }
+    private fun speakText(text: String, position: Int) {
+        if (isSpeaking) {
+            if (position == currentSpeakingPosition) {
+                // Stop current speech
+                textToSpeech.stop()
+                onSpeechFinished()
+            } else {
+                // Stop old and start new
+                textToSpeech.stop()
+                onSpeechFinished()
+                // Start new
+                isSpeaking = true
+                currentSpeakingPosition = position
+                chatAdapter.updateTtsState(isSpeaking, currentSpeakingPosition)
+                // flashissue: Update icon directly if holder is attached, else notify
+                updateIconDirectlyOrNotify(position, R.drawable.ic_stop_circle)
+                val safeText = text.take(3900)
+                if (safeText.length < text.length) {
+                    Toast.makeText(requireContext(), "Text truncated for TTS (too long)", Toast.LENGTH_SHORT).show()
+                }
+                textToSpeech.speak(safeText, TextToSpeech.QUEUE_FLUSH, null, "tts_utterance")
+            }
+        } else {
+            // Start new
+            isSpeaking = true
+            currentSpeakingPosition = position
+            chatAdapter.updateTtsState(isSpeaking, currentSpeakingPosition)
+            // flashissue: Update icon directly if holder is attached, else notify
+            updateIconDirectlyOrNotify(position, R.drawable.ic_stop_circle)
+            val safeText = text.take(3900)
+            if (safeText.length < text.length) {
+                Toast.makeText(requireContext(), "Text truncated for TTS (too long)", Toast.LENGTH_SHORT).show()
+            }
+            textToSpeech.speak(safeText, TextToSpeech.QUEUE_FLUSH, null, "tts_utterance")
+        }
+    }
+    private fun updateIconDirectlyOrNotify(position: Int, iconRes: Int) {
+        val holder = chatAdapter.currentHolder
+        if (holder?.itemView?.isAttachedToWindow == true && holder.bindingAdapterPosition == position) {  // Changed here
+            holder.ttsButton.setImageResource(iconRes)
+        } else {
+            chatAdapter.notifyItemChanged(position)
+        }
+    }
 
+
+
+
+    private fun onSpeechFinished() {
+        isSpeaking = false
+        val pos = currentSpeakingPosition
+        currentSpeakingPosition = -1
+        chatAdapter.updateTtsState(isSpeaking, currentSpeakingPosition)
+        if (pos != -1) {
+            // flashissue: Update icon directly if holder is attached, else notify
+            updateIconDirectlyOrNotify(pos, R.drawable.ic_volume_up)
+        }
+    }
     private fun updateButtonVisibility() {
         // If both buttons are already gone (extended OFF), do nothing
         if (clearButton.isGone && speechButton.isGone) return
