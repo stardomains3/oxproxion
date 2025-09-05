@@ -141,7 +141,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isStreamingEnabled: LiveData<Boolean> = _isStreamingEnabled
     //private val _isSoundEnabled = MutableLiveData<Boolean>(false)
     //val isSoundEnabled: LiveData<Boolean> = _isSoundEnabled
-    private val _isNotiEnabled = MutableLiveData<Boolean>(false)
+    val _isNotiEnabled = MutableLiveData<Boolean>(false)
     val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
@@ -422,7 +422,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 model = modelForRequest,
                 messages = messagesForApiRequest,
                 stream = true,
-                max_tokens = 2800,
+                max_tokens = 15000,
                 modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
             )
 
@@ -524,7 +524,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     model = modelForRequest,
                     messages = messagesForApiRequest,
                     //  usage = UsageRequest(include = true),
-                    max_tokens = 2800,
+                    max_tokens = 15000,
                     modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
                 )
 
@@ -760,7 +760,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             })
                         }
                         put("stream", JsonPrimitive(false))
-                        put("max_tokens", JsonPrimitive(2800))
+                        put("max_tokens", JsonPrimitive(15000))
                     }
 
                     val response = localClient.post(activeChatUrl) {

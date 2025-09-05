@@ -13,6 +13,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.SearchView
 import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -30,6 +31,8 @@ class SystemMessageLibraryFragment : Fragment() {
     private lateinit var systemMessageAdapter: SystemMessageAdapter
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private val systemMessages = mutableListOf<SystemMessage>()
+    private lateinit var searchView: SearchView  // NEW: Reference to SearchView
+    private val allSystemMessages = mutableListOf<SystemMessage>()
 
     private val exportSystemMessagesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -117,7 +120,23 @@ class SystemMessageLibraryFragment : Fragment() {
         toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
         }
+        val searchItem = toolbar.menu.findItem(R.id.action_search)
+        if (searchItem != null) {
+            searchView = searchItem.actionView as SearchView
+            searchView.queryHint = "Search system messages..."
+            searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    return true
+                }
 
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    filterSystemMessages(newText ?: "")  // NEW: Filter on every keystroke (no debounce)
+                    return true
+                }
+            })
+        } else {
+            Toast.makeText(requireContext(), "Search not available", Toast.LENGTH_SHORT).show()
+        }
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_import -> {
@@ -320,9 +339,39 @@ class SystemMessageLibraryFragment : Fragment() {
     }
     private fun loadSystemMessages() {
         systemMessages.clear()
-        // Use the stored default message instead of hardcoded one
-        systemMessages.add(sharedPreferencesHelper.getDefaultSystemMessage())
-        systemMessages.addAll(sharedPreferencesHelper.getCustomSystemMessages())
+        allSystemMessages.clear()  // NEW: Clear the full list too
+        val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
+        val customMessages = sharedPreferencesHelper.getCustomSystemMessages()
+
+        systemMessages.add(defaultMessage)
+        systemMessages.addAll(customMessages)
+
+        allSystemMessages.add(defaultMessage)  // NEW: Populate the full list
+        allSystemMessages.addAll(customMessages)
+
+        // Apply search filter only if searchView is initialized
+        if (::searchView.isInitialized) {
+            filterSystemMessages(searchView.query.toString())
+        } else {
+            systemMessageAdapter.notifyDataSetChanged()  // Fallback for non-search calls
+        }
+    }
+
+
+    private fun filterSystemMessages(query: String) {
+        if (allSystemMessages.isNotEmpty()) {
+            // Use the full list for filtering
+            val filteredMessages = if (query.isEmpty()) {
+                allSystemMessages
+            } else {
+                allSystemMessages.filter { message ->
+                    message.title.contains(query, ignoreCase = true) ||
+                            message.prompt.contains(query, ignoreCase = true)
+                }
+            }
+            systemMessages.clear()
+            systemMessages.addAll(filteredMessages)
+        }
         systemMessageAdapter.notifyDataSetChanged()
     }
 

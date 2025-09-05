@@ -103,7 +103,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Copy AI Response**: Tap the **robot icon** to copy the AI's message.
             *   **Copy User Message**: Tap the **user icon** to copy your message.
             *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps.
-            *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response.
+            *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.)
             *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder.
 
             ### Sending Prompts
@@ -186,6 +186,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   The app is licensed under the Apache License 2.0.
             *   This app is not affiliated with OpenRouter.ai.
             *   Pasting in to the prompt box strips any unnecessary rich text formatting automatically.
+            *   max_tokens is set to 15000 so as to prevent responses from being cut off.
             *   Costs are incurred with using OpenRouter models. Familiarize yourself with model costs at [https://openrouter.ai/models/](https://openrouter.ai/models/)
             *   Markdown content is well-supported in AI response chat messages.
             *   oxproxion app does not have trackers, analytics, nor ads.

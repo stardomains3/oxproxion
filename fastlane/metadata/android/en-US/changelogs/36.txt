@@ -1,0 +1,3 @@
+- Upped max_tokens to 15000 to prevent response clipping
+- Search in System Message library
+- Bug fix for notification option not showing proper state in menu

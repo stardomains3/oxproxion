@@ -1102,6 +1102,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         super.onResume()
         updateSystemMessageButtonState()
         chatEditText.requestFocus()
+        viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
 
         /*if (viewModel.isChatLoading.value == false) {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
