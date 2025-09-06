@@ -16,7 +16,6 @@
         app:layout_constraintWidth_percent="0.95"
         app:layout_constraintHorizontal_bias="0.0">
 
-        <!-- Copy Button -->
         <ImageButton
             android:id="@+id/copyButton"
             android:layout_width="32dp"
@@ -26,9 +25,10 @@
             android:contentDescription="Copy text"
             android:padding="4dp"
             android:src="@drawable/ic_tune"
-            app:tint="#2C2C2C"
+            app:tint="#454545"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
         <ImageButton
             android:id="@+id/aipdfButton"
             android:layout_width="32dp"
@@ -39,10 +39,12 @@
             android:contentDescription="Make PDF"
             android:padding="4dp"
             android:src="@drawable/ic_pdfnew"
-            app:tint="#2C2C2C"
+            app:tint="#454545"
             app:layout_constraintStart_toEndOf="@id/copyButton"
             app:layout_constraintTop_toTopOf="@id/copyButton"
             app:layout_constraintBottom_toBottomOf="@id/copyButton" />
+
+        <!-- shareButton -->
         <ImageButton
             android:id="@+id/shareButton"
             android:layout_width="32dp"
@@ -53,10 +55,12 @@
             android:contentDescription="Share text"
             android:padding="4dp"
             android:src="@drawable/ic_share"
-            app:tint="#2C2C2C"
+            app:tint="#454545"
             app:layout_constraintStart_toEndOf="@id/aipdfButton"
-            app:layout_constraintTop_toTopOf="@id/aipdfButton"
-            app:layout_constraintBottom_toBottomOf="@id/aipdfButton" />
+            app:layout_constraintTop_toTopOf="@id/copyButton"
+            app:layout_constraintBottom_toBottomOf="@id/copyButton" />
+
+        <!-- ttsButton -->
         <ImageButton
             android:id="@+id/ttsButton"
             android:layout_width="32dp"
@@ -67,10 +71,10 @@
             android:contentDescription="Speak text"
             android:padding="4dp"
             android:src="@drawable/ic_volume_up"
-            app:tint="#2C2C2C"
+            app:tint="#454545"
             app:layout_constraintStart_toEndOf="@id/shareButton"
-            app:layout_constraintTop_toTopOf="@id/shareButton"
-            app:layout_constraintBottom_toBottomOf="@id/shareButton" />
+            app:layout_constraintTop_toTopOf="@id/copyButton"
+            app:layout_constraintBottom_toBottomOf="@id/copyButton" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/messageContainer"

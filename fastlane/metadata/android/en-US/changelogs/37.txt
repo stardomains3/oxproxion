@@ -1,0 +1,2 @@
+- Improved appearance of Ai response action buttons.
+- Removed stop button animation.

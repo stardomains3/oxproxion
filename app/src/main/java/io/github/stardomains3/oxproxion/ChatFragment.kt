@@ -309,8 +309,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             sendChatButton.isEnabled = true
 
             val materialButton = sendChatButton
-
             if (isAwaiting) {
+                materialButton.setIconResource(R.drawable.ic_stop)
+            }
+            else{
+                materialButton.icon = originalSendIcon
+            }
+           /* if (isAwaiting) {
                 if (areAnimationsEnabled(requireContext())) {
                     // Stop any existing animation first
                     // (materialButton.icon as? Animatable)?.stop()
@@ -328,7 +333,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 // Stop animation and reset to original icon
                 (materialButton.icon as? Animatable)?.stop()
                 materialButton.icon = originalSendIcon
-            }
+            }*/
         }
 
         viewModel.modelPreferenceToSave.observe(viewLifecycleOwner) { model ->
