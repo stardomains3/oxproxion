@@ -35,7 +35,8 @@ import kotlin.collections.get
 class ChatAdapter(
     private val markwon: Markwon,
     private val viewModel: ChatViewModel,
-    private val onSpeakText: (String, Int) -> Unit  // Added for TTS
+    private val onSpeakText: (String, Int) -> Unit,
+    private val ttsAvailable: Boolean
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
     var currentSpeakingPosition = -1
@@ -188,6 +189,7 @@ class ChatAdapter(
             val text = getMessageText(message.content)
             markwon.setMarkdown(messageTextView, text)
             messageTextView.movementMethod = LinkMovementMethod.getInstance()
+            ttsButton.visibility = if (ttsAvailable) View.VISIBLE else View.GONE
             val isThinking = text == "thinking..."
             val isError = message.role == "assistant" && text.startsWith("**Error:**")
             if (isError) {

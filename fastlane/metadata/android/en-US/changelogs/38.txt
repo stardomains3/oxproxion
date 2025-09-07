@@ -1,0 +1,3 @@
+- If user's text-to-speech engine is unavailable or doesn't initialize, the speak response button will not be displayed
+- Fix for occasional error if a model returned unknown response object
+- Enhanced error handling

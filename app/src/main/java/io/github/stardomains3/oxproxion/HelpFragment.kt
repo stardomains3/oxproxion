@@ -103,7 +103,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Copy AI Response**: Tap the **robot icon** to copy the AI's message.
             *   **Copy User Message**: Tap the **user icon** to copy your message.
             *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps.
-            *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.)
+            *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.) Will not display if your device's text-to-speech engine isn't available.
             *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder.
 
             ### Sending Prompts

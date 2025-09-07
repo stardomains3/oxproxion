@@ -101,7 +101,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
-    //private lateinit var soundButton: MaterialButton
+    private var ttsAvailable = true
     private lateinit var notiButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
@@ -169,11 +169,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         requireActivity().runOnUiThread { onSpeechFinished() }  // Run on main thread
                     }
                     override fun onError(utteranceId: String?) {
-                        requireActivity().runOnUiThread { onSpeechFinished() }  // Run on main thread
+                        requireActivity().runOnUiThread {
+                            Toast.makeText(requireContext(), "TTS error: Check TTS settings or engine", Toast.LENGTH_SHORT).show()
+                            onSpeechFinished()
+                        }
                     }
                 })
+                ttsAvailable = true
             } else {
                 Toast.makeText(requireContext(), "TTS failed", Toast.LENGTH_SHORT).show()
+                ttsAvailable = false
             }
         }
         val prism4j = Prism4j(ExampleGrammarLocator())
@@ -411,9 +416,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     }
 
     private fun setupRecyclerView() {
-        chatAdapter = ChatAdapter(markwon, viewModel) {  text, position ->
-            speakText(text, position)// Callback for TTS
-        }
+        chatAdapter = ChatAdapter(markwon, viewModel, { text, position ->
+            speakText(text, position)
+        }, ttsAvailable)
         chatRecyclerView.apply {
             adapter = chatAdapter
             layoutManager = NonScrollingOnFocusLayoutManager(requireContext()).apply {

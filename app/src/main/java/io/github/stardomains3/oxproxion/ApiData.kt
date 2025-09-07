@@ -84,12 +84,23 @@ data class ChatResponse(
 
 @Serializable
 data class Choice(
-    val logprobs: String? = null,
+    val logprobs: Logprobs? = null,
     val finish_reason: String? = null,
     val native_finish_reason: String? = null, // Changed to nullable
     val index: Int,
-    val message: MessageResponse
-    // val finishReason: String? = null // From my code, if needed; make optional
+    val message: MessageResponse,
+    val error: ErrorResponse? = null
+)
+@Serializable
+data class ErrorResponse(  // <-- ADD THIS: New data class
+    val code: Int,
+    val message: String,
+    val metadata: Map<String, JsonElement>? = null
+)
+@Serializable
+data class Logprobs(
+    val content: List<JsonElement>? = null,
+    val refusal: List<JsonElement>? = null
 )
 
 @Serializable
@@ -212,7 +223,8 @@ data class StreamedChatResponse(
 data class StreamedChoice(
     val index: Int,
     val delta: StreamedDelta,
-    val finish_reason: String? = null
+    val finish_reason: String? = null,
+    val error: ErrorResponse? = null
 )
 
 @Serializable

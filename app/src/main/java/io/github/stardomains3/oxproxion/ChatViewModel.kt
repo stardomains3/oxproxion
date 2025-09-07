@@ -441,9 +441,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                     val channel = httpResponse.body<ByteReadChannel>()
                     var accumulatedResponse = ""
+                    var finish_reason: String? = null  // <-- ADD THIS: Declare finish_reason
+                    var lastChoice: StreamedChoice? = null
                     val accumulatedAnnotations = mutableListOf<Annotation>()
-                    val accumulatedImages = mutableListOf<String>()  // Added for images
-
+                    val accumulatedImages = mutableListOf<String>()
 
                     withContext(Dispatchers.Main) {
                         updateMessages {
@@ -462,7 +463,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                             try {
                                 val chunk = json.decodeFromString<StreamedChatResponse>(jsonString)
-                                val delta = chunk.choices.firstOrNull()?.delta
+                                val choice = chunk.choices.firstOrNull()  // <-- ADD THIS: Extract choice
+                                finish_reason = choice?.finish_reason ?: finish_reason  // <-- ADD THIS: Update finish_reason
+                                lastChoice = choice
+                                val delta = choice?.delta  // <-- UPDATE: Use choice.delta instead of chunk.choices.firstOrNull()?.delta
+
                                 delta?.content?.let { content ->
                                     accumulatedResponse += content
                                     withContext(Dispatchers.Main) {
@@ -482,6 +487,44 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
+                    var errorHandled = false
+                    lastChoice?.error?.let { error ->
+                        withContext(Dispatchers.Main) {
+                            handleErrorResponse(error, thinkingMessage)
+                        }
+                        errorHandled = true
+                    }
+                    if (!errorHandled) {
+                        when (finish_reason) {
+                            "error" -> {
+                                val errorMsg = "The model encountered an error while generating the response. Please try again."
+                                withContext(Dispatchers.Main) {
+                                    handleError(Exception(errorMsg), thinkingMessage)
+                                }
+                                return@execute
+                            }
+                            "content_filter" -> {
+                                val errorMsg = "The response was filtered due to content policies. Please rephrase your query."
+                                withContext(Dispatchers.Main) {
+                                    handleError(Exception(errorMsg), thinkingMessage)
+                                }
+                                return@execute
+                            }
+                            "length" -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
+                                }
+                                // No return: Proceed with the response
+                            }
+                            "stop", null -> {
+                                // Normal cases: Proceed as usual
+                            }
+                            else -> {
+                                Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
+                            }
+                        }
+                    }
+
                     if (accumulatedImages.isNotEmpty()) {
                         downloadImages(accumulatedImages)
                     }
@@ -496,6 +539,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
+
                 /* withContext(Dispatchers.Main) {
                      soundManager.playSuccessTone()
                  }*/
@@ -516,6 +560,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
 
     private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withTimeout(TIMEOUT_MS) {
@@ -550,6 +595,40 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 response.body<ChatResponse>()
             }.let { chatResponse ->
                 val choice = chatResponse.choices.firstOrNull()
+                val finishReason = choice?.finish_reason
+                var errorHandled = false
+                choice?.error?.let { error ->
+                    handleErrorResponse(error, thinkingMessage)
+                    errorHandled = true  // Flag to skip when block
+                }
+                if (!errorHandled) {
+                when (finishReason) {
+                    "error" -> {
+                        val errorMsg = "The model encountered an error while generating the response. Please try again."
+                        handleError(Exception(errorMsg), thinkingMessage)
+                        return@let
+                    }
+                    "content_filter" -> {
+                        val errorMsg = "The response was filtered due to content policies. Please rephrase your query."
+                        handleError(Exception(errorMsg), thinkingMessage)
+                        return@let
+                    }
+                    "length" -> {
+                        // Show Toast for truncation
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
+                        }
+                        // Still proceed to display the response
+                    }
+                    "stop", null -> {
+                        // Normal cases: Proceed as usual
+                    }
+                    else -> {
+                        // Unknown reason: Log for debugging
+                        Log.w("ChatViewModel", "Unknown finish_reason: $finishReason (native: ${choice.native_finish_reason})")
+                    }
+                }
+                    }
                 // Download images if present
                 choice?.message?.images?.let { images ->
                     val imageUrls = images.map { it.image_url.url }
@@ -581,6 +660,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 activeChatModel.value ?: "Unknown Model",
                 "Response Received."
             )
+        }
+    }
+    // New function for detailed error handling
+    private fun handleErrorResponse(error: ErrorResponse, thinkingMessage: FlexibleMessage?) {
+        val detailedMsg = "Error (Code: ${error.code}): ${error.message}"
+        // Optionally, include metadata if present
+        error.metadata?.let { meta ->
+            Log.e("ChatViewModel", "Error metadata: $meta")
+        }
+
+        // Update the UI with the detailed message (similar to handleError)
+        val errorMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(detailedMsg))
+        updateMessages { list ->
+            if (thinkingMessage != null) {
+                val index = list.indexOf(thinkingMessage)
+                if (index != -1) list[index] = errorMessage
+            } else {
+                list.add(errorMessage)
+            }
+        }
+
+        // Optional: Play error tone or notify
+        // soundManager.playErrorTone()
+        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+            ForegroundService.updateNotificationStatus(activeChatModel.value ?: "Unknown Model", "Error!")
         }
     }
 
