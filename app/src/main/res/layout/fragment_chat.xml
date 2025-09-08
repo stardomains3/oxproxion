@@ -239,6 +239,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
                         android:layout_gravity="center_horizontal">
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/extendButton"
@@ -296,6 +297,7 @@
                         android:id="@+id/buttonsRow2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
                         android:orientation="horizontal"
                         android:layout_gravity="center_horizontal">
 
