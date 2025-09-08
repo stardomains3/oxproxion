@@ -180,9 +180,9 @@
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/helpButton"
+                            android:id="@+id/setMaxTokensButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_help"
+                            app:icon="@drawable/ic_maxtoken"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -195,6 +195,7 @@
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/saveapiButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -204,7 +205,7 @@
                             app:iconGravity="textStart"
                             app:iconSize="28dp"
                             app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
+
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:insetLeft="0dp"
@@ -228,10 +229,37 @@
                               app:iconTint="#A8A8A8"
                               app:backgroundTint="@color/button_background_col"/>-->
 
+
+
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/buttonsRownew"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_gravity="center_horizontal">
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/notiButton"
+                            android:id="@+id/extendButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_notinew"
+                            app:icon="@drawable/ic_extend"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            android:layout_marginEnd="14dp"
+                            app:cornerRadius="24dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/helpButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_help"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -245,9 +273,9 @@
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/extendButton"
+                            android:id="@+id/notiButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_extend"
+                            app:icon="@drawable/ic_notinew"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -259,6 +287,8 @@
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
+
+
 
                     </LinearLayout>
 

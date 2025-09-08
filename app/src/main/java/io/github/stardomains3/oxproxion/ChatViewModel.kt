@@ -418,11 +418,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun handleStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withContext(Dispatchers.IO) {
+            val sharedPreferencesHelper = SharedPreferencesHelper( getApplication<Application>().applicationContext)
+            val maxTokens = try {
+                sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
+            } catch (e: Exception) {
+                12000  // Fallback on any prefs error
+            }
             val chatRequest = ChatRequest(
                 model = modelForRequest,
                 messages = messagesForApiRequest,
                 stream = true,
-                max_tokens = 15000,
+                logprobs = false,
+                max_tokens = maxTokens,
                 modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
             )
 
@@ -497,14 +504,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (!errorHandled) {
                         when (finish_reason) {
                             "error" -> {
-                                val errorMsg = "The model encountered an error while generating the response. Please try again."
+                                val errorMsg = "*Error:** The model encountered an error while generating the response. Please try again."
                                 withContext(Dispatchers.Main) {
                                     handleError(Exception(errorMsg), thinkingMessage)
                                 }
                                 return@execute
                             }
                             "content_filter" -> {
-                                val errorMsg = "The response was filtered due to content policies. Please rephrase your query."
+                                val errorMsg = "**Error:** The response was filtered due to content policies. Please rephrase your query."
                                 withContext(Dispatchers.Main) {
                                     handleError(Exception(errorMsg), thinkingMessage)
                                 }
@@ -565,11 +572,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withTimeout(TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
+                val sharedPreferencesHelper = SharedPreferencesHelper( getApplication<Application>().applicationContext)
+                val maxTokens = try {
+                    sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
+                } catch (e: Exception) {
+                    12000  // Fallback on any prefs error
+                }
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messages = messagesForApiRequest,
+                    logprobs = false,
                     //  usage = UsageRequest(include = true),
-                    max_tokens = 15000,
+                    max_tokens = maxTokens,
                     modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
                 )
 
@@ -604,19 +618,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 if (!errorHandled) {
                 when (finishReason) {
                     "error" -> {
-                        val errorMsg = "The model encountered an error while generating the response. Please try again."
+                        val errorMsg = "**Error:** The model encountered an error while generating the response. Please try again."
                         handleError(Exception(errorMsg), thinkingMessage)
-                        return@let
+                        return@let  // or return@execute for streamed
                     }
                     "content_filter" -> {
-                        val errorMsg = "The response was filtered due to content policies. Please rephrase your query."
+                        val errorMsg = "**Error:** The response was filtered due to content policies. Please rephrase your query."
                         handleError(Exception(errorMsg), thinkingMessage)
-                        return@let
+                        return@let  // or return@execute for streamed
                     }
                     "length" -> {
                         // Show Toast for truncation
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_LONG).show()
                         }
                         // Still proceed to display the response
                     }
@@ -664,7 +678,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     // New function for detailed error handling
     private fun handleErrorResponse(error: ErrorResponse, thinkingMessage: FlexibleMessage?) {
-        val detailedMsg = "Error (Code: ${error.code}): ${error.message}"
+        val detailedMsg = "**Error:**\n---\n(Code: ${error.code}): ${error.message}"
         // Optionally, include metadata if present
         error.metadata?.let { meta ->
             Log.e("ChatViewModel", "Error metadata: $meta")

@@ -1,0 +1,1 @@
+- Added a menu item for setting Max Tokens for the AI's output. Default is 12000

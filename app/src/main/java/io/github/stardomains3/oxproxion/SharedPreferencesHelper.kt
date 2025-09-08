@@ -41,6 +41,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_EXT_ENABLED = "ext_enabled"
         private const val KEY_INFO_BAR_DISMISSED = "info_bar_dismissed"
         private const val KEY_SORT_ORDER = "sort_order"
+        private const val KEY_MAX_TOKENS = "max_tokens"
         private const val KEY_DEFAULT_SYSTEM_MESSAGE = "default_system_message"
         private const val KEY_MIGRATION_COMPLETE = "has_migrated_to_kotlin_serialization"
     }
@@ -274,7 +275,15 @@ class SharedPreferencesHelper(context: Context) {
     fun getPreferenceModel(): String? {
         return mainPrefs.getString(KEY_MODEL_VALE, "mistralai/mistral-medium-3")
     }
+    fun saveMaxTokens(value: String) {
+        mainPrefs.edit(commit = true) {
+            putString(KEY_MAX_TOKENS, value)
+        }
+    }
 
+    fun getMaxTokens(): String {
+        return mainPrefs.getString(KEY_MAX_TOKENS, "12000").toString()
+    }
     fun getCustomModels(): MutableList<LlmModel> {
         val jsonString = mainPrefs.getString(KEY_CUSTOM_MODELS, null)
         return if (jsonString != null) {

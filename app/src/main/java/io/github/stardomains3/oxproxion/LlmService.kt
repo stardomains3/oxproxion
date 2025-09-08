@@ -42,6 +42,7 @@ class LlmService(
                     model = DEFAULT_TITLE_MODEL,
                     messages = messages,
                     max_tokens = 100,
+                    logprobs = false,
                     temperature = 0.7,
                     stream = false
                 )

@@ -102,6 +102,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
     private var ttsAvailable = true
+    private lateinit var setMaxTokensButton: MaterialButton
     private lateinit var notiButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
@@ -150,6 +151,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         copyChatButton = view.findViewById(R.id.copyChatButton)
         menuButton = view.findViewById(R.id.menuButton)
         saveapiButton = view.findViewById(R.id.saveapiButton)
+        setMaxTokensButton = view.findViewById(R.id.setMaxTokensButton)
         buttonsContainer = view.findViewById(R.id.buttonsContainer)
         modelNameTextView = view.findViewById(R.id.modelNameTextView)
         attachmentPreviewContainer = view.findViewById(R.id.attachmentPreviewContainer)
@@ -733,17 +735,25 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             true
         }
         helpButton.setOnClickListener {
+            hideMenu()
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, HelpFragment())
                 .addToBackStack(null)
                 .commit()
         }
         saveapiButton.setOnClickListener {
+            hideMenu()
             val dialog = SaveApiDialogFragment()
             dialog.show(childFragmentManager, "SaveApiDialogFragment")
         }
+        setMaxTokensButton.setOnClickListener {
+            hideMenu()
+            val dialog = MaxTokensDialogFragment()
+            dialog.show(childFragmentManager, "MaxTokensDialogFragment")
+        }
 
         saveapiButton.setOnLongClickListener {
+            hideMenu()
             if (viewModel.activeChatApiKey.isBlank()) {
                 Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT).show()
             } else {
@@ -763,6 +773,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
 
         streamButton.setOnClickListener {
+
             viewModel.toggleStreaming()
         }
 
@@ -770,9 +781,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
              viewModel.toggleSound()
          }*/
         notiButton.setOnClickListener {
+
             viewModel.toggleNoti()
         }
         extendButton.setOnClickListener {
+
             val currentState = sharedPreferencesHelper.getExtPreference()
             val newState = !currentState
             sharedPreferencesHelper.saveExtPreference(newState)

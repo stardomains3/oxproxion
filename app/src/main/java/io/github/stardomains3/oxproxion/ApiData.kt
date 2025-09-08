@@ -23,7 +23,8 @@ data class ChatRequest(
     @SerialName("search_parameters")
     val searchParameters: SearchParameters? = null,
     val temperature: Double? = null,
-    val modalities: List<String>? = null
+    val modalities: List<String>? = null,
+    val logprobs: Boolean? = null
 )
 
 @Serializable

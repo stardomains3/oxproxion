@@ -131,6 +131,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Standard Buttons (Always in the menu)
             *   **Stream Button**: Toggles streaming responses on or off.
+            *   **Max Tokens Button**: Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
             *   **API Key Button**: Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
             *   **Notification Button**: Activates a foreground service to prevent the app from closing in the background and enables you to customize the notification.
             *   **Extended Dock Button**: Toggles extended dock on or off. If on, an extra row is added to the bottom dock. On the right is a Paste button, which when pressed pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. On the left is either a Speech-to-Text button when the prompt box is empty, or a Clear Prompt button when the prompt box has some text.
@@ -186,7 +187,6 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   The app is licensed under the Apache License 2.0.
             *   This app is not affiliated with OpenRouter.ai.
             *   Pasting in to the prompt box strips any unnecessary rich text formatting automatically.
-            *   max_tokens is set to 15000 so as to prevent responses from being cut off.
             *   Costs are incurred with using OpenRouter models. Familiarize yourself with model costs at [https://openrouter.ai/models/](https://openrouter.ai/models/)
             *   Markdown content is well-supported in AI response chat messages.
             *   oxproxion app does not have trackers, analytics, nor ads.
