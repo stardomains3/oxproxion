@@ -1,0 +1,1 @@
+- Added element to  the manifest for better TTS engine discovery

@@ -297,7 +297,7 @@
                         android:id="@+id/buttonsRow2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+
                         android:orientation="horizontal"
                         android:layout_gravity="center_horizontal">
 
@@ -310,6 +310,7 @@
                             app:iconGravity="textStart"
                             app:iconSize="28dp"
                             app:cornerRadius="24dp"
+                            android:layout_marginTop="12dp"
                             android:layout_marginEnd="14dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
@@ -324,6 +325,7 @@
                             app:icon="@drawable/ic_pdfnew"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
+                            android:layout_marginTop="12dp"
                             app:iconGravity="textStart"
                             app:iconSize="28dp"
                             app:cornerRadius="24dp"
