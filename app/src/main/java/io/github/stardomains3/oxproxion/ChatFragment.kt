@@ -69,6 +69,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import java.util.Locale
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -1095,7 +1096,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private fun startSpeechRecognition() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
             putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak now...")
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }

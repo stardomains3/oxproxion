@@ -1,0 +1,2 @@
+- Added element to the manifest for better speech-to-text engine discovery.
+- Speech-to-text for extended dock uses users' default language.
