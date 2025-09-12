@@ -1,0 +1,2 @@
+- Updated dependencies
+- Fixed an issue with tts button occasionally causing a wild scroll

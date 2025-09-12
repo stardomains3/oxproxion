@@ -183,6 +183,7 @@ class ChatAdapter(
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
 
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
+            currentHolder = this@AssistantViewHolder
             if (position == currentPosition) {
                 currentHolder = this
             }
