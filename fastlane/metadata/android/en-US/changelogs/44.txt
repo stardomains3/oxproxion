@@ -1,0 +1,1 @@
+- Display name of model in main chat screen now shows as it is set in your list

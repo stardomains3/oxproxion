@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
@@ -47,7 +46,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.noties.markwon.AbstractMarkwonPlugin
@@ -69,7 +67,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import java.util.Locale
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -255,7 +252,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
-                modelNameTextView.text = formatModelName(model)
+                modelNameTextView.text = viewModel.getModelDisplayName(model)
+               // modelNameTextView.text = formatModelName(model)
                 plusButton.visibility = if (viewModel.isVisionModel(model)) View.VISIBLE else View.GONE
                 genButton.visibility = if (viewModel.isImageGenerationModel(model)) View.VISIBLE else View.GONE
 
