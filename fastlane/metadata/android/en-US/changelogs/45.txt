@@ -1,0 +1,2 @@
+- Fixed issue with main chat screen being recreated occasionally unnecessarily.
+- Notifications now show display name of active model.

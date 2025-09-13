@@ -36,7 +36,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, chatFragment)
+               // .replace(R.id.fragment_container, chatFragment)
+                .add(R.id.fragment_container, chatFragment)
                 .commitNow()
 
         }
@@ -83,11 +84,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun startForegroundService() {
+        if (ForegroundService.isRunningForeground) return  // Guard to prevent restarts
         try {
             val serviceIntent = Intent(this, ForegroundService::class.java)
+            // Optionally pass initial title if needed
+            val vm: ChatViewModel by viewModels()
+            val displayName = vm.getModelDisplayName(vm.activeChatModel.value ?: "Unknown Model")
+            serviceIntent.putExtra("initial_title", displayName)
             startService(serviceIntent)
         } catch (e: Exception) {
-            Log.e("ChatFragment", "Failed to start foreground service", e)
+            Log.e("MainActivity", "Failed to start foreground service", e)
         }
     }
     private fun askNotificationPermission() {

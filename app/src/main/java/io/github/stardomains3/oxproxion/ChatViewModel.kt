@@ -551,17 +551,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                      soundManager.playSuccessTone()
                  }*/
                 if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                    ForegroundService.updateNotificationStatus(
-                        activeChatModel.value ?: "Unknown Model", "Response Received."
-                    )
+                    val apiIdentifier = activeChatModel.value ?: "Unknown Model"
+                    val displayName = getModelDisplayName(apiIdentifier)
+                    ForegroundService.updateNotificationStatus(displayName, "Response Received.")
                 }
             } catch (e: Throwable) {
                 withContext(Dispatchers.Main) {
                     handleError(e, thinkingMessage)
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                        ForegroundService.updateNotificationStatus(
-                            activeChatModel.value ?: "Unknown Model", "Error!"
-                        )
+                        val apiIdentifier = activeChatModel.value ?: "Unknown Model"
+                        val displayName = getModelDisplayName(apiIdentifier)
+                        ForegroundService.updateNotificationStatus(displayName, "Error!")
                     }
                 }
             }
@@ -599,9 +599,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details" }
                     val openRouterError = parseOpenRouterError(errorBody)  // Use the parser!
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                        ForegroundService.updateNotificationStatus(
-                            activeChatModel.value ?: "Unknown Model", "Error!"
-                        )
+                        val apiIdentifier = activeChatModel.value ?: "Unknown Model"
+                        val displayName = getModelDisplayName(apiIdentifier)
+                        ForegroundService.updateNotificationStatus(displayName, "Error!")
                     }
                     throw Exception(openRouterError)  // Now throws friendly message
                 }
@@ -670,10 +670,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         //   soundManager.playSuccessTone()
         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-            ForegroundService.updateNotificationStatus(
-                activeChatModel.value ?: "Unknown Model",
-                "Response Received."
-            )
+            val apiIdentifier = activeChatModel.value ?: "Unknown Model"
+            val displayName = getModelDisplayName(apiIdentifier)
+            ForegroundService.updateNotificationStatus(displayName, "Response Received.")
         }
     }
     // New function for detailed error handling
@@ -694,11 +693,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 list.add(errorMessage)
             }
         }
-
-        // Optional: Play error tone or notify
-        // soundManager.playErrorTone()
         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-            ForegroundService.updateNotificationStatus(activeChatModel.value ?: "Unknown Model", "Error!")
+            val apiIdentifier = activeChatModel.value ?: "Unknown Model"
+            val displayName = getModelDisplayName(apiIdentifier)
+            ForegroundService.updateNotificationStatus(displayName, "Error!")
         }
     }
 

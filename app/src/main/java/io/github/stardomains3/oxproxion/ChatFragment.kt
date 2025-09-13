@@ -475,8 +475,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                          ChatServiceGate.shouldRunService = true
                          startForegroundService()
                      }*/
+
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                        ForegroundService.updateNotificationStatusSilently( viewModel.activeChatModel.value ?: "Unknown Model","Prompt sent. Awaiting Response.")
+                        val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
+                        val displayName = viewModel.getModelDisplayName(apiIdentifier)
+                        ForegroundService.updateNotificationStatusSilently(displayName, "Prompt sent. Awaiting Response.")
                     }
                     chatEditText.setText("")
                     chatEditText.text.clear()
@@ -549,29 +552,33 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     {
                         viewModel.setModel(modelString)
                         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                            ForegroundService.updateNotificationStatusSilently(modelString,"Model Changed")
+                            val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
+                            val displayName = viewModel.getModelDisplayName(apiIdentifier)
+                            ForegroundService.updateNotificationStatusSilently(displayName, "Model Changed")
                         }
                     }
                 }
             }
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, picker)
+                .hide(this)
+                .add(R.id.fragment_container, picker)
                 .addToBackStack(null)
                 .commit()
         }
 
         systemMessageButton.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, SystemMessageLibraryFragment())
+                .hide(this)
+                .add(R.id.fragment_container, SystemMessageLibraryFragment())
                 .addToBackStack(null)
                 .commit()
         }
         resetChatButton.setOnLongClickListener {
             if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","oxproxion is ready.")
+                val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
+                val displayName = viewModel.getModelDisplayName(apiIdentifier)
+                ForegroundService.updateNotificationStatusSilently(displayName, "oxproxion is Ready.")
             }
-
-
             viewModel.startNewChat()
             true
         }
@@ -588,7 +595,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
                 .setPositiveButton("Reset") { dialog, which ->
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                        ForegroundService.updateNotificationStatusSilently(viewModel.activeChatModel.value ?: "Unknown Model","oxproxion is ready.")
+                        val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
+                        val displayName = viewModel.getModelDisplayName(apiIdentifier)
+                        ForegroundService.updateNotificationStatusSilently(displayName, "oxproxion is Ready.")
                     }
                     /*if (ForegroundService.isRunningForeground) {
                         stopForegroundService()
@@ -612,7 +621,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         openSavedChatsButton.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, SavedChatsFragment())
+                .hide(this)
+                .add(R.id.fragment_container, SavedChatsFragment())
                 .addToBackStack(null)
                 .commit()
 
@@ -736,7 +746,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         helpButton.setOnClickListener {
             hideMenu()
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, HelpFragment())
+                .hide(this)
+                .add(R.id.fragment_container, HelpFragment())
                 .addToBackStack(null)
                 .commit()
         }
@@ -1103,12 +1114,23 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             Toast.makeText(requireContext(), "Speech recognition not supported", Toast.LENGTH_SHORT).show()
         }
     }
-    private fun startForegroundService() {
+    /*private fun startForegroundService() {
         try {
             val serviceIntent = Intent(requireContext(), ForegroundService::class.java)
             requireContext().startService(serviceIntent)
         } catch (e: Exception) {
             //  Log.e("ChatFragment", "Failed to start foreground service", e)
+        }
+    }*/
+    private fun startForegroundService() {
+        try {
+            val serviceIntent = Intent(requireContext(), ForegroundService::class.java)
+            // Add the display name extra if needed (from previous response)
+            val displayName = viewModel.getModelDisplayName(viewModel.activeChatModel.value ?: "Unknown Model")
+            serviceIntent.putExtra("initial_title", displayName)
+            requireContext().startService(serviceIntent)
+        } catch (e: Exception) {
+            Log.e("ChatFragment", "Failed to start foreground service", e)
         }
     }
 
@@ -1119,6 +1141,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             // Log.e("ChatFragment", "Failed to stop foreground service", e)
         }
     }
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) {  // Fragment is now visible
+            updateSystemMessageButtonState()
+            chatEditText.requestFocus()
+            viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         updateSystemMessageButtonState()
