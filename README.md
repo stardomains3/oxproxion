@@ -48,7 +48,7 @@ Here are some screenshots of the app in action:
 
 *Markdown delight!*
 
-### Options with Extended Dock on
+### Options with Extended Dock on and Reasoning on
 ![Options Screen](screenshots/8.png)
 
 *Customize your experience in the options menu.*
@@ -62,6 +62,11 @@ Here are some screenshots of the app in action:
 ![Vision Model Screen](screenshots/6.png)
 
 *Vision Model*
+
+### Advanced Reasoning Settings
+![Vision Model Screen](screenshots/9.png)
+
+*Advanced Reasoning Settings*
 
 ## ️ Technologies Used
 

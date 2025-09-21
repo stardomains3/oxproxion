@@ -57,6 +57,7 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.Base64
 import java.util.concurrent.TimeUnit
+import kotlin.compareTo
 
 @Serializable
 data class OpenRouterResponse(val data: List<ModelData>)
@@ -66,7 +67,8 @@ data class ModelData(
     val id: String,
     val name: String,
     val architecture: Architecture,
-    @SerialName("created") val created: Long
+    @SerialName("created") val created: Long,
+    @SerialName("supported_parameters") val supportedParameters: List<String>? = null
 )
 
 @Serializable
@@ -96,14 +98,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _customModelsUpdated = MutableLiveData<Event<Unit>>()
     val customModelsUpdated: LiveData<Event<Unit>> = _customModelsUpdated
+
     fun isVisionModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
-
         val customModels = sharedPreferencesHelper.getCustomModels()
         val allModels = getBuiltInModels() + customModels
-
         val model = allModels.find { it.apiIdentifier == modelIdentifier }
         return model?.isVisionCapable ?: false
+    }
+    fun isReasoningModel(modelIdentifier: String?): Boolean {
+        if (modelIdentifier == null) return false
+        val allModels = sharedPreferencesHelper.getOpenRouterModels()
+        val model = allModels.find { it.apiIdentifier == modelIdentifier }
+        return model?.isReasoningCapable ?: false
     }
 
     fun hasImagesInChat(): Boolean = _chatMessages.value?.any { isImageMessage(it) } ?: false
@@ -139,8 +146,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val creditsResult: LiveData<Event<String>> = _creditsResult
     private val _isStreamingEnabled = MutableLiveData<Boolean>(false)
     val isStreamingEnabled: LiveData<Boolean> = _isStreamingEnabled
-    //private val _isSoundEnabled = MutableLiveData<Boolean>(false)
-    //val isSoundEnabled: LiveData<Boolean> = _isSoundEnabled
+    private val _isReasoningEnabled = MutableLiveData(false)
+    val isReasoningEnabled: LiveData<Boolean> = _isReasoningEnabled
+    private val _isAdvancedReasoningOn = MutableLiveData(false)
+    val isAdvancedReasoningOn: LiveData<Boolean> = _isAdvancedReasoningOn
     val _isNotiEnabled = MutableLiveData<Boolean>(false)
     val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
@@ -161,11 +170,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         sharedPreferencesHelper.saveNotiPreference(newNotiState)
 
     }
-    /*fun toggleSound() {
-        val newSoundState = !(_isSoundEnabled.value ?: false)
-        _isSoundEnabled.value = newSoundState
-        sharedPreferencesHelper.saveSoundPreference(newSoundState)
-    }*/
+    fun toggleReasoning() {
+        val newValue = !(_isReasoningEnabled.value ?: false)
+        _isReasoningEnabled.value = newValue
+        sharedPreferencesHelper.saveReasoningPreference(newValue)
+    }
 
     var activeChatUrl: String = "https://openrouter.ai/api/v1/chat/completions"
     var activeChatApiKey: String = ""
@@ -198,9 +207,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        migrateOpenRouterModels()
+        allOpenRouterModels = sharedPreferencesHelper.getOpenRouterModels()
         _activeChatModel.value = sharedPreferencesHelper.getPreferenceModelnew()
         _isStreamingEnabled.value = sharedPreferencesHelper.getStreamingPreference()
-        //  _isSoundEnabled.value = sharedPreferencesHelper.getSoundPreference()
+        _isReasoningEnabled.value = sharedPreferencesHelper.getReasoningPreference()
+        _isAdvancedReasoningOn.value = sharedPreferencesHelper.getAdvancedReasoningEnabled()
         _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
         sharedPreferencesHelper.mainPrefs.registerOnSharedPreferenceChangeListener { _, key ->
             if (key == "noti_enabled") {  // Use the actual key from your companion object
@@ -418,18 +430,43 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun handleStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withContext(Dispatchers.IO) {
-            val sharedPreferencesHelper = SharedPreferencesHelper( getApplication<Application>().applicationContext)
+            val sharedPreferencesHelper = SharedPreferencesHelper(getApplication<Application>().applicationContext)
             val maxTokens = try {
                 sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
             } catch (e: Exception) {
-                12000  // Fallback on any prefs error
+                12000
             }
+            val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
+            val effort = if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
             val chatRequest = ChatRequest(
                 model = modelForRequest,
                 messages = messagesForApiRequest,
                 stream = true,
-                logprobs = false,
                 max_tokens = maxTokens,
+                logprobs = false,
+                reasoning = if (_isReasoningEnabled.value == true && isReasoningModel(_activeChatModel.value)) {
+                    if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
+                        if (maxRTokens != null && maxRTokens > 0) {
+                            Reasoning(
+                                enabled = true,
+                                exclude = sharedPreferencesHelper.getReasoningExclude(),
+                                max_tokens = maxRTokens
+                            )
+                        } else {
+                            Reasoning(
+                                enabled = true,
+                                exclude = sharedPreferencesHelper.getReasoningExclude(),
+                                effort = effort
+                            )
+                        }
+                    } else {
+                        Reasoning(enabled = true, exclude = true)
+                    }
+                } else if (_isReasoningEnabled.value == false && isReasoningModel(_activeChatModel.value)) {
+                    Reasoning(enabled = false, exclude = true)
+                } else {
+                    null
+                },
                 modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
             )
 
@@ -448,7 +485,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                     val channel = httpResponse.body<ByteReadChannel>()
                     var accumulatedResponse = ""
-                    var finish_reason: String? = null  // <-- ADD THIS: Declare finish_reason
+                    var accumulatedReasoning = ""
+                    var hasUsedReasoningDetails = false
+                    var reasoningStarted = false
+                    var finish_reason: String? = null
                     var lastChoice: StreamedChoice? = null
                     val accumulatedAnnotations = mutableListOf<Annotation>()
                     val accumulatedImages = mutableListOf<String>()
@@ -470,24 +510,56 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                             try {
                                 val chunk = json.decodeFromString<StreamedChatResponse>(jsonString)
-                                val choice = chunk.choices.firstOrNull()  // <-- ADD THIS: Extract choice
-                                finish_reason = choice?.finish_reason ?: finish_reason  // <-- ADD THIS: Update finish_reason
+                                val choice = chunk.choices.firstOrNull()
+                                finish_reason = choice?.finish_reason ?: finish_reason
                                 lastChoice = choice
-                                val delta = choice?.delta  // <-- UPDATE: Use choice.delta instead of chunk.choices.firstOrNull()?.delta
+                                val delta = choice?.delta
 
-                                delta?.content?.let { content ->
-                                    accumulatedResponse += content
+                                var contentChanged = false
+                                var reasoningChanged = false
+
+                                if (!delta?.content.isNullOrEmpty()) {
+                                    accumulatedResponse += delta.content
+                                    contentChanged = true
+                                }
+
+                                if (delta?.reasoning_details?.isNotEmpty() == true) {
+                                    hasUsedReasoningDetails = true
+                                    delta.reasoning_details.forEach { detail ->
+                                        if (detail.type == "reasoning.text" && detail.text != null) {
+                                            if (!reasoningStarted) {
+                                                accumulatedReasoning = "```\n"
+                                                reasoningStarted = true
+                                            }
+                                            accumulatedReasoning += detail.text
+                                            reasoningChanged = true
+                                        }
+                                    }
+                                } else if (!hasUsedReasoningDetails && !delta?.reasoning.isNullOrEmpty()) {
+                                    if (!reasoningStarted) {
+                                        accumulatedReasoning = "```\n"
+                                        reasoningStarted = true
+                                    }
+                                    accumulatedReasoning += delta.reasoning
+                                    reasoningChanged = true
+                                }
+
+                                if (contentChanged || reasoningChanged) {
                                     withContext(Dispatchers.Main) {
-                                        updateMessages {
-                                            val lastMessage = it.last()
-                                            it[it.size - 1] = lastMessage.copy(content = JsonPrimitive(accumulatedResponse))
+                                        updateMessages { list ->
+                                            if (list.isNotEmpty()) {
+                                                val last = list.last()
+                                                list[list.size - 1] = last.copy(
+                                                    content = JsonPrimitive(accumulatedResponse),
+                                                    reasoning = accumulatedReasoning
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                                delta?.annotations?.forEach { accumulatedAnnotations.add(it) }
-                                delta?.images?.forEach { image ->
-                                    accumulatedImages.add(image.image_url.url)
-                                }
+
+                                accumulatedAnnotations.addAll(delta?.annotations ?: emptyList())
+                                delta?.images?.forEach { accumulatedImages.add(it.image_url.url) }
                             } catch (e: Exception) {
                                 Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
                             }
@@ -504,7 +576,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (!errorHandled) {
                         when (finish_reason) {
                             "error" -> {
-                                val errorMsg = "*Error:** The model encountered an error while generating the response. Please try again."
+                                val errorMsg = "**Error:** The model encountered an error while generating the response. Please try again."
                                 withContext(Dispatchers.Main) {
                                     handleError(Exception(errorMsg), thinkingMessage)
                                 }
@@ -518,13 +590,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 return@execute
                             }
                             "length" -> {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
-                                }
-                                // No return: Proceed with the response
+                                Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
                             }
                             "stop", null -> {
-                                // Normal cases: Proceed as usual
+                                // Normal cases
                             }
                             else -> {
                                 Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
@@ -532,28 +601,34 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
+                    if (reasoningStarted) {
+                        accumulatedReasoning += "\n```"
+                        accumulatedReasoning += "\n\n---\n\n"
+                    }
                     if (accumulatedImages.isNotEmpty()) {
                         downloadImages(accumulatedImages)
                     }
 
-                    // After streaming, append citations to the final response
                     val citationsMarkdown = formatCitations(accumulatedAnnotations)
-                    accumulatedResponse += citationsMarkdown
+                    val finalContent = (accumulatedResponse + citationsMarkdown).takeIf { it.isNotBlank() } ?: "No response received."
+
                     withContext(Dispatchers.Main) {
-                        updateMessages {
-                            val lastMessage = it.last()
-                            it[it.size - 1] = lastMessage.copy(content = JsonPrimitive(accumulatedResponse))
+                        updateMessages { list ->
+                            if (list.isNotEmpty()) {
+                                val last = list.last()
+                                list[list.size - 1] = last.copy(
+                                    content = JsonPrimitive(finalContent),
+                                    reasoning = accumulatedReasoning
+                                )
+                            }
                         }
                     }
-                }
 
-                /* withContext(Dispatchers.Main) {
-                     soundManager.playSuccessTone()
-                 }*/
-                if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                    val apiIdentifier = activeChatModel.value ?: "Unknown Model"
-                    val displayName = getModelDisplayName(apiIdentifier)
-                    ForegroundService.updateNotificationStatus(displayName, "Response Received.")
+                    if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                        val apiIdentifier = activeChatModel.value ?: "Unknown Model"
+                        val displayName = getModelDisplayName(apiIdentifier)
+                        ForegroundService.updateNotificationStatus(displayName, "Response Received.")
+                    }
                 }
             } catch (e: Throwable) {
                 withContext(Dispatchers.Main) {
@@ -569,6 +644,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
+
     private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withTimeout(TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
@@ -578,12 +654,30 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) {
                     12000  // Fallback on any prefs error
                 }
+                val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
+                val effort = if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messages = messagesForApiRequest,
                     logprobs = false,
                     //  usage = UsageRequest(include = true),
                     max_tokens = maxTokens,
+                    reasoning = if (_isReasoningEnabled.value == true && isReasoningModel(_activeChatModel.value)) {
+                        if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
+                            Reasoning(
+                                enabled = true,
+                                exclude = sharedPreferencesHelper.getReasoningExclude(),
+                                effort = effort,
+                                max_tokens = maxRTokens
+                            )
+                        } else {
+                            Reasoning(enabled = true, exclude = true)
+                        }
+                    } else if (_isReasoningEnabled.value == false && isReasoningModel(_activeChatModel.value)) {
+                        Reasoning(enabled = false, exclude = true)
+                    } else {
+                        null
+                    },
                     modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
                 )
 
@@ -660,21 +754,35 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         val message = chatResponse.choices.firstOrNull()?.message ?: throw IllegalStateException("No message")
         val responseText = message.content ?: "No response received."
+
+        val reasoningForDisplay = message.reasoning_details
+            ?.firstOrNull { it.type == "reasoning.text" }
+            ?.let { "```\n${it.text}\n```" }
+            ?: message.reasoning?.let { "```\n$it\n```" }
+            ?: ""
+
+        val separator = if (reasoningForDisplay.isNotBlank()) "\n\n---\n\n" else ""
         val citationsMarkdown = formatCitations(message.annotations)
         val finalContent = responseText + citationsMarkdown
-        val finalAiMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(finalContent))
+
+        val finalAiMessage = FlexibleMessage(
+            role = "assistant",
+            content = JsonPrimitive(finalContent),
+            reasoning = reasoningForDisplay + separator
+        )
 
         updateMessages { list ->
             val index = list.indexOf(thinkingMessage)
             if (index != -1) list[index] = finalAiMessage
         }
-        //   soundManager.playSuccessTone()
+
         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
             val apiIdentifier = activeChatModel.value ?: "Unknown Model"
             val displayName = getModelDisplayName(apiIdentifier)
             ForegroundService.updateNotificationStatus(displayName, "Response Received.")
         }
     }
+
     // New function for detailed error handling
     private fun handleErrorResponse(error: ErrorResponse, thinkingMessage: FlexibleMessage?) {
         val detailedMsg = "**Error:**\n---\n(Code: ${error.code}): ${error.message}"
@@ -825,7 +933,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             LlmModel("Meta: Llama 4 Maverick", "meta-llama/llama-4-maverick", true)
         )
     }
-
+    fun checkAdvancedReasoningStatus() {
+        _isAdvancedReasoningOn.value = sharedPreferencesHelper.getAdvancedReasoningEnabled()
+    }
     fun getModelDisplayName(apiIdentifier: String): String {
         val builtInModels = getBuiltInModels()
         val customModels = sharedPreferencesHelper.getCustomModels()
@@ -934,6 +1044,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             apiIdentifier = it.id,
                             isVisionCapable = it.architecture.input_modalities.contains("image"),
                             isImageGenerationCapable = it.architecture.output_modalities?.contains("image") ?: false,
+                            isReasoningCapable = it.supportedParameters?.contains("reasoning") ?: false,
                             created = it.created
                         )
                     }
@@ -973,6 +1084,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             fetchOpenRouterModels()
         } else {
             applySort()
+        }
+    }
+    private fun migrateOpenRouterModels() {
+        val savedModels = sharedPreferencesHelper.getOpenRouterModels()
+        if (savedModels.isNotEmpty() && !savedModels.first().isReasoningCapable) {  // Check if migration needed
+            // Re-fetch or update based on supported_parameters (assuming you have the raw data)
+            // For simplicity, mark as migrated and refetch
+            sharedPreferencesHelper.clearOpenRouterModels()  // Clear old data
+            fetchOpenRouterModels()  // Refetch with new field
         }
     }
     private fun getModerationErrorMessage(baseMessage: String, metadata: ModerationErrorMetadata): String {

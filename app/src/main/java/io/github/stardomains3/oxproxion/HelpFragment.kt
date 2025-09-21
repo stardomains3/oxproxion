@@ -131,6 +131,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Standard Buttons (Always in the menu)
             *   **Stream Button**: Toggles streaming responses on or off.
+            *   **Reasoning Button**: Appears only for models that support reasoning. Toggles reasoning on or off. When enabled, the model uses deeper thinking for more thoughtful responses. When disabled, it explicitly instructs the model not to use reasoning. Reasoning traces are not returned in the response. Defaults to medium effort. If you long-press on the button if it is selected, you can enable Advanced Reasoning settings(see below). 
             *   **Max Tokens Button**: Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
             *   **API Key Button**: Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
             *   **Notification Button**: Activates a foreground service to prevent the app from closing in the background and enables you to customize the notification.
@@ -178,6 +179,15 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
              *   The generated images are not stored when you save the chat.
              *   The generated images are not passed back in the chat. If you want the model to edit one you need to attach it manually.
             
+            ---
+            
+            ## Advanced Reasoning Settings
+            
+             *   You can enable it and make additional reasoing settings here. Long-press on reasoning button to make its screen appear.
+             *   Enable reasoning traces in response, max reasoning tokens, and effort can be set here.
+             *   Reasoning traces are not passed in the chat(they display only). Nor are they included in the whole chat pdf(but they will be in a singular response pdf). They are not saved when you save a chat.
+             *   When enabled the Reasoning button will have a bright orange outline.
+             
             ---
 
             ## ℹ️ Other Info

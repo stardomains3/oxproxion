@@ -8,5 +8,6 @@ data class LlmModel(
     val apiIdentifier: String,    // The actual model string, e.g., "openai/gpt-4o-mini"
     val isVisionCapable: Boolean,  // To determine which icon to show
     val isImageGenerationCapable: Boolean = false,
+    val isReasoningCapable: Boolean = false,
     val created: Long = 0L
 )

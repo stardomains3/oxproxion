@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000"
+    android:fitsSystemWindows="true"
+    tools:context=".AdvancedReasoningFragment">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="Advanced Reasoning"
+        app:titleTextColor="@android:color/white"
+        android:background="#1C1C1E"
+        app:navigationIcon="@drawable/is_backarrow" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Explanation TextView -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Note: You can set Effort OR Max Reasoning Tokens, not both. Setting Max Reasoning Tokens disables Effort. To use Effort, make sure Max Reasoning Tokens has no value."
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:fontFamily="@font/geologica_light"
+                android:layout_marginBottom="16dp"
+                android:gravity="center" />
+
+            <!-- Effort Selector -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Effort Level:"
+                android:textColor="@color/your_orange_color"
+                android:textSize="18sp"
+                android:fontFamily="@font/geologica_light"
+                android:layout_marginBottom="16dp" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/effortGroup"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/buttonMinimal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Minimal"
+                        style="?attr/materialButtonOutlinedStyle"
+                        app:backgroundTint="@color/toggle_background_selector"
+                        app:strokeColor="@color/chestnut" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/buttonLow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Low"
+                        style="?attr/materialButtonOutlinedStyle"
+                        app:backgroundTint="@color/toggle_background_selector"
+                        app:strokeColor="@color/chestnut" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/buttonMedium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Medium"
+                        style="?attr/materialButtonOutlinedStyle"
+                        app:backgroundTint="@color/toggle_background_selector"
+                        app:strokeColor="@color/chestnut" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/buttonHigh"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="High"
+                        style="?attr/materialButtonOutlinedStyle"
+                        app:backgroundTint="@color/toggle_background_selector"
+                        app:strokeColor="@color/chestnut" />
+
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Include Toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="32dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Include in Response:"
+                    android:textColor="@color/your_orange_color"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/geologica_light" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/includeSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+            <!-- Max Tokens Input -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Max Reasoning Tokens:"
+                android:textColor="@color/your_orange_color"
+                android:textSize="16sp"
+                android:fontFamily="@font/geologica_light"
+                android:layout_marginBottom="16dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                app:boxStrokeColor="@android:color/white"
+                app:hintTextColor="@color/your_orange_color"
+                app:boxBackgroundColor="#636363"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusTopStart="8dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/maxTokensEdit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Optional"
+                    android:inputType="number"
+                    android:textColor="@android:color/white"
+                    android:fontFamily="@font/geologica_light" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

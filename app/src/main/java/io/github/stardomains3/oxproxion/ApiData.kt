@@ -44,8 +44,9 @@ data class FlexibleMessage(
     val toolCalls: List<ToolCall>? = null,
     @SerialName("tool_call_id")
     val toolCallId: String? = null,
-    val toolsUsed: Boolean = false  // NEW: Flag for visual indication (true if tools were involved in this
-)
+    val toolsUsed: Boolean = false,  // NEW: Flag for visual indication (true if tools were involved in this
+    val reasoning: String? = null
+    )
 
 @Serializable
 data class UsageRequest(
@@ -54,6 +55,9 @@ data class UsageRequest(
 
 @Serializable
 data class Reasoning(
+    val effort: String? = null,  // e.g., "high", "medium", "low"
+    val max_tokens: Int? = null,
+    val exclude: Boolean? = null,  // Defaults to false
     val enabled: Boolean? = null
 )
 @Serializable
@@ -111,9 +115,21 @@ data class MessageResponse(
     @SerialName("tool_calls")
     val toolCalls: List<ToolCall>? = null,
     val annotations: List<Annotation>? = null,
-    val images: List<ImageResponse>? = null
+    val images: List<ImageResponse>? = null,
+    val reasoning: String? = null,
+    val reasoning_details: List<ReasoningDetail>? = null
 )
-
+@Serializable
+data class ReasoningDetail(
+    val type: String,
+    val text: String? = null,  // For reasoning.text
+    val summary: String? = null,  // For reasoning.summary
+    val data: String? = null,  // For reasoning.encrypted
+    val id: String? = null,
+    val format: String? = null,
+    val index: Int? = null,
+    val signature: String? = null
+)
 @Serializable
 data class ImageResponse(
     val type: String,  // e.g., "image_url"
@@ -235,7 +251,9 @@ data class StreamedDelta(
     @SerialName("tool_calls")
     val toolCalls: List<ToolCallChunk>? = null,
     val annotations: List<Annotation>? = null,
-    val images: List<io.github.stardomains3.oxproxion.ImageResponse>? = null
+    val images: List<ImageResponse>? = null,
+    val reasoning: String? = null,
+    val reasoning_details: List<ReasoningDetail>? = null
 )
 
 // NEW: Added from my code for citations

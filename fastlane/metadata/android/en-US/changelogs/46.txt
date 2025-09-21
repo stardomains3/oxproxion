@@ -1,0 +1,2 @@
+- Added Reasoning button/option. Long-press if selected, to open, enable and set Advanced Reasoning settings.
+- Dependency update

@@ -39,6 +39,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_OPEN_ROUTER_MODELS = "open_router_models"
         private const val KEY_NOTI_ENABLED = "noti_enabled"
         private const val KEY_EXT_ENABLED = "ext_enabled"
+        private const val KEY_REASONING_ENABLED = "reasoning_enabled"
         private const val KEY_INFO_BAR_DISMISSED = "info_bar_dismissed"
         private const val KEY_SORT_ORDER = "sort_order"
         private const val KEY_MAX_TOKENS = "max_tokens"
@@ -110,7 +111,40 @@ class SharedPreferencesHelper(context: Context) {
             saveSelectedSystemMessage(oldMessage)
         }
     }
+    fun clearOpenRouterModels() {
+        mainPrefs.edit { remove(KEY_OPEN_ROUTER_MODELS) }
+    }
+    fun getAdvancedReasoningEnabled(): Boolean = mainPrefs.getBoolean("advanced_reasoning_enabled", false)
+    fun saveAdvancedReasoningEnabled(enabled: Boolean) = mainPrefs.edit {
+        putBoolean(
+            "advanced_reasoning_enabled",
+            enabled
+        )
+    }
 
+    fun getReasoningEffort(): String = mainPrefs.getString("reasoning_effort", "medium") ?: "medium"
+    fun saveReasoningEffort(effort: String) = mainPrefs.edit {
+        putString(
+            "reasoning_effort",
+            effort
+        )
+    }
+
+    fun getReasoningExclude(): Boolean = mainPrefs.getBoolean("reasoning_exclude", true)  // Default to true (exclude)
+    fun saveReasoningExclude(exclude: Boolean) = mainPrefs.edit {
+        putBoolean(
+            "reasoning_exclude",
+            exclude
+        )
+    }
+
+    fun getReasoningMaxTokens(): Int? = mainPrefs.getInt("reasoning_max_tokens", -1).takeIf { it != -1 }
+    fun saveReasoningMaxTokens(tokens: Int?) = mainPrefs.edit {
+        putInt(
+            "reasoning_max_tokens",
+            tokens ?: -1
+        )
+    }
     private fun migrateDefaultSystemMessage() {
         val oldJson = mainPrefs.getString(KEY_DEFAULT_SYSTEM_MESSAGE, null)
         if (oldJson != null) {
@@ -159,7 +193,14 @@ class SharedPreferencesHelper(context: Context) {
     fun getStreamingPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_STREAMING_ENABLED, false)
     }
-
+    fun getReasoningPreference(): Boolean {
+        return mainPrefs.getBoolean(KEY_REASONING_ENABLED, false)
+    }
+    fun saveReasoningPreference(isEnabled: Boolean) {
+        mainPrefs.edit {
+            putBoolean(KEY_REASONING_ENABLED, isEnabled)
+        }
+    }
     fun getNotiPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_NOTI_ENABLED, false)
     }

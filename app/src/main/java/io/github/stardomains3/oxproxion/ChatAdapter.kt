@@ -188,7 +188,9 @@ class ChatAdapter(
                 currentHolder = this
             }
             val text = getMessageText(message.content)
-            markwon.setMarkdown(messageTextView, text)
+            val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
+            val fullText = reasoningText + text  // Prepend reasoning for display
+            markwon.setMarkdown(messageTextView, fullText)
             messageTextView.movementMethod = LinkMovementMethod.getInstance()
             ttsButton.visibility = if (ttsAvailable) View.VISIBLE else View.GONE
             val isThinking = text == "thinking..."

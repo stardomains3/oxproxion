@@ -8,6 +8,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -99,6 +100,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
+    private lateinit var reasoningButton: MaterialButton
     private var ttsAvailable = true
     private lateinit var setMaxTokensButton: MaterialButton
     private lateinit var notiButton: MaterialButton
@@ -133,7 +135,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
-        //  soundButton = view.findViewById(R.id.soundButton)
+        reasoningButton = view.findViewById(R.id.reasoningButton)
         notiButton = view.findViewById(R.id.notiButton)
         extendButton = view.findViewById(R.id.extendButton)
         clearButton = view.findViewById(R.id.clearButton)
@@ -256,7 +258,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                // modelNameTextView.text = formatModelName(model)
                 plusButton.visibility = if (viewModel.isVisionModel(model)) View.VISIBLE else View.GONE
                 genButton.visibility = if (viewModel.isImageGenerationModel(model)) View.VISIBLE else View.GONE
-
+                reasoningButton.visibility = if (viewModel.isReasoningModel(model)) View.VISIBLE else View.GONE
                 // BUG FIX START: Clear staged image if new model is not a vision model
                 if (selectedImageBytes != null && !viewModel.isVisionModel(model)) {
                     selectedImageBytes = null
@@ -361,9 +363,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             streamButton.isSelected = isEnabled
         }
 
-        /*viewModel.isSoundEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            soundButton.isSelected = isEnabled
-        }*/
+        viewModel.isReasoningEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            reasoningButton.isSelected = isEnabled
+            updateReasoningButtonAppearance()
+        }
+        viewModel.isAdvancedReasoningOn.observe(viewLifecycleOwner) { isAdvanced ->
+            updateReasoningButtonAppearance() // Call helper
+        }
+
         viewModel.isNotiEnabled.observe(viewLifecycleOwner) { isEnabled ->
             notiButton.isSelected = isEnabled
             if(isEnabled && !ForegroundService.isRunningForeground ){
@@ -751,6 +758,17 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 .addToBackStack(null)
                 .commit()
         }
+        reasoningButton.setOnLongClickListener {
+            if(reasoningButton.isSelected)
+            {
+                parentFragmentManager.beginTransaction()
+                    .hide(this)
+                    .add(R.id.fragment_container, AdvancedReasoningFragment())
+                    .addToBackStack(null)
+                    .commit()
+            }
+            return@setOnLongClickListener true
+        }
         saveapiButton.setOnClickListener {
             hideMenu()
             val dialog = SaveApiDialogFragment()
@@ -783,13 +801,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
 
         streamButton.setOnClickListener {
-
             viewModel.toggleStreaming()
         }
 
-        /* soundButton.setOnClickListener {
-             viewModel.toggleSound()
-         }*/
+        reasoningButton.setOnClickListener {
+            viewModel.toggleReasoning()
+        }
         notiButton.setOnClickListener {
 
             viewModel.toggleNoti()
@@ -1141,11 +1158,30 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             // Log.e("ChatFragment", "Failed to stop foreground service", e)
         }
     }
+    private fun updateReasoningButtonAppearance() {
+        // Use .value to get the current state from LiveData
+        val isReasoningOn = viewModel.isReasoningEnabled.value ?: false
+        val isAdvancedOn = viewModel.isAdvancedReasoningOn.value ?: false
+
+
+        if (isReasoningOn && isAdvancedOn) {
+            // STATE: Advanced Reasoning is ON. Add the outline.
+            val strokeColor = ContextCompat.getColor(requireContext(), R.color.ora)
+            val strokeWidth = resources.getDimensionPixelSize(R.dimen.advanced_reasoning_outline_width)
+
+            reasoningButton.strokeColor = ColorStateList.valueOf(strokeColor)
+            reasoningButton.strokeWidth = strokeWidth
+        } else {
+            // STATE: Normal or OFF. Remove the outline by setting its width to 0.
+            reasoningButton.strokeWidth = 0
+        }
+    }
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         if (!hidden) {  // Fragment is now visible
             updateSystemMessageButtonState()
             chatEditText.requestFocus()
+            viewModel.checkAdvancedReasoningStatus()
             viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
         }
     }
@@ -1154,6 +1190,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         super.onResume()
         updateSystemMessageButtonState()
         chatEditText.requestFocus()
+        viewModel.checkAdvancedReasoningStatus()
         viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
 
         /*if (viewModel.isChatLoading.value == false) {
