@@ -1,0 +1,3 @@
+- Enhanced error handling for streaming
+- Bug fix
+- Increased timeout to 5 minutes

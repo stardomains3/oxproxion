@@ -233,7 +233,15 @@ data class StreamedChatResponse(
     val model: String,
     val `object`: String,
     val created: Long,
-    val choices: List<StreamedChoice>
+    val choices: List<StreamedChoice>,
+    val provider: String? = null,
+    val error: ApiError? = null
+)
+
+@Serializable
+data class ApiError(
+    val code: String? = null,  // Can be string or number per docs
+    val message: String? = null
 )
 
 @Serializable

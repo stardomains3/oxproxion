@@ -181,7 +181,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     // var runningCost: Double = 0.0 // Updated on successful responses
 
     companion object {
-        private const val TIMEOUT_MS = 150_000L
+        private const val TIMEOUT_MS = 300_000L
         val THINKING_MESSAGE = FlexibleMessage(
             role = "assistant",
             content = JsonPrimitive("thinking...")
@@ -443,7 +443,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 messages = messagesForApiRequest,
                 stream = true,
                 max_tokens = maxTokens,
-                logprobs = false,
+                //logprobs = null,
                 reasoning = if (_isReasoningEnabled.value == true && isReasoningModel(_activeChatModel.value)) {
                     if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
                         if (maxRTokens != null && maxRTokens > 0) {
@@ -480,7 +480,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }.execute { httpResponse ->
                     if (!httpResponse.status.isSuccess()) {
                         val errorBody = try { httpResponse.bodyAsText() } catch (ex: Exception) { "No details" }
-                        throw Exception("API Error: ${httpResponse.status} - $errorBody")
+                        val openRouterError = parseOpenRouterError(errorBody)  // FIXED: Parse for friendly message (no raw JSON)
+                        throw Exception(openRouterError)
                     }
 
                     val channel = httpResponse.body<ByteReadChannel>()
@@ -510,6 +511,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                             try {
                                 val chunk = json.decodeFromString<StreamedChatResponse>(jsonString)
+
+                                // Handle mid-stream error immediately (top-level error)
+                                chunk.error?.let { apiError ->
+                                    val rawDetails = "Code: ${apiError.code ?: "unknown"} - ${apiError.message ?: "Mid-stream error"}"
+                                    withContext(Dispatchers.Main) {
+                                        handleError(Exception(rawDetails), thinkingMessage)  // FIXED: Raw details (avoids nesting in handleError)
+                                    }
+                                    return@execute  // Exit the entire callback early (no post-loop processing for errors)
+                                }
+
                                 val choice = chunk.choices.firstOrNull()
                                 finish_reason = choice?.finish_reason ?: finish_reason
                                 lastChoice = choice
@@ -566,38 +577,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
-                    var errorHandled = false
-                    lastChoice?.error?.let { error ->
-                        withContext(Dispatchers.Main) {
-                            handleErrorResponse(error, thinkingMessage)
+                    // Post-loop: Only runs for normal completions (errors bail out early above)
+                    when (finish_reason) {
+                        "error" -> {
+                            // Fallback for "error" finish_reason (e.g., if parsing failed earlier)
+                            val errorMsg = "**Error:** The model encountered an error while generating the response. Please try again."
+                            withContext(Dispatchers.Main) {
+                                handleError(Exception(errorMsg), thinkingMessage)
+                            }
+                            return@execute
                         }
-                        errorHandled = true
-                    }
-                    if (!errorHandled) {
-                        when (finish_reason) {
-                            "error" -> {
-                                val errorMsg = "**Error:** The model encountered an error while generating the response. Please try again."
-                                withContext(Dispatchers.Main) {
-                                    handleError(Exception(errorMsg), thinkingMessage)
-                                }
-                                return@execute
+                        "content_filter" -> {
+                            val errorMsg = "**Error:** The response was filtered due to content policies. Please rephrase your query."
+                            withContext(Dispatchers.Main) {
+                                handleError(Exception(errorMsg), thinkingMessage)
                             }
-                            "content_filter" -> {
-                                val errorMsg = "**Error:** The response was filtered due to content policies. Please rephrase your query."
-                                withContext(Dispatchers.Main) {
-                                    handleError(Exception(errorMsg), thinkingMessage)
-                                }
-                                return@execute
-                            }
-                            "length" -> {
-                                Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
-                            }
-                            "stop", null -> {
-                                // Normal cases
-                            }
-                            else -> {
-                                Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
-                            }
+                            return@execute
+                        }
+                        "length" -> {
+                            Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
+                        }
+                        "stop", null -> {
+                            // Normal cases
+                        }
+                        else -> {
+                            Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
                         }
                     }
 
@@ -645,6 +649,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
 
 
+
+
+
     private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withTimeout(TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
@@ -659,7 +666,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messages = messagesForApiRequest,
-                    logprobs = false,
+                    //logprobs = null,
                     //  usage = UsageRequest(include = true),
                     max_tokens = maxTokens,
                     reasoning = if (_isReasoningEnabled.value == true && isReasoningModel(_activeChatModel.value)) {
