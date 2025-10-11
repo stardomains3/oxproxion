@@ -1,0 +1,2 @@
+- Fixed PDF generation to use scaled images
+- Updated dependencies

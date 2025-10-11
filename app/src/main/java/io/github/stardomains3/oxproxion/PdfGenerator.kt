@@ -55,6 +55,7 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import androidx.core.net.toUri
 
 class PdfGenerator(private val context: Context) {
     private data class MdBlock(val isTable: Boolean, val content: String)
@@ -394,10 +395,11 @@ class PdfGenerator(private val context: Context) {
         totalHeight += titleHeight + bubbleSpacing
 
         val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "thinking..." }
+        val imageBitmaps = mutableMapOf<Int, Bitmap>()
+
         messagesToRender.forEachIndexed { index, message ->
             val isUser = message.role == "user"
             var textContent = ""
-            var imageBitmap: Bitmap? = null
 
             // Extract text from content (same as original)
             if (message.content is JsonArray) {
@@ -408,6 +410,7 @@ class PdfGenerator(private val context: Context) {
                 textContent = message.content.content
             }
             textContent = processMarkdownLinks(textContent)
+
             // Extract uploaded image (base64 from content)
             var uploadedImageBitmap: Bitmap? = null
             if (message.content is JsonArray) {
@@ -426,6 +429,10 @@ class PdfGenerator(private val context: Context) {
                 uploadedImageBitmap
             }
 
+            // Store the bitmap for reuse
+            if (finalImageBitmap != null) {
+                imageBitmaps[index] = finalImageBitmap
+            }
 
             totalHeight += calculateTotalMessageHeight(textContent, finalImageBitmap, pageWidth, if (isUser) userIconDrawable != null else aiIconDrawable != null)
             if (index < messagesToRender.size - 1) {
@@ -450,7 +457,6 @@ class PdfGenerator(private val context: Context) {
             messagesToRender.forEachIndexed { index, message ->
                 val isUser = message.role == "user"
                 var textContent = ""
-                var imageBitmap: Bitmap? = null
 
                 // Extract text (same as above)
                 if (message.content is JsonArray) {
@@ -461,30 +467,17 @@ class PdfGenerator(private val context: Context) {
                     textContent = message.content.content
                 }
                 textContent = processMarkdownLinks(textContent)
-// Extract uploaded image (base64 from content)
-                var uploadedImageBitmap: Bitmap? = null
-                if (message.content is JsonArray) {
-                    val imageUrl = message.content.firstNotNullOfOrNull { item ->
-                        (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "image_url" }?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.content
-                    }
-                    if (imageUrl != null) {
-                        uploadedImageBitmap = decodeImage(imageUrl)  // Reuse existing decodeImage
-                    }
-                }
 
-// Prioritize: Use generated image if available, else uploaded
-                val finalImageBitmap = if (!isUser && generatedImages.containsKey(index)) {
-                    loadBitmapFromUri(context, generatedImages[index])
-                } else {
-                    uploadedImageBitmap
-                }
-
-
+                // Reuse the stored bitmap
+                val finalImageBitmap = imageBitmaps[index]
 
                 // Draw the message (reuses existing drawMessage and drawBubble logic)
                 val messageHeight = calculateTotalMessageHeight(textContent, finalImageBitmap, canvas.width.toFloat(), if (isUser) userIconDrawable != null else aiIconDrawable != null)
                 drawMessage(canvas, textContent, finalImageBitmap, isUser, currentY, if (isUser) userIconDrawable else aiIconDrawable)
                 currentY += messageHeight + bubbleSpacing
+
+                // Recycle the bitmap
+                finalImageBitmap?.recycle()
             }
 
             document.finishPage(page)
@@ -497,11 +490,12 @@ class PdfGenerator(private val context: Context) {
         }
     }
 
+
     // Helper function to load bitmap from URI
     private fun loadBitmapFromUri(context: Context, uriString: String?): Bitmap? {
         if (uriString == null) return null
         return try {
-            val uri = android.net.Uri.parse(uriString)
+            val uri = uriString.toUri()
             val inputStream = context.contentResolver.openInputStream(uri)
             BitmapFactory.decodeStream(inputStream)
         } catch (e: Exception) {
@@ -548,6 +542,7 @@ class PdfGenerator(private val context: Context) {
         totalHeight += titleHeight + bubbleSpacing
 
         val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "thinking..." }
+        val imageBitmaps = mutableMapOf<Int, Bitmap>()
 
         messagesToRender.forEachIndexed { index, message ->
             val isUser = message.role == "user"
@@ -563,6 +558,7 @@ class PdfGenerator(private val context: Context) {
                 }
                 if (imageUrl != null) {
                     imageBitmap = decodeImage(imageUrl)
+                    imageBitmaps[index] = imageBitmap!!  // Store the decoded bitmap for reuse
                 }
             } else if (message.content is JsonPrimitive) {
                 textContent = message.content.content
@@ -577,7 +573,7 @@ class PdfGenerator(private val context: Context) {
 
         try {
             val document = PdfDocument()
-            val pageInfo = PdfDocument.PageInfo.Builder(PageSize.A4.width(), totalHeight.toInt(), 1).create()
+            val pageInfo = PdfDocument.PageInfo.Builder(PdfGenerator.PageSize.A4.width(), totalHeight.toInt(), 1).create()
             val page = document.startPage(pageInfo)
             val canvas = page.canvas
 
@@ -590,7 +586,7 @@ class PdfGenerator(private val context: Context) {
             canvas.drawText(modelName, titleX, currentY, titlePaint)
             currentY += titlePaint.fontSpacing + bubbleSpacing
 
-            messagesToRender.forEach { message ->
+            messagesToRender.forEachIndexed { index, message ->
                 val isUser = message.role == "user"
                 var textContent = ""
                 var imageBitmap: Bitmap? = null
@@ -605,7 +601,7 @@ class PdfGenerator(private val context: Context) {
                         (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.content == "image_url" }?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.content
                     }
                     if (imageUrl != null) {
-                        imageBitmap = decodeImage(imageUrl)
+                        imageBitmap = imageBitmaps[index]  // Reuse the stored bitmap instead of re-decoding
                     }
                 } else if (message.content is JsonPrimitive) {
                     textContent = message.content.content
@@ -616,6 +612,9 @@ class PdfGenerator(private val context: Context) {
                 val messageHeight = calculateTotalMessageHeight(textContent, imageBitmap, canvas.width.toFloat(), if (isUser) userIconDrawable != null else aiIconDrawable != null)
                 drawMessage(canvas, textContent, imageBitmap, isUser, currentY, if (isUser) userIconDrawable else aiIconDrawable)
                 currentY += messageHeight + bubbleSpacing
+
+                // Recycle bitmaps to free memory
+                imageBitmap?.recycle()
             }
 
             document.finishPage(page)
@@ -630,7 +629,6 @@ class PdfGenerator(private val context: Context) {
             return null
         }
     }
-
     private fun processMarkdownLinks(markdown: String): String {
         // Regex to match Markdown links: [text](url)
         // Handles optional spaces around text and url
@@ -795,7 +793,22 @@ class PdfGenerator(private val context: Context) {
             if (image != null) {
                 val imageLeft = bubbleLeft + bubblePadding
                 val dst = RectF(imageLeft, y, imageLeft + scaledImageWidth, y + imagePartHeight)
-                drawBitmap(image, null, dst, null)
+
+                // Scale the bitmap to the target size before drawing (to reduce PDF size)
+                val scaledBitmap = if (image.width != scaledImageWidth.toInt() || image.height != imagePartHeight.toInt()) {
+                    image.scale(scaledImageWidth.toInt(), imagePartHeight.toInt(), true)
+                } else {
+                    image  // No scaling needed if already the right size
+                }
+
+                // Draw the scaled bitmap
+                drawBitmap(scaledBitmap, null, dst, null)
+
+                // Recycle if we created a new scaled bitmap
+                if (scaledBitmap !== image) {
+                    scaledBitmap.recycle()
+                }
+
                 y += imagePartHeight + if (blocks.isNotEmpty()) bubbleSpacing else 0f
             }
 
