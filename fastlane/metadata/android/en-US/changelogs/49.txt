@@ -1,0 +1,4 @@
+- Moved messages buttons to below message to align with standard AI Chat app structure.
+- Added Edit and Resend buttons for user messages/prompts. These remove all subsequent messages so be mindful of that.
+- Resolved issue of screen flash when pressing the TTS button.
+- Notification if a saved chat is loaded.

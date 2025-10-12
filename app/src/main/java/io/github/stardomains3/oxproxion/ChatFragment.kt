@@ -34,6 +34,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -68,6 +69,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -424,9 +426,59 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     }
 
     private fun setupRecyclerView() {
-        chatAdapter = ChatAdapter(markwon, viewModel, { text, position ->
-            speakText(text, position)
-        }, ttsAvailable)
+        chatAdapter = ChatAdapter(
+            markwon,
+            viewModel,
+            { text, position -> speakText(text, position) },
+            ttsAvailable,
+            onEditMessage = { position, text ->
+                // Existing edit confirmation dialog (unchanged from previous)
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Edit this message?")
+                    .setMessage("This will load the message into the prompt box for editing and remove it along with all following messages (AI responses and later prompts) from the chat history. This action cannot be undone.\n\nProceed?")
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setPositiveButton("Edit") { _, _ ->
+                        viewModel.truncateHistory(position)
+                        chatEditText.setText(text)
+                        chatEditText.setSelection(text.length)
+                        hideMenu()
+                        chatEditText.requestFocus()
+                        chatEditText.showKeyboard()
+                        if (chatAdapter.itemCount > 0) {
+                            chatRecyclerView.smoothScrollToPosition(chatAdapter.itemCount - 1)
+                        }
+                    }
+                    .setCancelable(true)
+                    .show()
+            },
+            // <-- NEW: Add this entire callback
+            onRedoMessage = { position, originalContent ->
+                // Show confirmation dialog for redo
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Resend this message?")
+                    .setMessage("This will remove all following messages from the chat, then resend the prompt automatically to generate a new response. This action cannot be undone.\n\nProceed?")
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()  // Do nothing
+                    }
+                    .setPositiveButton("Redo") { _, _ ->
+                        // Truncate from position + 1 (keep original user message, remove everything after)
+                        viewModel.truncateHistory(position )
+                        // Fetch current system message (as in sendChatButton logic)
+                        val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
+                        // Auto-resend the original content (triggers thinking bubble + new response)
+                        viewModel.sendUserMessage(originalContent, systemMessage)
+                        // UI polish: Hide menu, scroll to bottom (after resend starts)
+                        hideMenu()
+                        if (chatAdapter.itemCount > 0) {
+                            chatRecyclerView.smoothScrollToPosition(chatAdapter.itemCount - 1)
+                        }
+                    }
+                    .setCancelable(true)
+                    .show()
+            }
+        )
         chatRecyclerView.apply {
             adapter = chatAdapter
             layoutManager = NonScrollingOnFocusLayoutManager(requireContext()).apply {
@@ -982,14 +1034,21 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             textToSpeech.speak(safeText, TextToSpeech.QUEUE_FLUSH, null, "tts_utterance")
         }
     }
-    private fun updateIconDirectlyOrNotify(position: Int, iconRes: Int) {
-        val holder = chatAdapter.currentHolder
-        if (holder?.itemView?.isAttachedToWindow == true && holder.bindingAdapterPosition == position) {  // Changed here
-            holder.ttsButton.setImageResource(iconRes)
+    private fun updateIconDirectlyOrNotify(position: Int, @DrawableRes iconRes: Int) {
+        val lm = chatRecyclerView.layoutManager as? LinearLayoutManager ?: return
+        val vh = lm.findViewByHolder(position)          // extension below
+        if (vh is ChatAdapter.AssistantViewHolder && vh.itemView.isAttachedToWindow) {
+            vh.ttsButton.setImageResource(iconRes)      // fast path – no flash
         } else {
-            chatAdapter.notifyItemChanged(position)
+            chatAdapter.notifyItemChanged(position)     // slow path
         }
     }
+
+    /* helper – returns the ViewHolder that is *currently* bound to the given adapter position */
+    private fun LinearLayoutManager.findViewByHolder(pos: Int): RecyclerView.ViewHolder? {
+        return findViewByPosition(pos)?.let { chatRecyclerView.getChildViewHolder(it) }
+    }
+
 
 
 

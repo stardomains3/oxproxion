@@ -16,66 +16,6 @@
         app:layout_constraintWidth_percent="0.95"
         app:layout_constraintHorizontal_bias="0.0">
 
-        <ImageButton
-            android:id="@+id/copyButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Copy text"
-            android:padding="4dp"
-            android:src="@drawable/ic_tune"
-            app:tint="#454545"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageButton
-            android:id="@+id/aipdfButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Make PDF"
-            android:padding="4dp"
-            android:src="@drawable/ic_pdfnew"
-            app:tint="#454545"
-            app:layout_constraintStart_toEndOf="@id/copyButton"
-            app:layout_constraintTop_toTopOf="@id/copyButton"
-            app:layout_constraintBottom_toBottomOf="@id/copyButton" />
-
-        <!-- shareButton -->
-        <ImageButton
-            android:id="@+id/shareButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Share text"
-            android:padding="4dp"
-            android:src="@drawable/ic_share"
-            app:tint="#454545"
-            app:layout_constraintStart_toEndOf="@id/aipdfButton"
-            app:layout_constraintTop_toTopOf="@id/copyButton"
-            app:layout_constraintBottom_toBottomOf="@id/copyButton" />
-
-        <!-- ttsButton -->
-        <ImageButton
-            android:id="@+id/ttsButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Speak text"
-            android:padding="4dp"
-            android:src="@drawable/ic_volume_up"
-            app:tint="#454545"
-            app:layout_constraintStart_toEndOf="@id/shareButton"
-            app:layout_constraintTop_toTopOf="@id/copyButton"
-            app:layout_constraintBottom_toBottomOf="@id/copyButton" />
-
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/messageContainer"
             android:layout_width="wrap_content"
@@ -84,7 +24,7 @@
             android:padding="12dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/copyButton"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintHorizontal_bias="0.0">
 
             <!-- NEW: ImageView for generated images -->
@@ -123,6 +63,64 @@
                 app:layout_constraintTop_toBottomOf="@id/generatedImageView" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Buttons moved below messageContainer, at bottom edge -->
+        <ImageButton
+            android:id="@+id/copyButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Copy text"
+            android:padding="4dp"
+            android:src="@drawable/ic_tune"
+            app:tint="#454545"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+
+        <ImageButton
+            android:id="@+id/aipdfButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Make PDF"
+            android:padding="4dp"
+            android:src="@drawable/ic_pdfnew"
+            app:tint="#454545"
+            app:layout_constraintStart_toEndOf="@id/copyButton"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+
+        <!-- shareButton -->
+        <ImageButton
+            android:id="@+id/shareButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Share text"
+            android:padding="4dp"
+            android:src="@drawable/ic_share"
+            app:tint="#454545"
+            app:layout_constraintStart_toEndOf="@id/aipdfButton"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+
+        <!-- ttsButton -->
+        <ImageButton
+            android:id="@+id/ttsButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Speak text"
+            android:padding="4dp"
+            android:src="@drawable/ic_volume_up"
+            app:tint="#454545"
+            app:layout_constraintStart_toEndOf="@id/shareButton"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

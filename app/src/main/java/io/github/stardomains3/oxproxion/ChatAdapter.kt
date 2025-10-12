@@ -30,13 +30,14 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.collections.get
 
 class ChatAdapter(
     private val markwon: Markwon,
     private val viewModel: ChatViewModel,
     private val onSpeakText: (String, Int) -> Unit,
-    private val ttsAvailable: Boolean
+    private val ttsAvailable: Boolean,
+    private val onEditMessage: (Int, String) -> Unit,
+    private val onRedoMessage: (Int, JsonElement) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
     var currentSpeakingPosition = -1
@@ -145,6 +146,8 @@ class ChatAdapter(
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val copyButtonuser: ImageButton = itemView.findViewById(R.id.copyButtonuser)
         private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
+        private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)  // <-- NEW: Add this
+        private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
 
         fun bind(message: FlexibleMessage) {
             messageTextView.text = getMessageText(message.content)
@@ -165,6 +168,17 @@ class ChatAdapter(
                 clipboard.setPrimaryClip(clip)
                 // Toast.makeText(itemView.context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
             }
+            editButton.setOnClickListener {
+                val messageText = messageTextView.text.toString()
+                if (messageText.isNotBlank()) {
+                    onEditMessage(adapterPosition, messageText)
+                }
+            }
+
+            // <-- NEW: Add this entire block after the editButton listener
+            resendButton.setOnClickListener {
+                onRedoMessage(adapterPosition, message.content)  // Invoke callback with position and original content
+            }
         }
     }
 
@@ -181,6 +195,7 @@ class ChatAdapter(
          val ttsButton: ImageButton = itemView.findViewById(R.id.ttsButton)  // Added for TTS
         private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
+        private var pulseAnimator: ObjectAnimator? = null
 
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
             currentHolder = this@AssistantViewHolder
@@ -325,15 +340,18 @@ class ChatAdapter(
                 }
             }
         }
+        internal fun stopPulse() {          // <-- only visible inside the adapter
+            pulseAnimator?.cancel()
+            pulseAnimator = null
+            messageContainer.alpha = 1f
+            messageContainer.clearAnimation()
+            messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
+        }
     }
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
-        if (holder is AssistantViewHolder) {
-            holder.messageContainer.clearAnimation()  // Stop any running animations
-            holder.messageContainer.alpha = 1f        // Reset transparency to normal
-            // You might also want to reset the background here if needed:
-            holder.messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
-        }
+        if (holder is AssistantViewHolder) holder.stopPulse()
     }
+
 }

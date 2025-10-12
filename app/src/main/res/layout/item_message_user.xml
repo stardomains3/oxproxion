@@ -15,19 +15,6 @@
         app:layout_constraintWidth_percent="0.95"
         app:layout_constraintHorizontal_bias="1.0">
 
-        <ImageButton
-            android:id="@+id/copyButtonuser"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Copy text"
-            android:padding="4dp"
-            android:src="@drawable/ic_person"
-            app:tint="#36454F"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/messageContainer"
             android:layout_width="wrap_content"
@@ -36,7 +23,7 @@
             android:padding="12dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/copyButtonuser"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintHorizontal_bias="1.0">
 
             <ImageView
@@ -50,8 +37,7 @@
                 app:layout_constrainedWidth="true"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                android:paddingBottom="6dp" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/messageTextView"
@@ -71,6 +57,55 @@
                 app:layout_constraintTop_toBottomOf="@id/userImageView" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Horizontal container for buttons below messageContainer -->
+        <LinearLayout
+            android:id="@+id/buttonContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer">
+
+            <!-- New resend button (leftmost) -->
+            <ImageButton
+                android:id="@+id/resendButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Redo message"
+                android:padding="4dp"
+                android:src="@drawable/ic_redo"
+                android:visibility="visible"
+                app:tint="#222f3d" />
+
+            <!-- Edit button (middle) -->
+            <ImageButton
+                android:id="@+id/editButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Edit message"
+                android:padding="4dp"
+                android:src="@drawable/ic_edit"
+                android:visibility="visible"
+                app:tint="#222f3d" />
+
+            <!-- Existing copy button (far right) -->
+            <ImageButton
+                android:id="@+id/copyButtonuser"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Copy text"
+                android:padding="4dp"
+                android:src="@drawable/ic_person"
+                app:tint="#222f3d" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

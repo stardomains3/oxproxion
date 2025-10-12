@@ -322,6 +322,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 session?.let {
                     _activeChatModel.postValue(it.modelUsed)
                     _modelPreferenceToSave.postValue(it.modelUsed)
+                    withContext(Dispatchers.Main) {
+                        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                            val apiIdentifier = it.modelUsed ?: "Unknown Model"
+                            val displayName = getModelDisplayName(apiIdentifier)
+                            ForegroundService.updateNotificationStatusSilently(displayName, "Saved Chat Loaded")
+                        }
+                    }
                 }
             } finally {
                 _isChatLoading.postValue(false)
@@ -899,7 +906,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         generatedImages.clear()
         currentSessionId = null
     }
-
+    fun truncateHistory(startIndex: Int) {
+        val current = _chatMessages.value?.toMutableList() ?: return
+        if (startIndex >= 0 && startIndex < current.size) {
+            current.subList(startIndex, current.size).clear()
+            _chatMessages.value = current
+            // Clear any generated images associated with removed messages (simple clear for safety)
+            generatedImages.clear()
+        }
+    }
     fun hasWebpInHistory(): Boolean {
         val messages = _chatMessages.value ?: return false
         return messages.any {
