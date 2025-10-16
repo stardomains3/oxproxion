@@ -171,13 +171,13 @@ class ChatAdapter(
             editButton.setOnClickListener {
                 val messageText = messageTextView.text.toString()
                 if (messageText.isNotBlank()) {
-                    onEditMessage(adapterPosition, messageText)
+                    onEditMessage(bindingAdapterPosition, messageText)
                 }
             }
 
             // <-- NEW: Add this entire block after the editButton listener
             resendButton.setOnClickListener {
-                onRedoMessage(adapterPosition, message.content)  // Invoke callback with position and original content
+                onRedoMessage(bindingAdapterPosition, message.content)  // Invoke callback with position and original content
             }
         }
     }

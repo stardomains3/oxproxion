@@ -117,6 +117,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var removeAttachmentButton: ImageButton
     private lateinit var headerContainer: LinearLayout
     private var overlayView: View? = null
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -138,6 +139,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
         }
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                startSpeechRecognition()  // Auto-start after grant
+            } else {
+                Toast.makeText(requireContext(), "Microphone permission needed for voice input", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         // --- Initialize Views from fragment_chat.xml ---
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
@@ -427,11 +436,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             arguments?.remove("start_stt_on_launch")  // Clear flag to prevent re-trigger
             chatEditText.hideKeyboard()  // Ensure clean state
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)  // NEW: Use launcher
             } else {
                 startSpeechRecognition()  // Your existing method
             }
         }
+
     }
 
     private fun updateSystemMessageButtonState() {
@@ -499,6 +509,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
                         // Auto-resend the original content (triggers thinking bubble + new response)
                         viewModel.sendUserMessage(originalContent, systemMessage)
+                        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                            val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
+                            val displayName = viewModel.getModelDisplayName(apiIdentifier)
+                            ForegroundService.updateNotificationStatusSilently(displayName, "Prompt sent. Awaiting Response.")
+                        }
                         // UI polish: Hide menu, scroll to bottom (after resend starts)
                         hideMenu()
                         if (chatAdapter.itemCount > 0) {
@@ -983,11 +998,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         speechButton.setOnClickListener {
             chatEditText.hideKeyboard()
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)  // NEW: Use launcher instead of ActivityCompat
             } else {
                 startSpeechRecognition()
             }
         }
+
         clearButton.setOnClickListener {
             chatEditText.text.clear()
         }
@@ -1312,21 +1328,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     fun startSpeechRecognitionSafely() {
         chatEditText.hideKeyboard()
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)  // NEW: Use launcher
         } else {
             startSpeechRecognition()
         }
     }
 
-    // Override onRequestPermissionsResult to handle RECORD_AUDIO for assist (if denied, show rationale/toast)
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startSpeechRecognition()  // Auto-start after grant
-            } else {
-                Toast.makeText(requireContext(), "Microphone permission needed for voice input", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 }

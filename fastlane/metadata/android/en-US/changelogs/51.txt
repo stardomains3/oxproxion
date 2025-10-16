@@ -1,0 +1,2 @@
+- Lowered minimum OS to Android 12 on request
+- Replaced deprecations

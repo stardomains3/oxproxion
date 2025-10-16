@@ -14,10 +14,10 @@ android {
 
     defaultConfig {
         applicationId = "io.github.stardomains3.oxproxion"
-        minSdk = 34
+        minSdk = 31
         targetSdk = 36
-        versionCode = 50
-        versionName = "1.4.9"
+        versionCode = 51
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
