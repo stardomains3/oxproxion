@@ -25,6 +25,7 @@ class SharedPreferencesHelper(context: Context) {
     private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
+        private const val KEY_CONVERSATION_MODE_ENABLED = "conversation_mode_enabled"
         private const val API_KEYS_PREFS_STORE = "ApiKeysPrefsStore"
         private const val MAIN_PREFS = "MainAppPrefs"
         private const val KEY_MODEL_NEW_CHAT = "modelvalenewchat"
@@ -183,7 +184,13 @@ class SharedPreferencesHelper(context: Context) {
             emptyList()
         }
     }
+    fun saveConversationModeEnabled(isEnabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_CONVERSATION_MODE_ENABLED, isEnabled) }
+    }
 
+    fun getConversationModeEnabled(): Boolean {
+        return mainPrefs.getBoolean(KEY_CONVERSATION_MODE_ENABLED, false)
+    }
     fun saveStreamingPreference(isEnabled: Boolean) {
         mainPrefs.edit {
             putBoolean(KEY_STREAMING_ENABLED, isEnabled)

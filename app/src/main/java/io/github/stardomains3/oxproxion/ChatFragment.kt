@@ -94,6 +94,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var clearButton: MaterialButton
     private lateinit var speechButton: MaterialButton
     private lateinit var extendButton: MaterialButton
+    private lateinit var convoButton: MaterialButton
     private lateinit var saveChatButton: MaterialButton
     private lateinit var openSavedChatsButton: MaterialButton
     private lateinit var copyChatButton: MaterialButton
@@ -129,6 +130,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     val recognizedText = results[0]
                     chatEditText.setText(recognizedText)
                     chatEditText.setSelection(chatEditText.text.length)
+                    if (sharedPreferencesHelper.getConversationModeEnabled()) {
+                        sendChatButton.performClick()
+                    }
+
                     //   updateButtonVisibility()  // Update your buttons
                 }
             }
@@ -140,6 +145,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         reasoningButton = view.findViewById(R.id.reasoningButton)
         notiButton = view.findViewById(R.id.notiButton)
         extendButton = view.findViewById(R.id.extendButton)
+        convoButton  = view.findViewById(R.id.convoButton)
         clearButton = view.findViewById(R.id.clearButton)
         utilityButton = view.findViewById(R.id.utilityButton)
         speechButton = view.findViewById(R.id.speechButton)
@@ -316,6 +322,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
 
         viewModel.isAwaitingResponse.observe(viewLifecycleOwner) { isAwaiting ->
+            if (!isAwaiting && sharedPreferencesHelper.getConversationModeEnabled()) {
+                val messages = viewModel.chatMessages.value ?: return@observe
+                if (messages.isNotEmpty()) {
+                    val lastMessage = messages.last()
+                    if (lastMessage.role == "assistant" &&
+                        viewModel.getMessageText(lastMessage.content) != "thinking...") {
+                        chatRecyclerView.post {
+                            val position = messages.size - 1
+                            val holder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
+                            holder?.ttsButton?.performClick()
+                        }
+                    }
+                }
+            }
             sendChatButton.isEnabled = true
 
             val materialButton = sendChatButton
@@ -400,6 +420,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         }
                     })
                 }
+            }
+        }
+        val shouldStartStt = arguments?.getBoolean("start_stt_on_launch", false) ?: false
+        if (shouldStartStt) {
+            arguments?.remove("start_stt_on_launch")  // Clear flag to prevent re-trigger
+            chatEditText.hideKeyboard()  // Ensure clean state
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
+            } else {
+                startSpeechRecognition()  // Your existing method
             }
         }
     }
@@ -863,6 +893,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             viewModel.toggleNoti()
         }
+        convoButton.setOnClickListener {
+            val currentState = sharedPreferencesHelper.getConversationModeEnabled()
+            val newState = !currentState
+            sharedPreferencesHelper.saveConversationModeEnabled(newState)
+            convoButton.isSelected = newState
+        }
         extendButton.setOnClickListener {
 
             val currentState = sharedPreferencesHelper.getExtPreference()
@@ -981,7 +1017,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private fun updateInitialUI() {
         val isExtended = sharedPreferencesHelper.getExtPreference()
         val hasText = !chatEditText.text.isNullOrEmpty()
-
+        convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         extendButton.isSelected = isExtended
         utilityButton.visibility = if (isExtended) View.VISIBLE else View.GONE
 
@@ -1273,5 +1309,24 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         return false
     }
+    fun startSpeechRecognitionSafely() {
+        chatEditText.hideKeyboard()
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
+        } else {
+            startSpeechRecognition()
+        }
+    }
 
+    // Override onRequestPermissionsResult to handle RECORD_AUDIO for assist (if denied, show rationale/toast)
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startSpeechRecognition()  // Auto-start after grant
+            } else {
+                Toast.makeText(requireContext(), "Microphone permission needed for voice input", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 }

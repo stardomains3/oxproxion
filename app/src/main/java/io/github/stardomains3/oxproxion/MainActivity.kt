@@ -35,6 +35,12 @@ class MainActivity : AppCompatActivity() {
                     chatFragment.arguments = bundle
                 }
             }
+            val isAssistLaunch = intent?.action in listOf(Intent.ACTION_ASSIST, Intent.ACTION_VOICE_COMMAND)
+            if (isAssistLaunch) {
+                val bundle = chatFragment.arguments ?: Bundle()
+                bundle.putBoolean("start_stt_on_launch", true)
+                chatFragment.arguments = bundle
+            }
             supportFragmentManager.beginTransaction()
                // .replace(R.id.fragment_container, chatFragment)
                 .add(R.id.fragment_container, chatFragment)
@@ -81,6 +87,11 @@ class MainActivity : AppCompatActivity() {
                 //    fragment.setSharedText(text)
                 //  }
             }
+        }
+        val isAssistLaunch = intent.action in listOf(Intent.ACTION_ASSIST)
+        if (isAssistLaunch) {
+            val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container) as? ChatFragment
+            fragment?.startSpeechRecognitionSafely()  // Custom method below
         }
     }
     private fun startForegroundService() {

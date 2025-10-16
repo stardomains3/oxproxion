@@ -1,0 +1,2 @@
+- Added an "Audio Conversations" option. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
+- App can now be set as the phone's Assistant app. When called as that, Speech-to-Text automatically starts.
