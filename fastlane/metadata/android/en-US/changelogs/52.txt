@@ -1,0 +1,1 @@
+- Added expandable/collapsible items and drag-and-drop reordering to the System Messages list (except the Default System Message).

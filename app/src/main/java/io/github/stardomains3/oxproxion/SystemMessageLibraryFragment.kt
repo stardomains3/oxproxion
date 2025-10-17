@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.util.Log
+import androidx.appcompat.widget.SearchView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,18 +14,23 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.widget.SearchView
 import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+
+import java.util.Collections
+
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.collections.addAll
+import kotlin.collections.remove
 
 class SystemMessageLibraryFragment : Fragment() {
 
@@ -32,7 +38,7 @@ class SystemMessageLibraryFragment : Fragment() {
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private val systemMessages = mutableListOf<SystemMessage>()
     private lateinit var searchView: SearchView  // NEW: Reference to SearchView
-    private val allSystemMessages = mutableListOf<SystemMessage>()
+    private val allSystemMessages = mutableListOf<SystemMessage>()  // NEW: Store full list for filtering
 
     private val exportSystemMessagesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -61,6 +67,7 @@ class SystemMessageLibraryFragment : Fragment() {
             }
         }
     }
+
 
     private val importSystemMessagesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -104,6 +111,7 @@ class SystemMessageLibraryFragment : Fragment() {
             }
         }
     }
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -162,6 +170,7 @@ class SystemMessageLibraryFragment : Fragment() {
         }
     }
 
+
     private fun exportSystemMessages() {
         if (sharedPreferencesHelper.getCustomSystemMessages().isEmpty()) {
             Toast.makeText(requireContext(), "No system messages to export.", Toast.LENGTH_SHORT).show()
@@ -196,40 +205,55 @@ class SystemMessageLibraryFragment : Fragment() {
                 showPopupMenu(anchorView, systemMessage)
             }
         )
-        view.findViewById<RecyclerView>(R.id.system_message_recycler_view).apply {
+        val recyclerView = view.findViewById<RecyclerView>(R.id.system_message_recycler_view)
+        recyclerView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = systemMessageAdapter
+
+            // Drag-and-drop reordering (customs only; default fixed at top)
+            val callback = object : ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP or ItemTouchHelper.DOWN,  // Vertical drag only
+                0  // No swipe
+            ) {
+                override fun onMove(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                    target: RecyclerView.ViewHolder
+                ): Boolean {
+                    val fromPos = viewHolder.adapterPosition
+                    val toPos = target.adapterPosition
+                    // Only allow reordering if both are custom (index > 0)
+                    if (fromPos > 0 && toPos > 0) {
+                        Collections.swap(systemMessages, fromPos, toPos)
+                        systemMessageAdapter.notifyItemMoved(fromPos, toPos)
+                        // Persist: Save reordered customs (skip default)
+                        val customs = systemMessages.drop(1).toMutableList()
+                        sharedPreferencesHelper.saveCustomSystemMessages(customs)
+                        return true
+                    }
+                    return false
+                }
+
+                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                    // No swipe
+                }
+
+                override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                    // No drag on default (position 0)
+                    return if (viewHolder.adapterPosition > 0) {
+                        ItemTouchHelper.Callback.makeMovementFlags(
+                            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+                            0
+                        )
+                    } else {
+                        0
+                    }
+                }
+            }
+            val itemTouchHelper = ItemTouchHelper(callback)
+            itemTouchHelper.attachToRecyclerView(recyclerView)
         }
     }
-
-    /*private fun showPopupMenu(view: View, systemMessage: SystemMessage) {
-        val popup = PopupMenu(context, view)
-        popup.menuInflater.inflate(R.menu.model_item_menu, popup.menu)
-
-        // Enable edit option for default messages, disable delete
-        if (systemMessage.isDefault) {
-            popup.menu.findItem(R.id.delete_model).isVisible = false
-        }
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.edit_model -> {
-                    navigateToEditScreen(systemMessage)
-                    true
-                }
-                R.id.delete_model -> {
-                    if (systemMessage.isDefault) {
-                        Toast.makeText(context, "Default system message cannot be deleted", Toast.LENGTH_SHORT).show()
-                    } else {
-                        showDeleteConfirmationDialog(systemMessage)
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-        popup.show()
-    }*/
 
     private fun showPopupMenu(anchorView: View, systemMessage: SystemMessage) {
         val inflater = LayoutInflater.from(anchorView.context)
@@ -316,6 +340,37 @@ class SystemMessageLibraryFragment : Fragment() {
             popupWindow.showAsDropDown(anchorView)
         }
     }
+
+
+    /*private fun showPopupMenu(view: View, systemMessage: SystemMessage) {
+        val popup = PopupMenu(context, view)
+        popup.menuInflater.inflate(R.menu.model_item_menu, popup.menu)
+
+        // Enable edit option for default messages, disable delete
+        if (systemMessage.isDefault) {
+            popup.menu.findItem(R.id.delete_model).isVisible = false
+        }
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.edit_model -> {
+                    navigateToEditScreen(systemMessage)
+                    true
+                }
+                R.id.delete_model -> {
+                    if (systemMessage.isDefault) {
+                        Toast.makeText(context, "Default system message cannot be deleted", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showDeleteConfirmationDialog(systemMessage)
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+        popup.show()
+    }*/
+
     private fun navigateToEditScreen(systemMessage: SystemMessage) {
         val fragment = AddEditSystemMessageFragment().apply {
             arguments = Bundle().apply {
@@ -329,7 +384,6 @@ class SystemMessageLibraryFragment : Fragment() {
             .addToBackStack(null)
             .commit()
     }
-
     override fun onResume() {
         super.onResume()
         if (::systemMessageAdapter.isInitialized) {
@@ -342,6 +396,10 @@ class SystemMessageLibraryFragment : Fragment() {
         allSystemMessages.clear()  // NEW: Clear the full list too
         val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
         val customMessages = sharedPreferencesHelper.getCustomSystemMessages()
+
+        // Reset expand states (compact by default)
+        defaultMessage.isExpanded = false
+        customMessages.forEach { it.isExpanded = false }
 
         systemMessages.add(defaultMessage)
         systemMessages.addAll(customMessages)
@@ -371,12 +429,19 @@ class SystemMessageLibraryFragment : Fragment() {
             }
             systemMessages.clear()
             systemMessages.addAll(filteredMessages)
+            // Collapse all filtered items
+            systemMessages.forEach { it.isExpanded = false }
         }
         systemMessageAdapter.notifyDataSetChanged()
     }
 
+
+
+
     private fun showDeleteConfirmationDialog(systemMessage: SystemMessage) {
+        // MaterialAlertDialogBuilder(requireContext(), R.style.MyCustomAlertDialogTheme)
         MaterialAlertDialogBuilder(requireContext())
+            // AlertDialog.Builder(requireContext())
             .setTitle("Delete System Message")
             .setMessage("Are you sure you want to delete this system message?")
             .setPositiveButton("Delete") { _, _ ->
@@ -401,4 +466,3 @@ class SystemMessageLibraryFragment : Fragment() {
     }
 
 }
-

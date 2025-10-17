@@ -29,11 +29,34 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
-                    android:layout_toStartOf="@+id/menu_button"
+                    android:layout_toStartOf="@+id/expand_icon"
                     android:text="Title"
                     android:textColor="@android:color/white"
                     android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless" />
+
+                <!-- New: Expand icon (chevron) - tap to toggle collapse -->
+                <!-- Expand icon (arrow downward) - tap to toggle collapse -->
+                <ImageView
+                    android:id="@+id/expand_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@+id/menu_button"
+                    android:layout_marginEnd="8dp"
+                    android:src="@drawable/ic_arrow_downward"
+                    android:rotation="0"
+                    android:padding="8dp"
+                    android:background="@drawable/br_circle"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Expand/collapse"
+                    app:tint="@android:color/white" />
+
 
                 <ImageView
                     android:id="@+id/menu_button"
@@ -48,16 +71,17 @@
                     app:tint="@android:color/white" />
             </RelativeLayout>
 
+            <!-- Prompt - collapsible, hidden by default -->
             <TextView
                 android:id="@+id/system_message_prompt"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:maxLines="4"
-                android:ellipsize="end"
                 android:text="System Message"
                 android:textColor="#E0E0E0"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:visibility="gone" />
+
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 </LinearLayout>
