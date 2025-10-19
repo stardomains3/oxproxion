@@ -1,0 +1,2 @@
+- Added option to use camera for image input. Tap image button for dialog to appear asking for image picker or camera. Long-Press image button to go straight to camera.
+- If using Nano-Banana, tap palette button to set aspect ratio of returned generated image.

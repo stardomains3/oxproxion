@@ -226,7 +226,11 @@ class SharedPreferencesHelper(context: Context) {
             putBoolean(KEY_EXT_ENABLED, isEnabled)
         }
     }
+    fun getGeminiAspectRatio(): String? = mainPrefs.getString("gemini_aspect_ratio", null)
 
+    fun saveGeminiAspectRatio(ratio: String) {
+        mainPrefs.edit { putString("gemini_aspect_ratio", ratio) }
+    }
     // --- API Key Management ---
 
     fun saveApiKey(alias: String, apiKey: String) {

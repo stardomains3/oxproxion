@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
@@ -152,12 +153,44 @@ class ChatAdapter(
         fun bind(message: FlexibleMessage) {
             messageTextView.text = getMessageText(message.content)
 
-            val base64 = getImageBase64(message.content)
-            if (base64 != null) {
-                val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
-                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                imageView.setImageBitmap(bitmap)
-                imageView.visibility = View.VISIBLE
+            val imageUriStr = message.imageUri
+            if (!imageUriStr.isNullOrEmpty()) {
+                try {
+                    val userImageUri = imageUriStr.toUri()  // Parse string to Uri
+                    // Preferred: Load from Uri (Coil)
+                    val request = ImageRequest.Builder(itemView.context)
+                        .data(userImageUri)
+                        .target(imageView)
+                        .build()
+                    ImageLoader(itemView.context).enqueue(request)
+                    imageView.visibility = View.VISIBLE
+                    // Toast.makeText(itemView.context, "Flex!", Toast.LENGTH_SHORT).show()
+                    // Tap: Open original
+                    imageView.setOnClickListener {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(userImageUri, "image/*")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            itemView.context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(itemView.context, "Could not open image (may be deleted/moved)", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+
+                    // Fallback: Base64 display (if available)
+                    val base64 = getImageBase64(message.content)
+                    if (base64 != null) {
+                        val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)  // Or rotated if needed
+                        imageView.setImageBitmap(bitmap)
+                        imageView.visibility = View.VISIBLE
+                        // Optional: Add temp tap for base64 (as before)
+                    } else {
+                        imageView.visibility = View.GONE
+                    }
+                }
             } else {
                 imageView.visibility = View.GONE
             }
@@ -226,24 +259,33 @@ class ChatAdapter(
                 messageContainer.alpha = 1f // Reset alpha when not thinking
                 messageContainer.clearAnimation() // Stop any ongoing animations
             }
-            val imageUri = viewModel.generatedImages[position]  // Access temp map from ViewModel
-            if (imageUri != null) {
-                generatedImageView.visibility = View.VISIBLE
-                val request = ImageRequest.Builder(itemView.context)
-                    .data(imageUri)
-                    .target(generatedImageView)
-                    .build()
-                ImageLoader(itemView.context).enqueue(request)  // Use Coil to load
-                generatedImageView.setOnClickListener {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(imageUri.toUri(), "image/*")
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val generatedUriStr = message.imageUri  // From FlexibleMessage
+            if (!generatedUriStr.isNullOrEmpty()) {
+                try {
+                    val generatedUri = generatedUriStr.toUri()  // Parse string to Uri
+                    // Load from Uri (Coil)
+                    val request = ImageRequest.Builder(itemView.context)
+                        .data(generatedUri)
+                        .target(generatedImageView)
+                        .build()
+                    ImageLoader(itemView.context).enqueue(request)
+                    generatedImageView.visibility = View.VISIBLE
+
+                    // Tap: Open original
+                    generatedImageView.setOnClickListener {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(generatedUri, "image/*")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            itemView.context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(itemView.context, "Could not open image (may be deleted/moved)", Toast.LENGTH_SHORT).show()
                         }
-                        itemView.context.startActivity(intent)
-                    } catch (e: Exception) {
-                        Toast.makeText(itemView.context, "Could not open image", Toast.LENGTH_SHORT).show()
                     }
+                } catch (e: Exception) {
+                    //     Log.e("ChatAdapter", "Invalid Uri for generated image: $generatedUriStr", e)
+                    generatedImageView.visibility = View.GONE  // Hide (no base64 fallback for generated)
                 }
             } else {
                 generatedImageView.visibility = View.GONE
@@ -270,10 +312,11 @@ class ChatAdapter(
                     val pdfUri = withContext(Dispatchers.IO) {
                         try {
                             val generator = PdfGenerator(itemView.context)
-                            val imageUri = viewModel.generatedImages[position]  // Check for generated image
+                            val imageUriStr = message.imageUri  // NEW: From FlexibleMessage
+                            val imageUri = imageUriStr?.toUri()  // Parse string to Uri
                             if (imageUri != null) {
                                 // Case #2: Has generated image (with or without text)
-                                generator.generateMarkdownPdfWithImage(rawMarkdown, imageUri)
+                                generator.generateMarkdownPdfWithImage(rawMarkdown, imageUri.toString())
                             } else {
                                 // Case #1: Text-only
                                 generator.generateMarkdownPdf(rawMarkdown)

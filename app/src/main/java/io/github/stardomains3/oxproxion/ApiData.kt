@@ -24,7 +24,15 @@ data class ChatRequest(
     val searchParameters: SearchParameters? = null,
     val temperature: Double? = null,
     val modalities: List<String>? = null,
-    val logprobs: Boolean? = null
+    val logprobs: Boolean? = null,
+    @SerialName("image_config")  // NEW: Optional for Gemini
+    val imageConfig: ImageConfig? = null  // Only added for specific model
+)
+
+@Serializable
+data class ImageConfig(
+    @SerialName("aspect_ratio")
+    val aspectRatio: String  // e.g., "16:9"
 )
 
 @Serializable
@@ -45,8 +53,11 @@ data class FlexibleMessage(
     @SerialName("tool_call_id")
     val toolCallId: String? = null,
     val toolsUsed: Boolean = false,  // NEW: Flag for visual indication (true if tools were involved in this
-    val reasoning: String? = null
-    )
+    val reasoning: String? = null,
+    @SerialName("image_uri")  // NEW: String for serialization (parse to Uri later)
+    val imageUri: String? = null  // For user/generated images (original Uri.toString())
+)
+
 
 @Serializable
 data class UsageRequest(

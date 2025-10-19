@@ -57,7 +57,6 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.Base64
 import java.util.concurrent.TimeUnit
-import kotlin.compareTo
 
 @Serializable
 data class OpenRouterResponse(val data: List<ModelData>)
@@ -187,7 +186,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             content = JsonPrimitive("thinking...")
         )
     }
-    val generatedImages = mutableMapOf<Int, String>()
+    //val generatedImages = mutableMapOf<Int, String>()
+    private var pendingUserImageUri: String? = null  // String (toString())
     private val httpClient: HttpClient
     private var llmService: LlmService
     private val sharedPreferencesHelper: SharedPreferencesHelper = SharedPreferencesHelper(application)
@@ -296,7 +296,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadChat(sessionId: Long) {
-        generatedImages.clear()
+      //  generatedImages.clear()
         _isChatLoading.value = true
         viewModelScope.launch {
             try {
@@ -382,7 +382,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         userContent: JsonElement,
         systemMessage: String? = null
     ) {
-        val userMessage = FlexibleMessage(role = "user", content = userContent)
+        var userMessage = FlexibleMessage(role = "user", content = userContent)
+        pendingUserImageUri?.let { uriStr ->
+            userMessage = userMessage.copy(imageUri = uriStr)  // Embed string
+            pendingUserImageUri = null
+        }
         val thinkingMessage = THINKING_MESSAGE
 
         val messagesForApiRequest = mutableListOf<FlexibleMessage>()
@@ -474,7 +478,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     null
                 },
-                modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
+                modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
+                imageConfig = if (modelForRequest == "google/gemini-2.5-flash-image") {
+                    val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
+                    ImageConfig(aspectRatio = aspectRatio)
+                } else null
             )
 
             try {
@@ -583,7 +591,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         }
                     }
-
+                    val downloadedUris = if (accumulatedImages.isNotEmpty()) {
+                        downloadImages(accumulatedImages)
+                    } else emptyList()
                     // Post-loop: Only runs for normal completions (errors bail out early above)
                     when (finish_reason) {
                         "error" -> {
@@ -616,9 +626,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         accumulatedReasoning += "\n```"
                         accumulatedReasoning += "\n\n---\n\n"
                     }
-                    if (accumulatedImages.isNotEmpty()) {
-                        downloadImages(accumulatedImages)
-                    }
 
                     val citationsMarkdown = formatCitations(accumulatedAnnotations)
                     val finalContent = (accumulatedResponse + citationsMarkdown).takeIf { it.isNotBlank() } ?: "No response received."
@@ -629,7 +636,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 val last = list.last()
                                 list[list.size - 1] = last.copy(
                                     content = JsonPrimitive(finalContent),
-                                    reasoning = accumulatedReasoning
+                                    reasoning = accumulatedReasoning,
+                                    imageUri = downloadedUris.firstOrNull()
                                 )
                             }
                         }
@@ -692,7 +700,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         null
                     },
-                    modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null
+                    modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
+                    imageConfig = if (modelForRequest == "google/gemini-2.5-flash-image") {
+                        val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
+                        ImageConfig(aspectRatio = aspectRatio)
+                    } else null
                 )
 
                 val response = httpClient.post(activeChatUrl) {
@@ -752,19 +764,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
                     }
                 // Download images if present
-                choice?.message?.images?.let { images ->
+                val downloadedUris = choice?.message?.images?.let { images ->
                     val imageUrls = images.map { it.image_url.url }
                     downloadImages(imageUrls)
-                }
+                } ?: emptyList()
 
-                handleSuccessResponse(chatResponse, thinkingMessage)
+                handleSuccessResponse(chatResponse, thinkingMessage, downloadedUris)  // NEW: Pass Uris
             }
         }
     }
 
     private fun handleSuccessResponse(
         chatResponse: ChatResponse,
-        thinkingMessage: FlexibleMessage
+        thinkingMessage: FlexibleMessage,
+        downloadedUris: List<String> = emptyList()
     ) {
         val message = chatResponse.choices.firstOrNull()?.message ?: throw IllegalStateException("No message")
         val responseText = message.content ?: "No response received."
@@ -779,12 +792,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val citationsMarkdown = formatCitations(message.annotations)
         val finalContent = responseText + citationsMarkdown
 
-        val finalAiMessage = FlexibleMessage(
+        var finalAiMessage = FlexibleMessage(
             role = "assistant",
             content = JsonPrimitive(finalContent),
             reasoning = reasoningForDisplay + separator
         )
-
+        if (downloadedUris.isNotEmpty()) {
+            finalAiMessage = finalAiMessage.copy(imageUri = downloadedUris.first())  // Or join for multiple
+        }
         updateMessages { list ->
             val index = list.indexOf(thinkingMessage)
             if (index != -1) list[index] = finalAiMessage
@@ -903,7 +918,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startNewChat() {
         _chatMessages.value = emptyList()
-        generatedImages.clear()
+        pendingUserImageUri = null
         currentSessionId = null
     }
     fun truncateHistory(startIndex: Int) {
@@ -911,8 +926,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         if (startIndex >= 0 && startIndex < current.size) {
             current.subList(startIndex, current.size).clear()
             _chatMessages.value = current
-            // Clear any generated images associated with removed messages (simple clear for safety)
-            generatedImages.clear()
         }
     }
     fun hasWebpInHistory(): Boolean {
@@ -971,6 +984,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun textConsumed() {
         _sharedText.value = null
     }
+    fun hasGeneratedImagesInChat(): Boolean = _chatMessages.value?.any {
+        it.role == "assistant" && !it.imageUri.isNullOrEmpty()
+    } ?: false
+
     suspend fun correctText(input: String): String? {
         if (input.isBlank()) return null
 
@@ -1145,14 +1162,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             else -> "$originalMessage (Code: $code)"
         }
     }
-    private suspend fun downloadImages(imageUrls: List<String>) {
+    private suspend fun downloadImages(imageUrls: List<String>): List<String> {  // NEW: Return Uris
+        val downloadedUris = mutableListOf<String>()
         withContext(Dispatchers.IO) {
             imageUrls.forEachIndexed { index, imageUrl ->
                 try {
                     val base64Data = imageUrl.substringAfter(",")
                     val imageBytes = Base64.getDecoder().decode(base64Data)
-                    val timestamp = System.currentTimeMillis()  // Add timestamp for uniqueness
-                   // val filename = "generated_image_${timestamp}_${index + 1}.png"  // Updated filename
+                    val timestamp = System.currentTimeMillis()
                     val filename = "generated_image_${timestamp}.png"
                     val values = ContentValues().apply {
                         put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
@@ -1168,46 +1185,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         out.write(imageBytes)
                     } ?: throw Exception("Cannot open output stream")
 
-                    // Store in temp map (use message index, e.g., last message index)
-                    withContext(Dispatchers.Main) {
-                        val lastIndex = _chatMessages.value?.lastIndex ?: 0
-                        generatedImages[lastIndex] = uri.toString()
-                    }
+                    downloadedUris.add(uri.toString())  // NEW: Collect Uri string
 
-                    // NEW: Show Toast on success (instead of Snackbar)
                     withContext(Dispatchers.Main) {
                         Toast.makeText(getApplication<Application>().applicationContext, "Image downloaded: $filename", Toast.LENGTH_SHORT).show()
                     }
-
-                    // COMMENTED OUT: Original Snackbar code for reversion
-                    /*
-                    withContext(Dispatchers.Main) {
-                        _snackbarEvent.postValue(Event(SnackbarData("Image downloaded: $filename", "Open", {
-                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            getApplication<Application>().startActivity(intent)
-                        })))
-                    }
-                    */
-
                 } catch (e: Exception) {
-                    // NEW: Show Toast on error (instead of Snackbar)
                     withContext(Dispatchers.Main) {
                         Toast.makeText(getApplication<Application>().applicationContext, "Failed to download image: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
-
-                    // COMMENTED OUT: Original Snackbar code for reversion
-                    /*
-                    withContext(Dispatchers.Main) {
-                        _snackbarEvent.postValue(Event(SnackbarData("Failed to download image: ${e.message}")))
-                    }
-                    */
                 }
             }
         }
+        return downloadedUris  // NEW: Return list
     }
-
+    fun setPendingUserImageUri(uriStr: String) {
+        pendingUserImageUri = uriStr
+    }
     fun isImageGenerationModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
 

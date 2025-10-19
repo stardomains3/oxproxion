@@ -112,7 +112,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Text Box**: Enter your prompt.
             *   **Send Button**: Send your prompt to the LLM. **Long-press** it to clear the text box.
             *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
-            *   **Image Button**: Appears for vision models. Click to attach a single image up to 12MB in size.
+            *   **Image Button**: Appears for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. 
+            *   **Palette Button**: If using Nano-Banana, tap to set aspect ratio of returned generated image.
             
             ### Other Buttons
             *   **Clear Chat**(button on bottom left): Starts a new chat with the current model. Long-press to start a new chat without a warning alert.

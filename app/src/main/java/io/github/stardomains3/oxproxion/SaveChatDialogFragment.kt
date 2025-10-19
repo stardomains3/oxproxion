@@ -59,7 +59,7 @@ class SaveChatDialogFragment : DialogFragment() {
         val buttonLlmSuggestName = view.findViewById<MaterialButton>(R.id.button_suggest_title)
         val noticeTextView = view.findViewById<TextView>(R.id.notice_text_view)  // Find the notice TextView
 
-        if (chatViewModel.generatedImages.isNotEmpty()|| chatViewModel.hasImagesInChat()) {
+        if (chatViewModel.hasImagesInChat() || chatViewModel.hasGeneratedImagesInChat()) {
             noticeTextView.visibility = View.VISIBLE
         } else {
             noticeTextView.visibility = View.GONE

@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -12,9 +13,12 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -35,7 +39,6 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.doOnPreDraw
@@ -69,12 +72,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
-    private val REQUEST_RECORD_AUDIO_PERMISSION = 200
     private lateinit var textToSpeech: TextToSpeech
     private var isSpeaking = false
     private var currentSpeakingPosition = -1
@@ -118,6 +119,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var headerContainer: LinearLayout
     private var overlayView: View? = null
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
+    private var currentCameraUri: Uri? = null
+    private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var imagePicker: ActivityResultLauncher<Intent>  // Renamed for clarity (gallery picker)
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -146,7 +151,111 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 Toast.makeText(requireContext(), "Microphone permission needed for voice input", Toast.LENGTH_SHORT).show()
             }
         }
+        cameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                launchCamera()
+            } else {
+                Toast.makeText(requireContext(), "Camera permission needed to take photo", Toast.LENGTH_SHORT).show()
+            }
+        }
 
+        cameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val imageUri = currentCameraUri ?:
+            run {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    result.data?.getParcelableExtra(MediaStore.EXTRA_OUTPUT, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    result.data?.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)
+                }
+            } ?: result.data?.data  // Fallbacks
+
+            if (result.resultCode == Activity.RESULT_OK && imageUri != null) {
+                try {
+                    // Read raw bytes first (fresh stream, one-time read)
+                    val rawBytes = requireContext().contentResolver.openInputStream(imageUri)?.use { stream ->
+                        stream.readBytes()
+                    } ?: run {
+                        Toast.makeText(requireContext(), "Failed to read image", Toast.LENGTH_SHORT).show()
+                        return@registerForActivityResult
+                    }
+
+                    if (rawBytes.size > 12_000_000) {
+                        Toast.makeText(requireContext(), "Image too large (max 12MB)", Toast.LENGTH_SHORT).show()
+                        requireContext().contentResolver.delete(imageUri, null, null)
+                        return@registerForActivityResult
+                    }
+
+                    selectedImageBytes = rawBytes  // Raw for send (EXIF intact)
+                    selectedImageMime = "image/jpeg"
+                    previewImageView.setImageURI(imageUri)  // Use Uri for preview (EXIF auto)
+                    attachmentPreviewContainer.visibility = View.VISIBLE
+                    Toast.makeText(requireContext(), "Photo saved to gallery", Toast.LENGTH_SHORT).show()
+
+                    // NEW: Set pending as string for FlexibleMessage (MediaStore Uri already persistent)
+                    viewModel.setPendingUserImageUri(imageUri.toString())
+
+                    // Notify for gallery refresh
+                    requireContext().contentResolver.notifyChange(imageUri, null)
+                } catch (e: Exception) {
+                    Log.e("ChatFragment", "Error processing photo: ${e.message}", e)
+                    Toast.makeText(requireContext(), "Failed to process photo", Toast.LENGTH_SHORT).show()
+                    requireContext().contentResolver.delete(imageUri, null, null)
+                }
+            } else {
+                // Cancel or error
+                Toast.makeText(requireContext(), if (result.resultCode == Activity.RESULT_CANCELED) "Capture canceled" else "Capture failed", Toast.LENGTH_SHORT).show()
+                imageUri?.let { uri ->
+                    requireContext().contentResolver.delete(uri, null, null)  // Clean up placeholder
+                }
+            }
+            currentCameraUri = null  // Always reset after callback
+        }
+
+
+        imagePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val uri: Uri? = result.data?.data
+                uri?.let { u ->
+                    requireContext().contentResolver.openInputStream(u)?.use { stream ->
+                        val bytes = stream.readBytes()
+                        if (bytes.size > 12_000_000) {
+                            Toast.makeText(requireContext(), "Image too large (max 12MB)", Toast.LENGTH_SHORT).show()
+                            return@use
+                        }
+                        val mime = requireContext().contentResolver.getType(u)
+                        when (mime) {
+                            "image/jpeg", "image/png", "image/webp" -> {
+                                // Valid MIME type - proceed
+                            }
+                            else -> {
+                                Toast.makeText(requireContext(), "Unsupported image format", Toast.LENGTH_SHORT).show()
+                                return@use
+                            }
+                        }
+                        selectedImageBytes = bytes
+                        selectedImageMime = mime
+                        previewImageView.setImageURI(u)
+                        attachmentPreviewContainer.visibility = View.VISIBLE
+
+                        // NEW: Make URI persistent (no copy/save)
+                        try {
+                            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            requireContext().contentResolver.takePersistableUriPermission(u, takeFlags)
+
+                            // Set pending as string for FlexibleMessage
+                            viewModel.setPendingUserImageUri(u.toString())
+
+                            Log.d("ChatFragment", "Persistent URI granted for gallery: $u")
+                        } catch (e: SecurityException) {
+                            Log.e("ChatFragment", "Persistent permission failed: ${e.message}", e)
+                            Toast.makeText(requireContext(), "Image access limited; tap won't open full file", Toast.LENGTH_SHORT).show()
+                            // Fallback: No Uri set, use base64 display only
+                        }
+                    }
+                }
+            }
+        }
         // --- Initialize Views from fragment_chat.xml ---
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
@@ -238,12 +347,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 updateButtonVisibility()
             }
         })
-
-        setupClickListeners()
         pdfGenerator = PdfGenerator(requireContext())
         plusButton = view.findViewById(R.id.plusButton)
         genButton = view.findViewById(R.id.genButton)
-        setupImagePicker()
+        setupClickListeners()
+        setupPlusButtonListener()
         updateSystemMessageButtonState()
         updateInitialUI()
         val rootView = view as FrameLayout // The root FrameLayout (fragment_container)
@@ -631,6 +739,29 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
         }
+        genButton.setOnClickListener {
+            val model = viewModel.activeChatModel.value
+            if (model != "google/gemini-2.5-flash-image") {
+                Toast.makeText(requireContext(), "Image generation not supported for this model", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Dialog options (match docs: 1:1, 16:9, etc.)
+            val aspectRatios = arrayOf("1:1", "16:9", "9:16", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9")
+            val currentRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"  // Default 1:1
+            val selectedIndex = aspectRatios.indexOf(currentRatio)
+
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Select Aspect Ratio")
+                .setSingleChoiceItems(aspectRatios, selectedIndex) { _, which ->
+                    val selectedRatio = aspectRatios[which]
+                    sharedPreferencesHelper.saveGeminiAspectRatio(selectedRatio)
+                    Toast.makeText(requireContext(), "Aspect ratio set to $selectedRatio", Toast.LENGTH_SHORT).show()
+                }
+                .setPositiveButton("OK") { _, _ -> /* Dialog dismisses */ }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
 
         modelNameTextView.setOnClickListener {
             val picker = BotModelPickerFragment().apply {
@@ -752,11 +883,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 val filePath = withContext(Dispatchers.IO) {
                     try {
                         val messages = viewModel.chatMessages.value ?: emptyList()
-                        val generatedImages = viewModel.generatedImages  // Access the map from ViewModel
+                        val generatedImagesMap = mutableMapOf<Int, String>()
+                        messages.forEachIndexed { index, message ->
+                            if (message.role == "assistant" && !message.imageUri.isNullOrEmpty()) {
+                                generatedImagesMap[index] = message.imageUri  // Direct string (no parse)
+                            }
+                        }
                         when {
-                            generatedImages.isNotEmpty() -> {
-                                // Third case: Generated images (URIs in map) - use new function
-                                pdfGenerator.generateStyledChatPdfWithGeneratedImages(requireContext(), messages, modelName, generatedImages)
+                            generatedImagesMap.isNotEmpty() -> {
+                                // Case #3: Generated images (URIs from messages)
+                                pdfGenerator.generateStyledChatPdfWithGeneratedImages(requireContext(), messages, modelName, generatedImagesMap)
                             }
                             viewModel.hasImagesInChat() -> {
                                 // First case: Uploaded images (base64 in content)
@@ -1159,48 +1295,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             .substringBefore(":")
     }
 
-    private fun setupImagePicker() {
-        val imagePicker =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == Activity.RESULT_OK) {
-                    val uri: Uri? = result.data?.data
-                    uri?.let { u ->
-                        requireContext().contentResolver.openInputStream(u)?.use { stream ->
-                            val bytes = stream.readBytes()
-                            if (bytes.size > 12_000_000) {
-                                Toast.makeText(
-                                    requireContext(),
-                                    "Image too large (max 4MB)",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                return@use
-                            }
-                            val mime = requireContext().contentResolver.getType(u)
-                            when (mime) {
-                                "image/jpeg", "image/png", "image/webp" -> {
-                                    // Valid MIME type - proceed
-                                }
-                                else -> {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Unsupported image format",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    return@use
-                                }
-                            }
-                            selectedImageBytes = bytes
-                            selectedImageMime = mime
-                            previewImageView.setImageURI(u)
-                            attachmentPreviewContainer.visibility = View.VISIBLE
-                        }
-                    }
-                }
-            }
-
+    // NEW: Separate setup for plusButton listener (with dialog options)
+    private fun setupPlusButtonListener() {
         plusButton.setOnClickListener {
             val model = viewModel.activeChatModel.value
-
             if (model == null || !viewModel.isVisionModel(model)) {
                 Toast.makeText(
                     requireContext(),
@@ -1210,24 +1308,55 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 return@setOnClickListener
             }
 
-            val allowedMimeTypes: Array<String> = when {
-                model.lowercase().contains("grok") -> {
-                    arrayOf("image/jpeg", "image/png")
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Load Image")
+                .setItems(arrayOf("Take a Photo", "Choose from Gallery")) { _, which ->
+                    when (which) {
+                        0 -> { // Take Photo (Camera)
+                            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            } else {
+                                launchCamera()
+                            }
+                        }
+                        1 -> { // Choose from Gallery
+                            val allowedMimeTypes: Array<String> = when {
+                                model.lowercase().contains("grok") -> {
+                                    arrayOf("image/jpeg", "image/png")
+                                }
+                                else -> {
+                                    arrayOf("image/jpeg", "image/png", "image/webp")
+                                }
+                            }
+                            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "image/*"
+                                putExtra(Intent.EXTRA_MIME_TYPES, allowedMimeTypes)
+                            }
+                            imagePicker.launch(intent)
+                        }
+                    }
                 }
-                else -> {
-                    // For all other models (e.g., Google, ChatGPT, etc.)
-                    arrayOf("image/jpeg", "image/png", "image/webp")
-                }
-            }
-
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "image/*"
-                putExtra(Intent.EXTRA_MIME_TYPES, allowedMimeTypes)
-            }
-
-            imagePicker.launch(intent)
+                .setNegativeButton("Cancel", null)
+                .show()
         }
+        // In setupPlusButtonListener(), after the existing setOnClickListener block
+        plusButton.setOnLongClickListener {
+            val model = viewModel.activeChatModel.value
+            if (model == null || !viewModel.isVisionModel(model)) {
+                Toast.makeText(requireContext(), "Image selection not supported for the current model.", Toast.LENGTH_SHORT).show()
+                return@setOnLongClickListener false
+            }
+
+            // Direct camera launch on long-click
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            } else {
+                launchCamera()
+            }
+            true  // Consume long-click
+        }
+
     }
 
     private fun startSpeechRecognition() {
@@ -1324,6 +1453,31 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             return true
         }
         return false
+    }
+    private fun launchCamera() {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "OpenChat_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/Camera")
+        }
+
+        val uri = requireContext().contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        uri?.let { imageUri ->
+            currentCameraUri = imageUri  // NEW: Store for reliable retrieval
+            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)  // Allow camera to write
+            }
+            if (cameraIntent.resolveActivity(requireContext().packageManager) != null) {
+                cameraLauncher.launch(cameraIntent)
+            } else {
+                Toast.makeText(requireContext(), "No camera app available", Toast.LENGTH_SHORT).show()
+                requireContext().contentResolver.delete(imageUri, null, null)
+                currentCameraUri = null  // NEW: Clean up
+            }
+        } ?: run {
+            Toast.makeText(requireContext(), "Could not create image entry", Toast.LENGTH_SHORT).show()
+        }
     }
     fun startSpeechRecognitionSafely() {
         chatEditText.hideKeyboard()
