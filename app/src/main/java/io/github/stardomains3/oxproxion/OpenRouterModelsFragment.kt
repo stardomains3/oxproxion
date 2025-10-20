@@ -26,16 +26,23 @@ class OpenRouterModelsFragment : Fragment() {
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private lateinit var sortBar: MaterialButtonToggleGroup
     private lateinit var searchView: SearchView  // NEW: Reference to SearchView
+    private lateinit var filterBar: MaterialButtonToggleGroup  // NEW: Reference to type filter bar
+    private lateinit var costFilterBar: MaterialButtonToggleGroup  // NEW: Reference to cost filter bar
     private var allModels: List<LlmModel> = emptyList()  // NEW: Store the full unfiltered list
     private var filteredModels: List<LlmModel> = emptyList()  // NEW: Store the filtered list
-    private lateinit var filterBar: MaterialButtonToggleGroup
-    private var currentFilterType: FilterType = FilterType.ALL
+    private var currentFilterType: FilterType = FilterType.ALL  // NEW: Track the active type filter
+    private var currentCostFilter: CostFilter = CostFilter.ALL  // NEW: Track the active cost filter
+
+    enum class FilterType {
+        ALL, VISION, IMAGE_GEN
+    }
+
+    enum class CostFilter {
+        ALL, FREE, PAID
+    }
 
     companion object {
         const val TAG = "OpenRouterModelsFragment"
-    }
-    enum class FilterType {
-        ALL, VISION, IMAGE_GEN
     }
 
     override fun onCreateView(
@@ -90,8 +97,9 @@ class OpenRouterModelsFragment : Fragment() {
         val infoCard = view.findViewById<CardView>(R.id.infoCard)
         val closeInfoButton = view.findViewById<ImageView>(R.id.closeInfoButton)
         sortBar = view.findViewById(R.id.sortBar)
-        filterBar = view.findViewById(R.id.filterBar)
-        filterBar.check(R.id.filterAllButton)
+        filterBar = view.findViewById(R.id.filterBar)  // NEW: Initialize type filter bar
+        costFilterBar = view.findViewById(R.id.costFilterBar)  // NEW: Initialize cost filter bar
+
         if (sharedPreferencesHelper.hasDismissedOpenRouterInfo()) {
             infoCard.visibility = View.GONE
         } else {
@@ -102,6 +110,22 @@ class OpenRouterModelsFragment : Fragment() {
             infoCard.visibility = View.GONE
             sharedPreferencesHelper.setOpenRouterInfoDismissed(true)
         }
+
+        sortBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    R.id.sortAlphabeticalButton -> {
+                        viewModel.setSortOrder(SortOrder.ALPHABETICAL)
+                    }
+                    R.id.sortDateButton -> {
+                        viewModel.setSortOrder(SortOrder.BY_DATE)
+                    }
+                }
+            }
+        }
+
+        // NEW: Set up type filter bar
+        filterBar.check(R.id.filterAllButton)  // Default to "All"
         filterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
                 currentFilterType = when (checkedId) {
@@ -113,16 +137,18 @@ class OpenRouterModelsFragment : Fragment() {
                 filterModels(searchView.query.toString())  // Re-filter with current search
             }
         }
-        sortBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+
+        // NEW: Set up cost filter bar
+        costFilterBar.check(R.id.costFilterAllButton)  // Default to "All"
+        costFilterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
-                when (checkedId) {
-                    R.id.sortAlphabeticalButton -> {
-                        viewModel.setSortOrder(SortOrder.ALPHABETICAL)
-                    }
-                    R.id.sortDateButton -> {
-                        viewModel.setSortOrder(SortOrder.BY_DATE)
-                    }
+                currentCostFilter = when (checkedId) {
+                    R.id.costFilterAllButton -> CostFilter.ALL
+                    R.id.costFilterFreeButton -> CostFilter.FREE
+                    R.id.costFilterPaidButton -> CostFilter.PAID
+                    else -> CostFilter.ALL
                 }
+                filterModels(searchView.query.toString())  // Re-filter with current search
             }
         }
 
@@ -151,7 +177,7 @@ class OpenRouterModelsFragment : Fragment() {
         viewModel.getOpenRouterModels()
     }
 
-    // UPDATED: Method to filter models based on query and type
+    // NEW: Method to filter models based on query, type, and cost
     private fun filterModels(query: String) {
         var tempFiltered = allModels  // Start with the full (sorted) list
 
@@ -160,6 +186,13 @@ class OpenRouterModelsFragment : Fragment() {
             FilterType.ALL -> tempFiltered
             FilterType.VISION -> tempFiltered.filter { it.isVisionCapable }
             FilterType.IMAGE_GEN -> tempFiltered.filter { it.isImageGenerationCapable }
+        }
+
+        // Apply cost filter
+        tempFiltered = when (currentCostFilter) {
+            CostFilter.ALL -> tempFiltered
+            CostFilter.FREE -> tempFiltered.filter { it.isFree }
+            CostFilter.PAID -> tempFiltered.filter { !it.isFree }
         }
 
         // Apply search filter
@@ -173,9 +206,8 @@ class OpenRouterModelsFragment : Fragment() {
         }
 
         filteredModels = tempFiltered
-        adapter.updateModels(filteredModels)
+        adapter.updateModels(filteredModels)  // Update adapter with filtered list
     }
-
 
     private fun updateSortButtons(sortOrder: SortOrder) {
         when (sortOrder) {

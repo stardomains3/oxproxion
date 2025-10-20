@@ -9,5 +9,6 @@ data class LlmModel(
     val isVisionCapable: Boolean,  // To determine which icon to show
     val isImageGenerationCapable: Boolean = false,
     val isReasoningCapable: Boolean = false,
-    val created: Long = 0L
+    val created: Long = 0L,
+    val isFree: Boolean = apiIdentifier.endsWith(":free")
 )

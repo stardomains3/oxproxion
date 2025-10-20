@@ -1,0 +1,1 @@
+- Added a cost filter (All, Free, Paid) to the OpenRouter models screen, allowing users to easily browse and select models based on pricing.

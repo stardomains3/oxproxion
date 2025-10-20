@@ -1084,7 +1084,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             isVisionCapable = it.architecture.input_modalities.contains("image"),
                             isImageGenerationCapable = it.architecture.output_modalities?.contains("image") ?: false,
                             isReasoningCapable = it.supportedParameters?.contains("reasoning") ?: false,
-                            created = it.created
+                            created = it.created,
+                            isFree = it.id.endsWith(":free")
                         )
                     }
                     saveOpenRouterModels(allOpenRouterModels)
@@ -1119,7 +1120,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getOpenRouterModels() {
         allOpenRouterModels = sharedPreferencesHelper.getOpenRouterModels()
-        if (allOpenRouterModels.isEmpty()) {
+        if (allOpenRouterModels.isEmpty() || !allOpenRouterModels.any { it.isFree }) {
             fetchOpenRouterModels()
         } else {
             applySort()

@@ -95,7 +95,7 @@
                 app:strokeColor="@color/chestnut"/>
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- NEW: Filter bar below the sort bar -->
+        <!-- Existing type filter bar -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/filterBar"
             android:layout_width="0dp"
@@ -104,42 +104,85 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/sortBar"
             android:layout_marginTop="8dp"
-        app:singleSelection="true">
+            app:singleSelection="true">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/filterAllButton"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/filterAllButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="All"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/filterVisionButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Vision"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/filterImageGenButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Image Gen"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- NEW: Cost filter bar below the type filter bar -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/costFilterBar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="All"
-            style="?attr/materialButtonOutlinedStyle"
-            app:backgroundTint="@color/toggle_background_selector"
-            app:strokeColor="@color/chestnut"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/filterBar"
+            android:layout_marginTop="8dp"
+            app:singleSelection="true">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/filterVisionButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Vision"
-            style="?attr/materialButtonOutlinedStyle"
-            app:backgroundTint="@color/toggle_background_selector"
-            app:strokeColor="@color/chestnut"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/costFilterAllButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="All"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/filterImageGenButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Image Gen"
-            style="?attr/materialButtonOutlinedStyle"
-            app:backgroundTint="@color/toggle_background_selector"
-            app:strokeColor="@color/chestnut"/>
-    </com.google.android.material.button.MaterialButtonToggleGroup>
-</androidx.constraintlayout.widget.ConstraintLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/costFilterFreeButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Free"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/costFilterPaidButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Paid"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 
-<androidx.recyclerview.widget.RecyclerView
+
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewOpenRouterModels"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
