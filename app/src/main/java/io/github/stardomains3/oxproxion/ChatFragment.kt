@@ -741,10 +741,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         genButton.setOnClickListener {
             val model = viewModel.activeChatModel.value
-            if (model != "google/gemini-2.5-flash-image") {
-                Toast.makeText(requireContext(), "Image generation not supported for this model", Toast.LENGTH_SHORT).show()
+            if (model !in listOf("google/gemini-2.5-flash-image", "google/gemini-2.5-flash-image-preview")) {
+                Toast.makeText(requireContext(), "Image generation parameters not supported for this model", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
 
             // Dialog options (match docs: 1:1, 16:9, etc.)
             val aspectRatios = arrayOf("1:1", "16:9", "9:16", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9")

@@ -28,9 +28,14 @@ class OpenRouterModelsFragment : Fragment() {
     private lateinit var searchView: SearchView  // NEW: Reference to SearchView
     private var allModels: List<LlmModel> = emptyList()  // NEW: Store the full unfiltered list
     private var filteredModels: List<LlmModel> = emptyList()  // NEW: Store the filtered list
+    private lateinit var filterBar: MaterialButtonToggleGroup
+    private var currentFilterType: FilterType = FilterType.ALL
 
     companion object {
         const val TAG = "OpenRouterModelsFragment"
+    }
+    enum class FilterType {
+        ALL, VISION, IMAGE_GEN
     }
 
     override fun onCreateView(
@@ -85,7 +90,8 @@ class OpenRouterModelsFragment : Fragment() {
         val infoCard = view.findViewById<CardView>(R.id.infoCard)
         val closeInfoButton = view.findViewById<ImageView>(R.id.closeInfoButton)
         sortBar = view.findViewById(R.id.sortBar)
-
+        filterBar = view.findViewById(R.id.filterBar)
+        filterBar.check(R.id.filterAllButton)
         if (sharedPreferencesHelper.hasDismissedOpenRouterInfo()) {
             infoCard.visibility = View.GONE
         } else {
@@ -96,7 +102,17 @@ class OpenRouterModelsFragment : Fragment() {
             infoCard.visibility = View.GONE
             sharedPreferencesHelper.setOpenRouterInfoDismissed(true)
         }
-
+        filterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                currentFilterType = when (checkedId) {
+                    R.id.filterAllButton -> FilterType.ALL
+                    R.id.filterVisionButton -> FilterType.VISION
+                    R.id.filterImageGenButton -> FilterType.IMAGE_GEN
+                    else -> FilterType.ALL
+                }
+                filterModels(searchView.query.toString())  // Re-filter with current search
+            }
+        }
         sortBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
                 when (checkedId) {
@@ -135,18 +151,31 @@ class OpenRouterModelsFragment : Fragment() {
         viewModel.getOpenRouterModels()
     }
 
-    // NEW: Method to filter models based on query
+    // UPDATED: Method to filter models based on query and type
     private fun filterModels(query: String) {
-        filteredModels = if (query.isEmpty()) {
-            allModels  // Show all if no query
+        var tempFiltered = allModels  // Start with the full (sorted) list
+
+        // Apply type filter
+        tempFiltered = when (currentFilterType) {
+            FilterType.ALL -> tempFiltered
+            FilterType.VISION -> tempFiltered.filter { it.isVisionCapable }
+            FilterType.IMAGE_GEN -> tempFiltered.filter { it.isImageGenerationCapable }
+        }
+
+        // Apply search filter
+        tempFiltered = if (query.isEmpty()) {
+            tempFiltered
         } else {
-            allModels.filter { model ->
+            tempFiltered.filter { model ->
                 model.displayName.contains(query, ignoreCase = true) ||
                         model.apiIdentifier.contains(query, ignoreCase = true)
             }
         }
-        adapter.updateModels(filteredModels)  // Update adapter with filtered list
+
+        filteredModels = tempFiltered
+        adapter.updateModels(filteredModels)
     }
+
 
     private fun updateSortButtons(sortOrder: SortOrder) {
         when (sortOrder) {

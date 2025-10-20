@@ -64,6 +64,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+        <!-- Existing sort bar -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/sortBar"
             android:layout_width="0dp"
@@ -93,9 +94,52 @@
                 app:backgroundTint="@color/toggle_background_selector"
                 app:strokeColor="@color/chestnut"/>
         </com.google.android.material.button.MaterialButtonToggleGroup>
-    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
+        <!-- NEW: Filter bar below the sort bar -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/filterBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/sortBar"
+            android:layout_marginTop="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/filterAllButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="All"
+            style="?attr/materialButtonOutlinedStyle"
+            app:backgroundTint="@color/toggle_background_selector"
+            app:strokeColor="@color/chestnut"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/filterVisionButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Vision"
+            style="?attr/materialButtonOutlinedStyle"
+            app:backgroundTint="@color/toggle_background_selector"
+            app:strokeColor="@color/chestnut"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/filterImageGenButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Image Gen"
+            style="?attr/materialButtonOutlinedStyle"
+            app:backgroundTint="@color/toggle_background_selector"
+            app:strokeColor="@color/chestnut"/>
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+
+<androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewOpenRouterModels"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

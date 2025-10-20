@@ -479,7 +479,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     null
                 },
                 modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
-                imageConfig = if (modelForRequest == "google/gemini-2.5-flash-image") {
+                imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image")) {
                     val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
                     ImageConfig(aspectRatio = aspectRatio)
                 } else null
@@ -701,7 +701,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         null
                     },
                     modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
-                    imageConfig = if (modelForRequest == "google/gemini-2.5-flash-image") {
+                    imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image")) {
                         val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
                         ImageConfig(aspectRatio = aspectRatio)
                     } else null
