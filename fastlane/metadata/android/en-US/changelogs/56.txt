@@ -1,0 +1,1 @@
+- Added sorting (Alphabetical/Newest) and filtering (Type: All/Vision/Image Gen, Cost: All/Free/Paid) to the personal model picker screen for enhanced model browsing and selection.

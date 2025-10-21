@@ -226,6 +226,21 @@ class SharedPreferencesHelper(context: Context) {
             putBoolean(KEY_EXT_ENABLED, isEnabled)
         }
     }
+    fun saveBotModelPickerSortOrder(sortOrder: BotModelPickerFragment.SortOrder) {
+        val value = when (sortOrder) {
+            BotModelPickerFragment.SortOrder.ALPHABETICAL -> "alphabetical"
+            BotModelPickerFragment.SortOrder.BY_DATE -> "by_date"
+        }
+        mainPrefs.edit { putString("bot_model_picker_sort_order", value) }
+    }
+
+    fun getBotModelPickerSortOrder(): BotModelPickerFragment.SortOrder {
+        val value = mainPrefs.getString("bot_model_picker_sort_order", "alphabetical")  // Default to alphabetical
+        return when (value) {
+            "by_date" -> BotModelPickerFragment.SortOrder.BY_DATE
+            else -> BotModelPickerFragment.SortOrder.ALPHABETICAL
+        }
+    }
     fun getGeminiAspectRatio(): String? = mainPrefs.getString("gemini_aspect_ratio", null)
 
     fun saveGeminiAspectRatio(ratio: String) {
