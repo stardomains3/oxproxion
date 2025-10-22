@@ -1,0 +1,2 @@
+- When you close out the app from recents(swipe up) the notification service of the app will close too.
+- Fixed typo

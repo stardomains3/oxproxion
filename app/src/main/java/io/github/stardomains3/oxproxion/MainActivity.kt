@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity() {
             })
 
         promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock OpenChat")
+            .setTitle("Unlock oxproxion")
             .setSubtitle("Use your biometric credential")
             .setNegativeButtonText("Cancel")
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
