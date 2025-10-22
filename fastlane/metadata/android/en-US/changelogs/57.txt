@@ -1,0 +1,3 @@
+- Added **Biometric Button**: Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system.
+- Fixed an issue that might of affected the app from starting for Android 12 or 13 users
+- Fixed Nano Banana duplicate size ratios

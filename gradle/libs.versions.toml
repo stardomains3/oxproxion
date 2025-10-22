@@ -26,7 +26,9 @@ okhttp = "5.2.1"
 roomRuntime = "2.8.2"
 coil = "2.7.0"
 prism4j = "2.0.0"
+biometric = "1.1.0"
 [libraries]
+biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 markwon-syntax-highlight = { module = "io.noties.markwon:syntax-highlight", version.ref = "markwon"}
 prism4j-core    = { module = "io.noties:prism4j", version.ref = "prism4j" }
 prism4j-bundler = { module = "io.noties:prism4j-bundler", version.ref = "prism4j" }

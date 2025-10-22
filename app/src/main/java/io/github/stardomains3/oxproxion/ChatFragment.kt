@@ -16,6 +16,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
@@ -84,6 +86,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
     private lateinit var genButton: MaterialButton
+    private lateinit var biometricButton: MaterialButton
     private var originalSendIcon: Drawable? = null
     private val viewModel: ChatViewModel by activityViewModels()
     private lateinit var modelNameTextView: TextView
@@ -350,6 +353,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfGenerator = PdfGenerator(requireContext())
         plusButton = view.findViewById(R.id.plusButton)
         genButton = view.findViewById(R.id.genButton)
+        biometricButton = view.findViewById(R.id.biometricButton)
         setupClickListeners()
         setupPlusButtonListener()
         updateSystemMessageButtonState()
@@ -660,6 +664,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             textToSpeech.stop()
             textToSpeech.shutdown()
         }
+        stopForegroundService()
     }
     @SuppressLint("ClickableViewAccessibility")
     private fun setupClickListeners() {
@@ -748,7 +753,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
 
             // Dialog options (match docs: 1:1, 16:9, etc.)
-            val aspectRatios = arrayOf("1:1", "16:9", "9:16", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9")
+            val aspectRatios = arrayOf("1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9")
             val currentRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"  // Default 1:1
             val selectedIndex = aspectRatios.indexOf(currentRatio)
 
@@ -757,13 +762,36 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 .setSingleChoiceItems(aspectRatios, selectedIndex) { _, which ->
                     val selectedRatio = aspectRatios[which]
                     sharedPreferencesHelper.saveGeminiAspectRatio(selectedRatio)
-                    Toast.makeText(requireContext(), "Aspect ratio set to $selectedRatio", Toast.LENGTH_SHORT).show()
+                  //  Toast.makeText(requireContext(), "Aspect ratio set to $selectedRatio", Toast.LENGTH_SHORT).show()
                 }
                 .setPositiveButton("OK") { _, _ -> /* Dialog dismisses */ }
                 .setNegativeButton("Cancel", null)
                 .show()
         }
+        biometricButton.setOnClickListener {
+            val prefs = SharedPreferencesHelper(requireContext())
+            val currentlyOn = prefs.getBiometricEnabled()
 
+            if (currentlyOn) {
+                // simply turn off
+                prefs.saveBiometricEnabled(false)
+                biometricButton.isSelected = false
+                return@setOnClickListener
+            }
+
+            // trying to turn on – check hardware
+            val bm = BiometricManager.from(requireContext())
+            when (bm.canAuthenticate(BIOMETRIC_STRONG)) {
+                BiometricManager.BIOMETRIC_SUCCESS -> {
+                    prefs.saveBiometricEnabled(true)
+                    biometricButton.isSelected = true
+                    // Toast.makeText(requireContext(), "Biometric lock enabled", Toast.LENGTH_SHORT).show()
+                }
+                else -> {
+                    Toast.makeText(requireContext(), "No biometrics available", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
         modelNameTextView.setOnClickListener {
             val picker = BotModelPickerFragment().apply {
                 onModelSelected = { modelString ->
@@ -1171,6 +1199,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val isExtended = sharedPreferencesHelper.getExtPreference()
         val hasText = !chatEditText.text.isNullOrEmpty()
         convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
+        biometricButton.isSelected = sharedPreferencesHelper.getBiometricEnabled()
         extendButton.isSelected = isExtended
         utilityButton.visibility = if (isExtended) View.VISIBLE else View.GONE
 

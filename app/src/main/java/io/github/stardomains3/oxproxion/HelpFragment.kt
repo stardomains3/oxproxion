@@ -140,6 +140,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Notification Button**: Activates a foreground service to prevent the app from closing in the background and enables you to customize the notification.
             *   **Extended Dock Button**: Toggles extended dock on or off. If on, an extra row is added to the bottom dock. On the right is a Paste button, which when pressed pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. On the left is either a Speech-to-Text button when the prompt box is empty, or a Clear Prompt button when the prompt box has some text.
             *   **Conversation Button**: Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
+            *   **Biometric Button**: Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
             ---
 
             ## 📂 App Screens

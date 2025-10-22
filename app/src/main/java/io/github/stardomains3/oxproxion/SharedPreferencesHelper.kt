@@ -25,6 +25,7 @@ class SharedPreferencesHelper(context: Context) {
     private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
+        private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_CONVERSATION_MODE_ENABLED = "conversation_mode_enabled"
         private const val API_KEYS_PREFS_STORE = "ApiKeysPrefsStore"
         private const val MAIN_PREFS = "MainAppPrefs"
@@ -115,6 +116,9 @@ class SharedPreferencesHelper(context: Context) {
     fun clearOpenRouterModels() {
         mainPrefs.edit { remove(KEY_OPEN_ROUTER_MODELS) }
     }
+    fun saveBiometricEnabled(enabled: Boolean) = mainPrefs.edit { putBoolean(KEY_BIOMETRIC_ENABLED, enabled) }
+    fun getBiometricEnabled(): Boolean = mainPrefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)
+
     fun getAdvancedReasoningEnabled(): Boolean = mainPrefs.getBoolean("advanced_reasoning_enabled", false)
     fun saveAdvancedReasoningEnabled(enabled: Boolean) = mainPrefs.edit {
         putBoolean(
