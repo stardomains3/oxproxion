@@ -1,0 +1,1 @@
+- Added dynamic hint text in chat input box to display selected system message title when not using the default, improving user awareness of active system prompts.

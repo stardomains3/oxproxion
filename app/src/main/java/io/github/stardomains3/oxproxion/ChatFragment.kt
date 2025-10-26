@@ -559,6 +559,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private fun updateSystemMessageButtonState() {
         val selectedSystemMessage = sharedPreferencesHelper.getSelectedSystemMessage()
         systemMessageButton.isSelected = !selectedSystemMessage.isDefault
+        updateChatEditTextHint()
+    }
+
+    private fun updateChatEditTextHint() {
+        val selectedMessage = sharedPreferencesHelper.getSelectedSystemMessage()
+        val isDefault = selectedMessage.isDefault
+        val title = selectedMessage.title.trim()
+        if (isDefault) {
+            chatEditText.hint = "Type a message..."
+        } else {
+            chatEditText.hint = "($title) Type a message..."
+        }
     }
 
     fun setSharedText(sharedText: String) {
@@ -1108,6 +1120,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             val defaultMessage = SharedPreferencesHelper(requireContext()).getDefaultSystemMessage()
             SharedPreferencesHelper(requireContext()).saveSelectedSystemMessage(defaultMessage)
             systemMessageButton.isSelected = false
+            updateChatEditTextHint()
             // Toast.makeText(requireContext(), "System message reset to default", Toast.LENGTH_SHORT).show()
             true
         }
