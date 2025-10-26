@@ -672,6 +672,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             selectedImageBytes = null
             selectedImageMime = null
             attachmentPreviewContainer.visibility = View.GONE
+            viewModel.setPendingUserImageUri(null)
             Toast.makeText(requireContext(), "Attachment removed", Toast.LENGTH_SHORT).show()
         }
         sendChatButton.setOnClickListener {

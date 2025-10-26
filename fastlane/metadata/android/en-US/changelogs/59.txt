@@ -1,0 +1,1 @@
+- Fixed a bug where an image wasn't fully cleared when removing it before sending to the AI.

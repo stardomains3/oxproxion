@@ -1200,7 +1200,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         return downloadedUris  // NEW: Return list
     }
-    fun setPendingUserImageUri(uriStr: String) {
+    fun setPendingUserImageUri(uriStr: String?) {
         pendingUserImageUri = uriStr
     }
     fun isImageGenerationModel(modelIdentifier: String?): Boolean {
