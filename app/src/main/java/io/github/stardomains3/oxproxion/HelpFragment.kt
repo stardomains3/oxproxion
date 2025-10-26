@@ -100,7 +100,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ## 📱 Main Chat Interface
 
             ### Interacting with Messages
-            *   **Copy AI Response**: Tap the **robot icon** to copy the AI's message.
+            *   **Copy AI Response**: Tap the **robot icon** to copy the AI's message. Long Press to copy Markdown RAW.
             *   **Copy User Message**: Tap the **user icon** to copy your message.
             *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps.
             *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.) Will not display if your device's text-to-speech engine isn't available.
@@ -130,7 +130,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Contextual Buttons (Enabled during a chat)
             *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.
-            *   **Copy Chat**: Copies the full conversation to your clipboard.
+            *   **Copy Chat**: Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.
 
             ### Standard Buttons (Always in the menu)
             *   **Stream Button**: Toggles streaming responses on or off.

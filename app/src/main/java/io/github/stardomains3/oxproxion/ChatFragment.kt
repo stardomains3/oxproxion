@@ -981,6 +981,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
 
+        copyChatButton.setOnLongClickListener {
+            val chatText = viewModel.getFormattedChatHistory()  // Raw Markdown
+            if (chatText.isNotBlank()) {
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Chat History (Markdown)", chatText)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(requireContext(), "Chat copied as Markdown!", Toast.LENGTH_SHORT).show()
+                true  // Consume the long press
+            } else {
+                Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
+                true
+            }
+        }
+
         copyChatButton.setOnClickListener {
             val chatText = viewModel.getFormattedChatHistoryPlainText()  // Use the new plain-text function
             if (chatText.isNotBlank()) {

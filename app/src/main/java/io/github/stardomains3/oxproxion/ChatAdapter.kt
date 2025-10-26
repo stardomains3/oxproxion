@@ -132,12 +132,13 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = messages[position]
-        val contentText = getMessageText(message.content)
+        var contentText = getMessageText(message.content)
 
         when (holder) {
             is UserViewHolder -> holder.bind(message)
             is AssistantViewHolder -> holder.bind(message, position, isSpeaking, currentSpeakingPosition)
         }
+        // Removed the redundant if statement
     }
 
     override fun getItemCount(): Int = messages.size
@@ -146,13 +147,12 @@ class ChatAdapter(
     inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val copyButtonuser: ImageButton = itemView.findViewById(R.id.copyButtonuser)
-        private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
-        private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)  // <-- NEW: Add this
+        private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
+        private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
 
         fun bind(message: FlexibleMessage) {
             messageTextView.text = getMessageText(message.content)
-
             val imageUriStr = message.imageUri
             if (!imageUriStr.isNullOrEmpty()) {
                 try {
@@ -195,6 +195,10 @@ class ChatAdapter(
                 imageView.visibility = View.GONE
             }
 
+
+
+
+
             copyButtonuser.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
@@ -204,11 +208,9 @@ class ChatAdapter(
             editButton.setOnClickListener {
                 val messageText = messageTextView.text.toString()
                 if (messageText.isNotBlank()) {
-                    onEditMessage(bindingAdapterPosition, messageText)
+                    onEditMessage(bindingAdapterPosition, messageText)  // Invoke callback with position and text
                 }
             }
-
-            // <-- NEW: Add this entire block after the editButton listener
             resendButton.setOnClickListener {
                 onRedoMessage(bindingAdapterPosition, message.content)  // Invoke callback with position and original content
             }
@@ -221,44 +223,46 @@ class ChatAdapter(
         private val markwon: Markwon,
         private val onSpeakText: (String, Int) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
+
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
-        private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
-        private val aipdfButton: ImageButton = itemView.findViewById(R.id.aipdfButton)
         private val copyButton: ImageButton = itemView.findViewById(R.id.copyButton)
-         val ttsButton: ImageButton = itemView.findViewById(R.id.ttsButton)  // Added for TTS
+        private val aipdfButton: ImageButton = itemView.findViewById(R.id.aipdfButton)
+        private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
+        val ttsButton: ImageButton = itemView.findViewById(R.id.ttsButton)
         private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
         private var pulseAnimator: ObjectAnimator? = null
-
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
-            currentHolder = this@AssistantViewHolder
-            if (position == currentPosition) {
-                currentHolder = this
-            }
             val text = getMessageText(message.content)
+
             val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
             val fullText = reasoningText + text  // Prepend reasoning for display
+
             markwon.setMarkdown(messageTextView, fullText)
             messageTextView.movementMethod = LinkMovementMethod.getInstance()
             ttsButton.visibility = if (ttsAvailable) View.VISIBLE else View.GONE
-            val isThinking = text == "thinking..."
-            val isError = message.role == "assistant" && text.startsWith("**Error:**")
+
+            val isError = message.role == "assistant" && text.startsWith("**Error:**")  // Use original text
+            val isThinking = text == "thinking..."  // Use original text
             if (isError) {
                 messageContainer.setBackgroundResource(R.drawable.bg_error_message)
             } else {
                 messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
             }
-            if (isThinking) {
-                val pulse = ObjectAnimator.ofFloat(messageContainer, "alpha", 0.2f, 1f).apply {
+            pulseAnimator?.cancel()          // 2. always stop old one
+            pulseAnimator = null
+
+            if (isThinking) {                // 3. start only when needed
+                pulseAnimator = ObjectAnimator.ofFloat(messageContainer, "alpha", 0.2f, 1f).apply {
                     duration = 800
                     repeatCount = ObjectAnimator.INFINITE
                     repeatMode = ObjectAnimator.REVERSE
+                    start()
                 }
-                pulse.start()
             } else {
-                messageContainer.alpha = 1f // Reset alpha when not thinking
-                messageContainer.clearAnimation() // Stop any ongoing animations
+                messageContainer.alpha = 1f
             }
+
             val generatedUriStr = message.imageUri  // From FlexibleMessage
             if (!generatedUriStr.isNullOrEmpty()) {
                 try {
@@ -290,16 +294,52 @@ class ChatAdapter(
             } else {
                 generatedImageView.visibility = View.GONE
             }
-            val rawMarkdown = text
 
+
+
+            val rawMarkdown = fullText  // Use fullText for copy/share
+
+            copyButton.setOnClickListener {
+                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
+                clipboard.setPrimaryClip(clip)
+            }
+            copyButton.setOnLongClickListener {
+                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Copied Markdown", rawMarkdown)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
+                true // Consume the long click
+            }
+            /*shareButton.setOnClickListener {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, rawMarkdown) // Share the raw markdown text
+                    putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message") // Optional subject
+                }
+
+                    itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
+
+            }*/
+            shareButton.setOnClickListener {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, messageTextView.text.toString())  // Use the same plain text as the copy button
+                    putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message")  // Optional subject
+                }
+                itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
+            }
+            // android.util.Log.d("TTS_DEBUG", "Binding position $position, isSpeaking: $isSpeaking, currentPosition: $currentPosition")
             // Update TTS button icon based on state
             val iconRes = if (isSpeaking && position == currentPosition) {
                 R.drawable.ic_stop_circle  // Your stop icon
             } else {
-                R.drawable.ic_volume_up  // Your play/speaker icon
+                R.drawable.ic_volume_up   // Your play/speaker icon
             }
             ttsButton.setImageResource(iconRes)
+            //  android.util.Log.d("TTS_DEBUG", "Setting icon to $iconRes for position $position")
             ttsButton.setOnClickListener {
+
                 val textToSpeak = messageTextView.text.toString()
                 if (textToSpeak.isNotEmpty()) {
                     onSpeakText(textToSpeak, position)
@@ -307,6 +347,7 @@ class ChatAdapter(
                     Toast.makeText(itemView.context, "No text to speak", Toast.LENGTH_SHORT).show()
                 }
             }
+            // Long-press to copy raw markdown
             aipdfButton.setOnClickListener {
                 CoroutineScope(Dispatchers.Main).launch {
                     val pdfUri = withContext(Dispatchers.IO) {
@@ -322,7 +363,7 @@ class ChatAdapter(
                                 generator.generateMarkdownPdf(rawMarkdown)
                             }
                         } catch (e: Exception) {
-                            // Log.e("ChatAdapter", "PDF generation failed", e)
+                            //  Log.e("ChatAdapter", "PDF generation failed", e)
                             null
                         }
                     }
@@ -334,54 +375,29 @@ class ChatAdapter(
                     }
                 }
             }
-            // Special handling for the copy button
-            if (text == "thinking...") {
-                // Hide the copy button when the AI is thinking
-                //  copyButton.visibility = View.GONE
-            } else {
-                // Show it for actual responses and set its click listener
-                //    copyButton.visibility = View.VISIBLE
-                copyButton.setOnClickListener {
-                    // Get the clipboard service
-                    val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    // Get the raw text from the message TextView
-                    val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
-                    // Set the data to the clipboard
-                    clipboard.setPrimaryClip(clip)
 
-                    // Provide feedback to the user
-                    //   Toast.makeText(itemView.context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-                }
-                copyButton.setOnLongClickListener {
-                    // Launch on main thread (UI), but do the work on IO
-                    CoroutineScope(Dispatchers.Main).launch {
-                        val pdfUri = withContext(Dispatchers.IO) {
-                            try {
-                                val generator = PdfGenerator(itemView.context)
-                                generator.generateMarkdownPdf(rawMarkdown)
-                            } catch (e: Exception) {
-                                //Log.e("ChatAdapter", "PDF generation failed", e)
-                                null
-                            }
-                        }
 
-                        if (pdfUri != null) {
-                            Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
+            /*copyButton.setOnLongClickListener {
+                // Launch on main thread (UI), but do the work on IO
+                CoroutineScope(Dispatchers.Main).launch {
+                    val pdfUri = withContext(Dispatchers.IO) {
+                        try {
+                            val generator = PdfGenerator(itemView.context)
+                            generator.generateMarkdownPdf(rawMarkdown)
+                        } catch (e: Exception) {
+                            //Log.e("ChatAdapter", "PDF generation failed", e)
+                            null
                         }
                     }
-                    true // Consume the long click
-                }
-                shareButton.setOnClickListener {
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, messageTextView.text.toString())  // Use the same plain text as the copy button
-                        putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message")  // Optional subject
+
+                    if (pdfUri != null) {
+                        Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
                     }
-                    itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
                 }
-            }
+                true // Consume the long click
+            }*/
         }
         internal fun stopPulse() {          // <-- only visible inside the adapter
             pulseAnimator?.cancel()
@@ -391,6 +407,8 @@ class ChatAdapter(
             messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
         }
     }
+
+
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
