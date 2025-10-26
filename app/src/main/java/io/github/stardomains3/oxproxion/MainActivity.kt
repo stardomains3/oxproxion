@@ -33,7 +33,6 @@ class MainActivity : AppCompatActivity() {
         /* 1.  Cold-start gate:  finish() if auth fails / none    */
         /* ------------------------------------------------------ */
 
-
         if (savedInstanceState == null && SharedPreferencesHelper(this).getBiometricEnabled()) {
             val bm = BiometricManager.from(this)
             when (bm.canAuthenticate(BIOMETRIC_STRONG)) {
@@ -119,6 +118,24 @@ class MainActivity : AppCompatActivity() {
                 .commitNow()
         }
 
+        val vm: ChatViewModel by viewModels()
+        if (intent.getBooleanExtra("autosend", false)) {
+            intent.getStringExtra("shared_text")?.let { text ->
+                val clearChat = intent.getBooleanExtra("clear_chat", false)
+                if (clearChat) vm.startNewChat()
+                vm.consumeSharedTextautosend(text)
+            }
+        } else if (intent.getBooleanExtra("input_only", false)) {
+            intent.getStringExtra("shared_text")?.let { text ->
+                val clearChat = intent.getBooleanExtra("clear_chat", false)
+                if (clearChat) vm.startNewChat()
+                vm.consumeSharedText(text)
+                val sharedPreferencesHelper = SharedPreferencesHelper(this)
+                val systemMessageTitle = sharedPreferencesHelper.getSelectedSystemMessage().title
+                Toast.makeText(this, systemMessageTitle, Toast.LENGTH_SHORT).show()
+            }
+        }
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
@@ -137,31 +154,19 @@ class MainActivity : AppCompatActivity() {
         if (sharedPreferencesHelper.getNotiPreference()) startForegroundService()
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        if (intent.action == Intent.ACTION_SEND && "text/plain" == intent.type) {
-            intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
-                val vm: ChatViewModel by viewModels()
-                vm.consumeSharedText(text)
-                //Toast.makeText(this, "Text received", Toast.LENGTH_LONG).show()
-                //val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
-                //if (fragment is ChatFragment) {
-                //    fragment.setSharedText(text)
-                //  }
+
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        val isAssistLaunch = intent.action in listOf(Intent.ACTION_ASSIST)
-        if (isAssistLaunch) {
-            val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container) as? ChatFragment
-            fragment?.startSpeechRecognitionSafely()  // Custom method below
-        }
     }
+
     private fun startForegroundService() {
-        if (ForegroundService.isRunningForeground) return  // Guard to prevent restarts
+        if (ForegroundService.isRunningForeground) return
         try {
             val serviceIntent = Intent(this, ForegroundService::class.java)
-            // Optionally pass initial title if needed
             val vm: ChatViewModel by viewModels()
             val displayName = vm.getModelDisplayName(vm.activeChatModel.value ?: "Unknown Model")
             serviceIntent.putExtra("initial_title", displayName)
@@ -170,14 +175,43 @@ class MainActivity : AppCompatActivity() {
             Log.e("MainActivity", "Failed to start foreground service", e)
         }
     }
-    private fun askNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {   // 33
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) !=
-                PackageManager.PERMISSION_GRANTED) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        if (intent.action == Intent.ACTION_SEND && "text/plain" == intent.type && !intent.getBooleanExtra("autosend", false)) {
+            intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
+                val vm: ChatViewModel by viewModels()
+                val sharedPreferencesHelper = SharedPreferencesHelper(this)
+                vm.consumeSharedText(text)
+                val systemMessageTitle = sharedPreferencesHelper.getSelectedSystemMessage().title
+                Toast.makeText(this, systemMessageTitle, Toast.LENGTH_SHORT).show()
             }
         }
-        // on 31/32 the permission doesn’t exist, notifications are enabled by default
+
+        val vm: ChatViewModel by viewModels()
+        if (intent.getBooleanExtra("autosend", false)) {
+            intent.getStringExtra("shared_text")?.let { text ->
+                val clearChat = intent.getBooleanExtra("clear_chat", false)
+                if (clearChat) vm.startNewChat()
+                vm.consumeSharedTextautosend(text)
+            }
+        } else if (intent.getBooleanExtra("input_only", false)) {
+            intent.getStringExtra("shared_text")?.let { text ->
+                val clearChat = intent.getBooleanExtra("clear_chat", false)
+                if (clearChat) vm.startNewChat()
+                vm.consumeSharedText(text)
+                val sharedPreferencesHelper = SharedPreferencesHelper(this)
+                val systemMessageTitle = sharedPreferencesHelper.getSelectedSystemMessage().title
+                Toast.makeText(this, systemMessageTitle, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        val isAssistLaunch = intent.action in listOf(Intent.ACTION_ASSIST)
+        if (isAssistLaunch) {
+            val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container) as? ChatFragment
+            fragment?.startSpeechRecognitionSafely()
+        }
     }
 }

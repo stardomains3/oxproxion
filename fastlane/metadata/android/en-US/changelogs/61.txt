@@ -1,0 +1,1 @@
+- Added advanced share targets: "Prompt" for inputting shared text to the prompt only, "Autosend" for automatic sending of the shared text, and "Chooser" for selecting system messages with options to send, input only, or clear chat before sharing. Improved shared text handling with toasts displaying active system message titles.

@@ -493,7 +493,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 viewModel.onModelPreferenceSaved()
             }
         }
-
+        viewModel.autosendEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                // Perform autosend: Simulate send button click
+                sendChatButton.performClick()
+            }
+        }
 
         // --- Credits Observer ---
         viewModel.creditsResult.observe(viewLifecycleOwner) { event ->

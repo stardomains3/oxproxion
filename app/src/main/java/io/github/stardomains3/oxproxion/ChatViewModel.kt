@@ -156,6 +156,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _isChatLoading = MutableLiveData(false)
     val isChatLoading: LiveData<Boolean> = _isChatLoading
     private var networkJob: Job? = null
+    private val _autosendEvent = MutableLiveData<Event<Unit>>()
+    val autosendEvent: LiveData<Event<Unit>> = _autosendEvent
 
 
     fun toggleStreaming() {
@@ -980,7 +982,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun consumeSharedText(text: String) {
         _sharedText.value = text
     }
-
+    fun consumeSharedTextautosend(text: String) {
+        _sharedText.value = text
+        _autosendEvent.value = Event(Unit)
+    }
     fun textConsumed() {
         _sharedText.value = null
     }
