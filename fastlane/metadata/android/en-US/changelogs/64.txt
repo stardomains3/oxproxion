@@ -1,0 +1,1 @@
+- Tweak for "Thinking..." message being removed too soon before first streaming chunk arrives.

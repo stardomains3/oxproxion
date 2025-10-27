@@ -513,15 +513,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val accumulatedAnnotations = mutableListOf<Annotation>()
                     val accumulatedImages = mutableListOf<String>()
 
-                    withContext(Dispatchers.Main) {
-                        updateMessages {
-                            val index = it.indexOf(thinkingMessage)
-                            if (index != -1) {
-                                it[index] = FlexibleMessage(role = "assistant", content = JsonPrimitive(""))
-                            }
-                        }
-                    }
-
                     while (!channel.isClosedForRead) {
                         val line = channel.readUTF8Line() ?: continue
                         if (line.startsWith("data:")) {
@@ -549,8 +540,27 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 var reasoningChanged = false
 
                                 if (!delta?.content.isNullOrEmpty()) {
+                                    val isFirstContentChunk = accumulatedResponse.isEmpty()
                                     accumulatedResponse += delta.content
                                     contentChanged = true
+                                    // If this is the first content chunk, we must replace the 'thinking...' placeholder.
+                                    if (isFirstContentChunk) {
+                                        withContext(Dispatchers.Main) {
+                                            updateMessages { list ->
+                                                val index = list.indexOf(thinkingMessage)
+                                                if (index != -1) {
+                                                    // Replace 'thinking...' directly with the first accumulated content
+                                                    list[index] = FlexibleMessage(
+                                                        role = "assistant",
+                                                        content = JsonPrimitive(accumulatedResponse),
+                                                        reasoning = accumulatedReasoning // Include reasoning if it started
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        // Skip the general update below for the first chunk, as we just performed the replacement
+                                        continue
+                                    }
                                 }
 
                                 if (delta?.reasoning_details?.isNotEmpty() == true) {
