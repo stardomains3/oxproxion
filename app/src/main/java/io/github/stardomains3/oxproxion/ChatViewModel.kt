@@ -422,7 +422,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 handleError(e, thinkingMessage)
             } finally {
                 _isAwaitingResponse.postValue(false)
-                _scrollToBottomEvent.postValue(Event(Unit))
+                if (_isStreamingEnabled.value != true) {
+                    _scrollToBottomEvent.postValue(Event(Unit))
+                }
                 networkJob = null
             }
         }

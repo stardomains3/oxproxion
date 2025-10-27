@@ -74,6 +74,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -126,6 +127,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var currentCameraUri: Uri? = null
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var imagePicker: ActivityResultLauncher<Intent>  // Renamed for clarity (gallery picker)
+    private lateinit var layoutManager: LinearLayoutManager
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -534,14 +536,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     chatRecyclerView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
                         override fun onPreDraw(): Boolean {
                             chatRecyclerView.viewTreeObserver.removeOnPreDrawListener(this)
-
-                            val layoutManager = chatRecyclerView.layoutManager as LinearLayoutManager
                             val position = chatAdapter.itemCount - 1
-
-                            // Scroll with positive offset to show icon
-                            // val offset = resources.getDimensionPixelSize(R.dimen.ai_icon_offset)
                             layoutManager.scrollToPositionWithOffset(position, -12)
-
                             return true
                         }
                     })
@@ -595,6 +591,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     }
 
     private fun setupRecyclerView() {
+        layoutManager = NonScrollingOnFocusLayoutManager(requireContext()).apply {
+            stackFromEnd = false
+        }
         chatAdapter = ChatAdapter(
             markwon,
             viewModel,
@@ -615,9 +614,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         hideMenu()
                         chatEditText.requestFocus()
                         chatEditText.showKeyboard()
-                        if (chatAdapter.itemCount > 0) {
-                            chatRecyclerView.smoothScrollToPosition(chatAdapter.itemCount - 1)
-                        }
                     }
                     .setCancelable(true)
                     .show()
@@ -643,11 +639,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             val displayName = viewModel.getModelDisplayName(apiIdentifier)
                             ForegroundService.updateNotificationStatusSilently(displayName, "Prompt sent. Awaiting Response.")
                         }
-                        // UI polish: Hide menu, scroll to bottom (after resend starts)
                         hideMenu()
-                        if (chatAdapter.itemCount > 0) {
-                            chatRecyclerView.smoothScrollToPosition(chatAdapter.itemCount - 1)
-                        }
                     }
                     .setCancelable(true)
                     .show()
@@ -655,9 +647,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         )
         chatRecyclerView.apply {
             adapter = chatAdapter
-            layoutManager = NonScrollingOnFocusLayoutManager(requireContext()).apply {
-                stackFromEnd = true
-            }
+            layoutManager = this@ChatFragment.layoutManager
         }
     }
 
@@ -756,8 +746,17 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     selectedImageBytes = null
                     selectedImageMime = null
                     attachmentPreviewContainer.visibility = View.GONE
-                    if (chatAdapter.itemCount > 0) {
+                   /* if (chatAdapter.itemCount > 0) {
                         chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
+                    }*/
+                    if (chatAdapter.itemCount > 0) {
+                        // Post with a tiny delay to ensure the adapter has added the new item
+                        chatRecyclerView.postDelayed({
+                            val newPosition = chatAdapter.itemCount - 1
+
+                            // Scroll to the new message with 0 offset to pin its top edge to the top of the visible area
+                            layoutManager.scrollToPositionWithOffset(newPosition, 0)
+                        }, 50) // 50ms delay - test and increase to 100 if still off on slower devices
                     }
                 }
             }

@@ -1,0 +1,1 @@
+- The chat won't scroll by itself when streaming is enabled.
