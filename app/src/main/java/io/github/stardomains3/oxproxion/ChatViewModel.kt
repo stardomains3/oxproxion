@@ -185,7 +185,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         private const val TIMEOUT_MS = 300_000L
         val THINKING_MESSAGE = FlexibleMessage(
             role = "assistant",
-            content = JsonPrimitive("thinking...")
+            content = JsonPrimitive("working...")
         )
     }
     //val generatedImages = mutableMapOf<Int, String>()
@@ -345,7 +345,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun getFormattedChatHistory(): String {
         return _chatMessages.value?.mapNotNull { message ->
             val contentText = getMessageText(message.content).trim()
-            if (contentText.isEmpty() || contentText == "thinking...") null
+            if (contentText.isEmpty() || contentText == "working...") null
             else when (message.role) {
                 "user" -> "User: $contentText"
                 "assistant" -> "AI: $contentText"
@@ -356,7 +356,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun getFormattedChatHistoryPlainText(): String {
         return _chatMessages.value?.mapNotNull { message ->
             val contentText = getMessageText(message.content).trim()
-            if (contentText.isEmpty() || contentText == "thinking...") null
+            if (contentText.isEmpty() || contentText == "working...") null
             else {
                 val plainText = stripMarkdown(contentText)  // Strip Markdown here
                 when (message.role) {
@@ -543,13 +543,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                     val isFirstContentChunk = accumulatedResponse.isEmpty()
                                     accumulatedResponse += delta.content
                                     contentChanged = true
-                                    // If this is the first content chunk, we must replace the 'thinking...' placeholder.
+                                    // If this is the first content chunk, we must replace the 'working...' placeholder.
                                     if (isFirstContentChunk) {
                                         withContext(Dispatchers.Main) {
                                             updateMessages { list ->
                                                 val index = list.indexOf(thinkingMessage)
                                                 if (index != -1) {
-                                                    // Replace 'thinking...' directly with the first accumulated content
+                                                    // Replace 'working...' directly with the first accumulated content
                                                     list[index] = FlexibleMessage(
                                                         role = "assistant",
                                                         content = JsonPrimitive(accumulatedResponse),

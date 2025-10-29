@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
@@ -77,8 +78,11 @@ class ForegroundService : Service() {
         val initialTitle = intent?.getStringExtra("initial_title") ?: "oxproxion is Running."  // Fallback if not provided
         val notification = buildNotification(initialTitle, "oxproxion is Ready.", SILENT_CHANNEL_ID)
        // val notification = buildNotification("oxproxion is Running.", "oxproxion is Ready.", SILENT_CHANNEL_ID)
-        val foregroundServiceType =
+        val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {  // API 34
             ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC  // Fallback for lower APIs (e.g., for data sync/messaging)
+        }
 
         startForeground(1, notification, foregroundServiceType)
        // startForeground(1, notification)

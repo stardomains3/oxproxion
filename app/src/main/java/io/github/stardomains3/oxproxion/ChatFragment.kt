@@ -11,6 +11,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
@@ -27,8 +29,10 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
 import android.util.Log
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.widget.EditText
@@ -42,6 +46,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
@@ -78,6 +84,7 @@ import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
+    private var isFontUpdate = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private var isSpeaking = false
@@ -112,6 +119,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var ttsAvailable = true
     private lateinit var setMaxTokensButton: MaterialButton
     private lateinit var notiButton: MaterialButton
+    private lateinit var fontsButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var markwon: Markwon
@@ -267,6 +275,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         streamButton = view.findViewById(R.id.streamButton)
         reasoningButton = view.findViewById(R.id.reasoningButton)
         notiButton = view.findViewById(R.id.notiButton)
+        fontsButton = view.findViewById(R.id.fontsButton)
         extendButton = view.findViewById(R.id.extendButton)
         convoButton  = view.findViewById(R.id.convoButton)
         clearButton = view.findViewById(R.id.clearButton)
@@ -450,7 +459,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 if (messages.isNotEmpty()) {
                     val lastMessage = messages.last()
                     if (lastMessage.role == "assistant" &&
-                        viewModel.getMessageText(lastMessage.content) != "thinking...") {
+                        viewModel.getMessageText(lastMessage.content) != "working...") {
                         chatRecyclerView.post {
                             val position = messages.size - 1
                             val holder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
@@ -554,7 +563,37 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 startSpeechRecognition()  // Your existing method
             }
         }
-
+        val selectedFontName = sharedPreferencesHelper.getSelectedFont()
+        val themeResId = when (selectedFontName) {
+            "system_default" -> R.style.Base_Theme_Oxproxion  // System default font (base theme)
+            "lato_regular" -> R.style.Font_LatoRegular
+            "cabin_regular" -> R.style.Font_CabinRegular
+            "exo2_regular" -> R.style.Font_Exo2Regular
+            "geologica_light" -> R.style.Font_GeologicaLight
+            "georama_regular" -> R.style.Font_GeoramaRegular
+            "opensans_regular" -> R.style.Font_OpenSansRegular
+            "outfit_regular" -> R.style.Font_OutfitRegular
+            "play_regular" -> R.style.Font_PlayRegular
+            "roboto_regular" -> R.style.Font_RobotoRegular
+            "ubuntusans_regular" -> R.style.Font_UbuntuSansRegular
+            else -> R.style.Font_GeologicaLight // Default
+        }
+        val typeface = when (selectedFontName) {
+            "system_default" -> Typeface.DEFAULT
+            "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+            "lato_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lato_regular)
+            "cabin_regular" -> ResourcesCompat.getFont(requireContext(), R.font.cabin_regular)
+            "exo2_regular" -> ResourcesCompat.getFont(requireContext(), R.font.exo2_regular)
+            "georama_regular" -> ResourcesCompat.getFont(requireContext(), R.font.georama_regular)
+            "opensans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.opensans_regular)
+            "outfit_regular" -> ResourcesCompat.getFont(requireContext(), R.font.outfit_regular)
+            "play_regular" -> ResourcesCompat.getFont(requireContext(), R.font.play_regular)
+            "roboto_regular" -> ResourcesCompat.getFont(requireContext(), R.font.roboto_regular)
+            "ubuntusans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.ubuntusans_regular)
+            else -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+        }
+        chatEditText.typeface = typeface ?: Typeface.DEFAULT
+        requireActivity().setTheme(themeResId)
     }
 
     private fun updateSystemMessageButtonState() {
@@ -671,7 +710,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             textToSpeech.stop()
             textToSpeech.shutdown()
         }
-        stopForegroundService()
+        if (!isFontUpdate) {  // Only stop the service if not a font update (i.e., actual app closure)
+            stopForegroundService()
+        }
     }
     @SuppressLint("ClickableViewAccessibility")
     private fun setupClickListeners() {
@@ -1103,6 +1144,126 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         notiButton.setOnClickListener {
 
             viewModel.toggleNoti()
+        }
+        fontsButton.setOnClickListener {
+            hideMenu()
+
+            // Define font options (display name, font res ID or null for system default, style res ID)
+            val fontOptions = listOf(
+                Triple("System Default", null, R.style.Base_Theme_Oxproxion),  // Special case: null fontResId for system font
+                Triple("Geologica Light", R.font.geologica_light, R.style.Font_GeologicaLight),
+                Triple("Lato Regular", R.font.lato_regular, R.style.Font_LatoRegular),
+                Triple("Cabin Regular", R.font.cabin_regular, R.style.Font_CabinRegular),
+                Triple("Exo 2 Regular", R.font.exo2_regular, R.style.Font_Exo2Regular),
+                Triple("Georama Regular", R.font.georama_regular, R.style.Font_GeoramaRegular),
+                Triple("Open Sans Regular", R.font.opensans_regular, R.style.Font_OpenSansRegular),
+                Triple("Outfit Regular", R.font.outfit_regular, R.style.Font_OutfitRegular),
+                Triple("Play Regular", R.font.play_regular, R.style.Font_PlayRegular),
+                Triple("Roboto Regular", R.font.roboto_regular, R.style.Font_RobotoRegular),
+                Triple("Ubuntu Sans Regular", R.font.ubuntusans_regular, R.style.Font_UbuntuSansRegular)
+            )
+
+            // Create the dialog first (to make it accessible in the adapter)
+            val dialog = MaterialAlertDialogBuilder(requireContext(), com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered)
+                .setTitle("Select Font")
+                .setNegativeButton("Cancel", null)
+                .create()
+
+            // Create a RecyclerView adapter for font previews
+            val adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                    val textView = TextView(parent.context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                        setPadding(32, 16, 32, 16)  // Padding for touch targets
+                        textSize = 18f
+                        gravity = Gravity.CENTER
+                        isClickable = true
+                    }
+                    return object : RecyclerView.ViewHolder(textView) {}
+                }
+
+                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                    val (displayName, fontResId, styleResId) = fontOptions[position]
+                    val textView = holder.itemView as TextView
+                    textView.text = displayName
+                    // Apply the font for preview (use system default if fontResId is null)
+                    textView.typeface = if (fontResId != null) {
+                        try {
+                            ResourcesCompat.getFont(textView.context, fontResId)
+                        } catch (e: Exception) {
+                            ResourcesCompat.getFont(textView.context, R.font.geologica_light)  // Fallback
+                        }
+                    } else {
+                        Typeface.DEFAULT  // System default font
+                    }
+
+                    // Highlight current font in #a0610a
+                    val currentFont = sharedPreferencesHelper.getSelectedFont()
+                    val isSelected = (fontResId == null && currentFont == "system_default") ||
+                            (fontResId != null && when (fontResId) {
+                                R.font.geologica_light -> "geologica_light"
+                                R.font.lato_regular -> "lato_regular"
+                                R.font.cabin_regular -> "cabin_regular"
+                                R.font.exo2_regular -> "exo2_regular"
+                                R.font.georama_regular -> "georama_regular"
+                                R.font.opensans_regular -> "opensans_regular"
+                                R.font.outfit_regular -> "outfit_regular"
+                                R.font.play_regular -> "play_regular"
+                                R.font.roboto_regular -> "roboto_regular"
+                                R.font.ubuntusans_regular -> "ubuntusans_regular"
+                                else -> ""
+                            } == currentFont)
+                    if (isSelected) {
+                        textView.setTextColor("#a0610a".toColorInt())  // High contrast for readability
+                    } else {
+                        textView.setTextColor(Color.WHITE)  // Default text color
+                    }
+
+                    // On tap: Save, apply, dismiss
+                    textView.setOnClickListener {
+                        val fontName = if (fontResId == null) {
+                            "system_default"  // Special value for system font
+                        } else {
+                            when (fontResId) {
+                                R.font.geologica_light -> "geologica_light"
+                                R.font.lato_regular -> "lato_regular"
+                                R.font.cabin_regular -> "cabin_regular"
+                                R.font.exo2_regular -> "exo2_regular"
+                                R.font.georama_regular -> "georama_regular"
+                                R.font.opensans_regular -> "opensans_regular"
+                                R.font.outfit_regular -> "outfit_regular"
+                                R.font.play_regular -> "play_regular"
+                                R.font.roboto_regular -> "roboto_regular"
+                                R.font.ubuntusans_regular -> "ubuntusans_regular"
+                                else -> "geologica_light"
+                            }
+                        }
+                        sharedPreferencesHelper.saveSelectedFont(fontName)
+                        requireActivity().setTheme(styleResId)
+                        isFontUpdate = true  // Set flag before recreate
+                        requireActivity().recreate()  // Apply theme change
+                        dialog.dismiss()
+                    }
+                }
+
+                override fun getItemCount() = fontOptions.size
+            }
+
+            // Set up RecyclerView and show dialog
+            val recyclerView = RecyclerView(requireContext()).apply {
+                layoutManager = LinearLayoutManager(requireContext())
+                this.adapter = adapter
+            }
+
+            dialog.setView(recyclerView)
+            dialog.show()
+
+            // Force underline the title after showing
+            val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
+            titleView?.paintFlags = titleView.paintFlags or Paint.UNDERLINE_TEXT_FLAG
         }
         convoButton.setOnClickListener {
             val currentState = sharedPreferencesHelper.getConversationModeEnabled()

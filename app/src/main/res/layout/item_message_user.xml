@@ -44,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="start|top"
-                android:fontFamily="@font/geologica_light"
+                android:fontFamily="?attr/fontFamily"
                 android:text="User message here"
                 android:textColor="#F8F8F8"
                 android:textColorHighlight="#756151"

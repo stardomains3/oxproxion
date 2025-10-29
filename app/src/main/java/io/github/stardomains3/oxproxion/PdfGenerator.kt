@@ -394,7 +394,7 @@ class PdfGenerator(private val context: Context) {
         val titleHeight = titlePaint.fontSpacing
         totalHeight += titleHeight + bubbleSpacing
 
-        val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "thinking..." }
+        val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "working..." }
         val imageBitmaps = mutableMapOf<Int, Bitmap>()
 
         messagesToRender.forEachIndexed { index, message ->
@@ -541,7 +541,7 @@ class PdfGenerator(private val context: Context) {
         val titleHeight = titlePaint.fontSpacing
         totalHeight += titleHeight + bubbleSpacing
 
-        val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "thinking..." }
+        val messagesToRender = messages.filterNot { it.content is JsonPrimitive && it.content.content == "working..." }
         val imageBitmaps = mutableMapOf<Int, Bitmap>()
 
         messagesToRender.forEachIndexed { index, message ->

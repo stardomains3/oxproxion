@@ -25,6 +25,7 @@ class SharedPreferencesHelper(context: Context) {
     private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
+        private const val KEY_SELECTED_FONT = "selected_font"
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_CONVERSATION_MODE_ENABLED = "conversation_mode_enabled"
         private const val API_KEYS_PREFS_STORE = "ApiKeysPrefsStore"
@@ -211,6 +212,13 @@ class SharedPreferencesHelper(context: Context) {
         mainPrefs.edit {
             putBoolean(KEY_REASONING_ENABLED, isEnabled)
         }
+    }
+    fun saveSelectedFont(fontName: String) {
+        mainPrefs.edit { putString(KEY_SELECTED_FONT, fontName) }
+    }
+
+    fun getSelectedFont(): String {
+        return mainPrefs.getString(KEY_SELECTED_FONT, "geologica_light") ?: "geologica_light"
     }
     fun getNotiPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_NOTI_ENABLED, false)

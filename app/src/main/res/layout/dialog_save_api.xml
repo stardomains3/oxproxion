@@ -34,7 +34,7 @@
             android:layout_height="wrap_content"
             android:textSize="20sp"
             android:inputType="textCapSentences"
-            android:fontFamily="@font/geologica_light"
+            android:fontFamily="?attr/fontFamily"
 
             android:textColor="#ffffff"
 

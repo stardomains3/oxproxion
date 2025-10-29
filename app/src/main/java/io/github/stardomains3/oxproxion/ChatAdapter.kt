@@ -74,7 +74,7 @@ class ChatAdapter(
     private companion object {
         const val VIEW_TYPE_USER = 1
         const val VIEW_TYPE_ASSISTANT = 2
-        const val VIEW_TYPE_THINKING = 3 // For the "thinking..." message
+        const val VIEW_TYPE_THINKING = 3 // For the "working..." message
     }
 
     fun setMessages(newMessages: List<FlexibleMessage>) {
@@ -110,7 +110,7 @@ class ChatAdapter(
             "assistant" -> {
                 // Check if it's the special "thinking" message
                 val content = (message.content as? JsonPrimitive)?.content ?: ""
-                if (content == "thinking...") VIEW_TYPE_THINKING else VIEW_TYPE_ASSISTANT
+                if (content == "working...") VIEW_TYPE_THINKING else VIEW_TYPE_ASSISTANT
             }
             else -> VIEW_TYPE_ASSISTANT // Default
         }
@@ -243,7 +243,7 @@ class ChatAdapter(
             ttsButton.visibility = if (ttsAvailable) View.VISIBLE else View.GONE
 
             val isError = message.role == "assistant" && text.startsWith("**Error:**")  // Use original text
-            val isThinking = text == "thinking..."  // Use original text
+            val isThinking = text == "working..."  // Use original text
             if (isError) {
                 messageContainer.setBackgroundResource(R.drawable.bg_error_message)
             } else {

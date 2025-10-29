@@ -1,0 +1,2 @@
+- Added 10 or so font options the user can choose from
+- Changed "thinking..." to "working..."

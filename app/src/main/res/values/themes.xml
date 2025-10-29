@@ -70,6 +70,35 @@
         <item name="colorControlActivated">#FF9800</item>
         <item name="colorControlNormal">#79480a</item>   <!-- underline when not focused -->
     </style>
-
+    <style name="Font.GeologicaLight" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/geologica_light</item>
+    </style>
+    <style name="Font.LatoRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/lato_regular</item>
+    </style>
+    <style name="Font.CabinRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/cabin_regular</item>
+    </style>
+    <style name="Font.Exo2Regular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/exo2_regular</item>
+    </style>
+    <style name="Font.GeoramaRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/georama_regular</item>
+    </style>
+    <style name="Font.OpenSansRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/opensans_regular</item>
+    </style>
+    <style name="Font.OutfitRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/outfit_regular</item>
+    </style>
+    <style name="Font.PlayRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/play_regular</item>
+    </style>
+    <style name="Font.RobotoRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/roboto_regular</item>
+    </style>
+    <style name="Font.UbuntuSansRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/ubuntusans_regular</item>
+    </style>
     <style name="Theme.Oxproxion" parent="Base.Theme.Oxproxion" />
 </resources>
