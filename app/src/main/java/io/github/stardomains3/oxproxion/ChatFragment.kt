@@ -564,59 +564,39 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
         val selectedFontName = sharedPreferencesHelper.getSelectedFont()
-        val themeResId = when (selectedFontName) {
-            "system_default" -> R.style.Base_Theme_Oxproxion  // System default font (base theme)
-            "alansans_regular" -> R.style.Font_AlanSansRegular
-            "alexandria_regular" -> R.style.Font_AlexandriaRegular
-            "aronesans_regular" -> R.style.Font_AroneSansRegular
-            "funneldisplay_regular" -> R.style.Font_FunnelDisplayRegular
-            "geologica_light" -> R.style.Font_GeologicaLight
-            "instrumentsans_regular" -> R.style.Font_InstrumentSansRegular
-            "lexend_regular" -> R.style.Font_LexendRegular
-            "merriweather_24pt_regular" -> R.style.Font_Merriweather24ptRegular
-            "mplus2_regular" -> R.style.Font_MPlus2Regular
-            "nokora_regular" -> R.style.Font_NokoraRegular
-            "notosans_regular" -> R.style.Font_NotoSansRegular
-            "opensans_regular" -> R.style.Font_OpenSansRegular
-            "outfit_regular" -> R.style.Font_OutfitRegular
-            "poppins_regular" -> R.style.Font_PoppinsRegular
-            "readexpro_regular" -> R.style.Font_ReadexProRegular
-            "roboto_regular" -> R.style.Font_RobotoRegular
-            "robotoserif_regular" -> R.style.Font_RobotoSerifRegular
-            "sourceserif4_regular" -> R.style.Font_SourceSerif4Regular
-            "tasaorbiter_regular" -> R.style.Font_TasaOrbiterRegular
-            "ubuntusans_regular" -> R.style.Font_UbuntuSansRegular
-            "vendsans_regular" -> R.style.Font_VendSansRegular
-            else -> R.style.Font_GeologicaLight // Default
-        }
-        val typeface = when (selectedFontName) {
-            "system_default" -> Typeface.DEFAULT
-            "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
-            "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
-            "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
-            "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
-            "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
-            "instrumentsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.instrumentsans_regular)
-            "lexend_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lexend_regular)
-            "merriweather_24pt_regular" -> ResourcesCompat.getFont(requireContext(), R.font.merriweather_24pt_regular)
-            "mplus2_regular" -> ResourcesCompat.getFont(requireContext(), R.font.mplus2_regular)
-            "nokora_regular" -> ResourcesCompat.getFont(requireContext(), R.font.nokora_regular)
-            "notosans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notosans_regular)
-            "opensans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.opensans_regular)
-            "outfit_regular" -> ResourcesCompat.getFont(requireContext(), R.font.outfit_regular)
-            "poppins_regular" -> ResourcesCompat.getFont(requireContext(), R.font.poppins_regular)
-            "readexpro_regular" -> ResourcesCompat.getFont(requireContext(), R.font.readexpro_regular)
-            "roboto_regular" -> ResourcesCompat.getFont(requireContext(), R.font.roboto_regular)
-            "robotoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.robotoserif_regular)
-            "sourceserif4_regular" -> ResourcesCompat.getFont(requireContext(), R.font.sourceserif4_regular)
-            "tasaorbiter_regular" -> ResourcesCompat.getFont(requireContext(), R.font.tasaorbiter_regular)
-            "ubuntusans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.ubuntusans_regular)
-            "vendsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.vendsans_regular)
-            else -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+        val typeface = try {
+            when (selectedFontName) {
+                "system_default" -> Typeface.DEFAULT
+                "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
+                "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
+                "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
+                "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
+                "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+                "instrumentsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.instrumentsans_regular)
+                "lexend_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lexend_regular)
+                "merriweather_24pt_regular" -> ResourcesCompat.getFont(requireContext(), R.font.merriweather_24pt_regular)
+                "merriweathersans_light" -> ResourcesCompat.getFont(requireContext(), R.font.merriweathersans_light)
+                "mplus2_regular" -> ResourcesCompat.getFont(requireContext(), R.font.mplus2_regular)
+                "nokora_regular" -> ResourcesCompat.getFont(requireContext(), R.font.nokora_regular)
+                "notosans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notosans_regular)
+                "opensans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.opensans_regular)
+                "outfit_regular" -> ResourcesCompat.getFont(requireContext(), R.font.outfit_regular)
+                "poppins_regular" -> ResourcesCompat.getFont(requireContext(), R.font.poppins_regular)
+                "readexpro_regular" -> ResourcesCompat.getFont(requireContext(), R.font.readexpro_regular)
+                "roboto_regular" -> ResourcesCompat.getFont(requireContext(), R.font.roboto_regular)
+                "robotoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.robotoserif_regular)
+                "sourceserif4_regular" -> ResourcesCompat.getFont(requireContext(), R.font.sourceserif4_regular)
+                "tasaorbiter_regular" -> ResourcesCompat.getFont(requireContext(), R.font.tasaorbiter_regular)
+                "ubuntusans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.ubuntusans_regular)
+                "vendsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.vendsans_regular)
+                else -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+            }
+        } catch (e: Exception) {
+            Typeface.DEFAULT  // Fallback if any font load fails
         }
         chatEditText.typeface = typeface ?: Typeface.DEFAULT
         modelNameTextView.typeface = typeface ?: Typeface.DEFAULT
-        requireActivity().setTheme(themeResId)
+        chatAdapter.updateFont(typeface)
     }
 
     private fun updateSystemMessageButtonState() {
@@ -1202,6 +1182,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 Triple("Instrument Sans Regular", R.font.instrumentsans_regular, R.style.Font_InstrumentSansRegular),
                 Triple("Lexend Regular", R.font.lexend_regular, R.style.Font_LexendRegular),
                 Triple("Merriweather 24pt Regular", R.font.merriweather_24pt_regular, R.style.Font_Merriweather24ptRegular),
+                Triple("Merriweather Sans Light", R.font.merriweathersans_light, R.style.Font_MerriweathersansLight),
                 Triple("M Plus 2 Regular", R.font.mplus2_regular, R.style.Font_MPlus2Regular),
                 Triple("Nokora Regular", R.font.nokora_regular, R.style.Font_NokoraRegular),
                 Triple("Noto Sans Regular", R.font.notosans_regular, R.style.Font_NotoSansRegular),
@@ -1214,8 +1195,36 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 Triple("Source Serif 4 Regular", R.font.sourceserif4_regular, R.style.Font_SourceSerif4Regular),
                 Triple("Tasa Orbiter Regular", R.font.tasaorbiter_regular, R.style.Font_TasaOrbiterRegular),
                 Triple("Ubuntu Sans Regular", R.font.ubuntusans_regular, R.style.Font_UbuntuSansRegular),
-                Triple("Vend Sans Regular", R.font.vendsans_regular, R.style.Font_VendSansRegular),
+                Triple("Vend Sans Regular", R.font.vendsans_regular, R.style.Font_VendSansRegular)
             )
+
+            // Helper function: Maps fontResId to its string name (or "system_default" for null)
+            fun getFontNameFromRes(fontResId: Int?): String = when (fontResId) {
+                null -> "system_default"
+                R.font.alansans_regular -> "alansans_regular"
+                R.font.alexandria_regular -> "alexandria_regular"
+                R.font.aronesans_regular -> "aronesans_regular"
+                R.font.funneldisplay_regular -> "funneldisplay_regular"
+                R.font.geologica_light -> "geologica_light"
+                R.font.instrumentsans_regular -> "instrumentsans_regular"
+                R.font.lexend_regular -> "lexend_regular"
+                R.font.merriweather_24pt_regular -> "merriweather_24pt_regular"
+                R.font.merriweathersans_light -> "merriweathersans_light"
+                R.font.mplus2_regular -> "mplus2_regular"
+                R.font.nokora_regular -> "nokora_regular"
+                R.font.notosans_regular -> "notosans_regular"
+                R.font.opensans_regular -> "opensans_regular"
+                R.font.outfit_regular -> "outfit_regular"
+                R.font.poppins_regular -> "poppins_regular"
+                R.font.readexpro_regular -> "readexpro_regular"
+                R.font.roboto_regular -> "roboto_regular"
+                R.font.robotoserif_regular -> "robotoserif_regular"
+                R.font.sourceserif4_regular -> "sourceserif4_regular"
+                R.font.tasaorbiter_regular -> "tasaorbiter_regular"
+                R.font.ubuntusans_regular -> "ubuntusans_regular"
+                R.font.vendsans_regular -> "vendsans_regular"
+                else -> "geologica_light"  // Fallback
+            }
 
             // Create the dialog first (to make it accessible in the adapter)
             val dialog = MaterialAlertDialogBuilder(requireContext(), com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered)
@@ -1254,73 +1263,36 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         Typeface.DEFAULT  // System default font
                     }
 
-                    // Highlight current font in #a0610a
+                    // Highlight current font in #a0610a (using helper for isSelected)
                     val currentFont = sharedPreferencesHelper.getSelectedFont()
-                    val isSelected = (fontResId == null && currentFont == "system_default") ||
-                            (fontResId != null && when (fontResId) {
-                                R.font.alansans_regular -> "alansans_regular"
-                                R.font.alexandria_regular -> "alexandria_regular"
-                                R.font.aronesans_regular -> "aronesans_regular"
-                                R.font.funneldisplay_regular -> "funneldisplay_regular"
-                                R.font.geologica_light -> "geologica_light"
-                                R.font.instrumentsans_regular -> "instrumentsans_regular"
-                                R.font.lexend_regular -> "lexend_regular"
-                                R.font.merriweather_24pt_regular -> "merriweather_24pt_regular"
-                                R.font.mplus2_regular -> "mplus2_regular"
-                                R.font.nokora_regular -> "nokora_regular"
-                                R.font.notosans_regular -> "notosans_regular"
-                                R.font.opensans_regular -> "opensans_regular"
-                                R.font.outfit_regular -> "outfit_regular"
-                                R.font.poppins_regular -> "poppins_regular"
-                                R.font.readexpro_regular -> "readexpro_regular"
-                                R.font.roboto_regular -> "roboto_regular"
-                                R.font.robotoserif_regular -> "robotoserif_regular"
-                                R.font.sourceserif4_regular -> "sourceserif4_regular"
-                                R.font.tasaorbiter_regular -> "tasaorbiter_regular"
-                                R.font.ubuntusans_regular -> "ubuntusans_regular"
-                                R.font.vendsans_regular -> "vendsans_regular"
-                                else -> ""
-                            } == currentFont)
+                    val fontName = getFontNameFromRes(fontResId)
+                    val isSelected = fontName == currentFont
                     if (isSelected) {
                         textView.setTextColor("#a0610a".toColorInt())  // High contrast for readability
                     } else {
                         textView.setTextColor(Color.WHITE)  // Default text color
                     }
 
-                    // On tap: Save, apply, dismiss
+                    // On tap: Save, apply, dismiss (using helper for fontName)
                     textView.setOnClickListener {
-                        val fontName = if (fontResId == null) {
-                            "system_default"  // Special value for system font
-                        } else {
-                            when (fontResId) {
-                                R.font.alansans_regular -> "alansans_regular"
-                                R.font.alexandria_regular -> "alexandria_regular"
-                                R.font.aronesans_regular -> "aronesans_regular"
-                                R.font.funneldisplay_regular -> "funneldisplay_regular"
-                                R.font.geologica_light -> "geologica_light"
-                                R.font.instrumentsans_regular -> "instrumentsans_regular"
-                                R.font.lexend_regular -> "lexend_regular"
-                                R.font.merriweather_24pt_regular -> "merriweather_24pt_regular"
-                                R.font.mplus2_regular -> "mplus2_regular"
-                                R.font.nokora_regular -> "nokora_regular"
-                                R.font.notosans_regular -> "notosans_regular"
-                                R.font.opensans_regular -> "opensans_regular"
-                                R.font.outfit_regular -> "outfit_regular"
-                                R.font.poppins_regular -> "poppins_regular"
-                                R.font.readexpro_regular -> "readexpro_regular"
-                                R.font.roboto_regular -> "roboto_regular"
-                                R.font.robotoserif_regular -> "robotoserif_regular"
-                                R.font.sourceserif4_regular -> "sourceserif4_regular"
-                                R.font.tasaorbiter_regular -> "tasaorbiter_regular"
-                                R.font.ubuntusans_regular -> "ubuntusans_regular"
-                                R.font.vendsans_regular -> "vendsans_regular"
-                                else -> "geologica_light"
-                            }
-                        }
+                        val fontName = getFontNameFromRes(fontResId)
                         sharedPreferencesHelper.saveSelectedFont(fontName)
-                        requireActivity().setTheme(styleResId)
-                        isFontUpdate = true  // Set flag before recreate
-                        requireActivity().recreate()  // Apply theme change
+
+                        // Manual font update for static views (e.g., chatEditText)
+                        val newTypeface = if (fontResId != null) {
+                            try {
+                                ResourcesCompat.getFont(requireContext(), fontResId)
+                            } catch (e: Exception) {
+                                ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+                            }
+                        } else {
+                            Typeface.DEFAULT  // System default
+                        }
+                        // Apply to your static TextViews (add more as needed)
+                        chatEditText.typeface = newTypeface
+                        modelNameTextView.typeface = newTypeface
+                        chatAdapter.updateFont(newTypeface)
+
                         dialog.dismiss()
                     }
                 }
@@ -1333,6 +1305,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 layoutManager = LinearLayoutManager(requireContext())
                 this.adapter = adapter
             }
+            dialog.window?.setDimAmount(0.8f)
 
             dialog.setView(recyclerView)
             dialog.show()

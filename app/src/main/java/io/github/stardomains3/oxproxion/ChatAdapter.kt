@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.graphics.Typeface
 import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
@@ -152,6 +153,7 @@ class ChatAdapter(
         private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
 
         fun bind(message: FlexibleMessage) {
+            messageTextView.typeface = currentTypeface
             messageTextView.text = getMessageText(message.content)
             val imageUriStr = message.imageUri
             if (!imageUriStr.isNullOrEmpty()) {
@@ -233,6 +235,7 @@ class ChatAdapter(
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
         private var pulseAnimator: ObjectAnimator? = null
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
+            messageTextView.typeface = currentTypeface
             val text = getMessageText(message.content)
 
             val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
@@ -407,8 +410,11 @@ class ChatAdapter(
             messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
         }
     }
-
-
+    private var currentTypeface: Typeface = Typeface.DEFAULT
+    fun updateFont(newTypeface: Typeface?) {
+        currentTypeface = newTypeface ?: Typeface.DEFAULT
+        notifyDataSetChanged()
+    }
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)

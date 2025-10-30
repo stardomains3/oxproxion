@@ -32,7 +32,7 @@
             android:textSize="20sp"
             android:inputType="number"
             android:digits="0123456789"
-            android:fontFamily="?attr/fontFamily"
+
             android:textColor="#ffffff"
             android:text="12000"
             android:singleLine="true" />

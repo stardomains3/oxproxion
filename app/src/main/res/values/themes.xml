@@ -94,6 +94,9 @@
     <style name="Font.Merriweather24ptRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/merriweather_24pt_regular</item>
     </style>
+    <style name="Font.MerriweathersansLight" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/merriweathersans_light</item>
+    </style>
     <style name="Font.MPlus2Regular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/mplus2_regular</item>
     </style>

@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:textSize="20sp"
             android:inputType="textCapSentences"
-            android:fontFamily="?attr/fontFamily"
+
             android:textColor="#ffffff"
             android:singleLine="true" />
     </com.google.android.material.textfield.TextInputLayout>

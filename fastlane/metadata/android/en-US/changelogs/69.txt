@@ -1,0 +1,2 @@
+- Changed method of how the app changes fonts as the previous was occasionally restarting the activity. Some utility screens use the phones main system font as a result.
+- Added Merriweather Sans font

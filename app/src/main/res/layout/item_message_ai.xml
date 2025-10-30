@@ -48,7 +48,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="start|top"
-                android:fontFamily="?attr/fontFamily"
                 android:textColorHighlight="#756151"
                 android:text="AI message here"
                 android:textColor="#F8F8F8"

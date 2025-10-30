@@ -1,10 +1,12 @@
 package io.github.stardomains3.oxproxion
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
 import io.noties.markwon.AbstractMarkwonPlugin
@@ -33,7 +35,39 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
         }
 
         val helpContentTextView = view.findViewById<TextView>(R.id.helpContentTextView)
-
+        val sharedPreferencesHelper = SharedPreferencesHelper(requireContext())
+        val selectedFontName = sharedPreferencesHelper.getSelectedFont()
+        val typeface = try {
+            when (selectedFontName) {
+                "system_default" -> Typeface.DEFAULT
+                "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
+                "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
+                "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
+                "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
+                "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+                "instrumentsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.instrumentsans_regular)
+                "lexend_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lexend_regular)
+                "merriweather_24pt_regular" -> ResourcesCompat.getFont(requireContext(), R.font.merriweather_24pt_regular)
+                "merriweathersans_light" -> ResourcesCompat.getFont(requireContext(), R.font.merriweathersans_light)
+                "mplus2_regular" -> ResourcesCompat.getFont(requireContext(), R.font.mplus2_regular)
+                "nokora_regular" -> ResourcesCompat.getFont(requireContext(), R.font.nokora_regular)
+                "notosans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notosans_regular)
+                "opensans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.opensans_regular)
+                "outfit_regular" -> ResourcesCompat.getFont(requireContext(), R.font.outfit_regular)
+                "poppins_regular" -> ResourcesCompat.getFont(requireContext(), R.font.poppins_regular)
+                "readexpro_regular" -> ResourcesCompat.getFont(requireContext(), R.font.readexpro_regular)
+                "roboto_regular" -> ResourcesCompat.getFont(requireContext(), R.font.roboto_regular)
+                "robotoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.robotoserif_regular)
+                "sourceserif4_regular" -> ResourcesCompat.getFont(requireContext(), R.font.sourceserif4_regular)
+                "tasaorbiter_regular" -> ResourcesCompat.getFont(requireContext(), R.font.tasaorbiter_regular)
+                "ubuntusans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.ubuntusans_regular)
+                "vendsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.vendsans_regular)
+                else -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+            }
+        } catch (e: Exception) {
+            Typeface.DEFAULT  // Fallback
+        }
+        helpContentTextView.typeface = typeface
         val prism4j = Prism4j(ExampleGrammarLocator())
         val theme = Prism4jThemeDarkula.create()
         val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
