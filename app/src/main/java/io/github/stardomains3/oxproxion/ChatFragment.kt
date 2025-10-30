@@ -1184,6 +1184,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             // Define font options (display name, font res ID or null for system default, style res ID)
             val fontOptions = listOf(
+                Triple("System Default", null, R.style.Base_Theme_Oxproxion),
                 Triple("Alan Sans Regular", R.font.alansans_regular, R.style.Font_AlanSansRegular),
                 Triple("Alexandria Regular", R.font.alexandria_regular, R.style.Font_AlexandriaRegular),
                 Triple("Arone Sans Regular", R.font.aronesans_regular, R.style.Font_AroneSansRegular),
