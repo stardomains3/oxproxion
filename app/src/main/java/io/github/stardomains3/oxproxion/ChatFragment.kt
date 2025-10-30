@@ -573,6 +573,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             "geologica_light" -> R.style.Font_GeologicaLight
             "instrumentsans_regular" -> R.style.Font_InstrumentSansRegular
             "lexend_regular" -> R.style.Font_LexendRegular
+            "merriweather_24pt_regular" -> R.style.Font_Merriweather24ptRegular
             "mplus2_regular" -> R.style.Font_MPlus2Regular
             "nokora_regular" -> R.style.Font_NokoraRegular
             "notosans_regular" -> R.style.Font_NotoSansRegular
@@ -597,6 +598,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
             "instrumentsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.instrumentsans_regular)
             "lexend_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lexend_regular)
+            "merriweather_24pt_regular" -> ResourcesCompat.getFont(requireContext(), R.font.merriweather_24pt_regular)
             "mplus2_regular" -> ResourcesCompat.getFont(requireContext(), R.font.mplus2_regular)
             "nokora_regular" -> ResourcesCompat.getFont(requireContext(), R.font.nokora_regular)
             "notosans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notosans_regular)
@@ -709,6 +711,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             adapter = chatAdapter
             layoutManager = this@ChatFragment.layoutManager
         }
+        chatRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING && viewModel.isAwaitingResponse.value == true) {
+                    viewModel.setUserScrolledDuringStream(true)
+                }
+            }
+        })
     }
 
     fun View.showKeyboard() {
@@ -1192,6 +1201,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 Triple("Geologica Light", R.font.geologica_light, R.style.Font_GeologicaLight),
                 Triple("Instrument Sans Regular", R.font.instrumentsans_regular, R.style.Font_InstrumentSansRegular),
                 Triple("Lexend Regular", R.font.lexend_regular, R.style.Font_LexendRegular),
+                Triple("Merriweather 24pt Regular", R.font.merriweather_24pt_regular, R.style.Font_Merriweather24ptRegular),
                 Triple("M Plus 2 Regular", R.font.mplus2_regular, R.style.Font_MPlus2Regular),
                 Triple("Nokora Regular", R.font.nokora_regular, R.style.Font_NokoraRegular),
                 Triple("Noto Sans Regular", R.font.notosans_regular, R.style.Font_NotoSansRegular),
@@ -1255,6 +1265,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                                 R.font.geologica_light -> "geologica_light"
                                 R.font.instrumentsans_regular -> "instrumentsans_regular"
                                 R.font.lexend_regular -> "lexend_regular"
+                                R.font.merriweather_24pt_regular -> "merriweather_24pt_regular"
                                 R.font.mplus2_regular -> "mplus2_regular"
                                 R.font.nokora_regular -> "nokora_regular"
                                 R.font.notosans_regular -> "notosans_regular"
@@ -1289,6 +1300,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                                 R.font.geologica_light -> "geologica_light"
                                 R.font.instrumentsans_regular -> "instrumentsans_regular"
                                 R.font.lexend_regular -> "lexend_regular"
+                                R.font.merriweather_24pt_regular -> "merriweather_24pt_regular"
                                 R.font.mplus2_regular -> "mplus2_regular"
                                 R.font.nokora_regular -> "nokora_regular"
                                 R.font.notosans_regular -> "notosans_regular"

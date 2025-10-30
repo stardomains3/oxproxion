@@ -158,7 +158,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private var networkJob: Job? = null
     private val _autosendEvent = MutableLiveData<Event<Unit>>()
     val autosendEvent: LiveData<Event<Unit>> = _autosendEvent
-
+    private val _userScrolledDuringStream = MutableLiveData(false)
+    val userScrolledDuringStream: LiveData<Boolean> = _userScrolledDuringStream
 
     fun toggleStreaming() {
         val newStremingState = !(_isStreamingEnabled.value ?: false)
@@ -409,7 +410,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         _chatMessages.value = uiMessages
         _isAwaitingResponse.value = true
-
+        _userScrolledDuringStream.value = false
         networkJob = viewModelScope.launch {
             try {
                 val modelForRequest = _activeChatModel.value ?: throw IllegalStateException("No active chat model")
@@ -422,6 +423,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 handleError(e, thinkingMessage)
             } finally {
                 _isAwaitingResponse.postValue(false)
+                if (_userScrolledDuringStream.value != true) {
+                    _scrollToBottomEvent.postValue(Event(Unit))
+                }
                 if (_isStreamingEnabled.value != true) {
                     _scrollToBottomEvent.postValue(Event(Unit))
                 }
@@ -1216,6 +1220,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         return downloadedUris  // NEW: Return list
+    }
+    fun setUserScrolledDuringStream(value: Boolean) {
+        _userScrolledDuringStream.value = value
     }
     fun setPendingUserImageUri(uriStr: String?) {
         pendingUserImageUri = uriStr

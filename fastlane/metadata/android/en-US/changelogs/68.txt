@@ -1,0 +1,2 @@
+- Added Merriweather font.
+- If you are using streaming, and do not scroll whilst a stream comes in, once it is done it will auto-scroll the response as high as possible for best visibility. If you do scroll whilst it comes in, it will not auto-scroll when finished.
