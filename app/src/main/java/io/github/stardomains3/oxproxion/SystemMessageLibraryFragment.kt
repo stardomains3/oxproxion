@@ -4,9 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.util.DisplayMetrics
-import android.util.Log
-import androidx.appcompat.widget.SearchView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +11,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.SearchView
 import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -23,14 +21,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-
-import java.util.Collections
-
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import kotlin.collections.addAll
-import kotlin.collections.remove
+import java.util.Collections
 
 class SystemMessageLibraryFragment : Fragment() {
 
@@ -220,8 +214,8 @@ class SystemMessageLibraryFragment : Fragment() {
                     viewHolder: RecyclerView.ViewHolder,
                     target: RecyclerView.ViewHolder
                 ): Boolean {
-                    val fromPos = viewHolder.adapterPosition
-                    val toPos = target.adapterPosition
+                    val fromPos = viewHolder.bindingAdapterPosition  // Updated: Use bindingAdapterPosition instead of deprecated adapterPosition
+                    val toPos = target.bindingAdapterPosition  // Updated: Use bindingAdapterPosition instead of deprecated adapterPosition
                     // Only allow reordering if both are custom (index > 0)
                     if (fromPos > 0 && toPos > 0) {
                         Collections.swap(systemMessages, fromPos, toPos)
@@ -240,8 +234,8 @@ class SystemMessageLibraryFragment : Fragment() {
 
                 override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
                     // No drag on default (position 0)
-                    return if (viewHolder.adapterPosition > 0) {
-                        ItemTouchHelper.Callback.makeMovementFlags(
+                    return if (viewHolder.bindingAdapterPosition > 0) {  // Updated: Use bindingAdapterPosition instead of deprecated adapterPosition
+                        makeMovementFlags(
                             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
                             0
                         )
@@ -319,10 +313,9 @@ class SystemMessageLibraryFragment : Fragment() {
         val anchorY = location[1]
         val anchorHeight = anchorView.height
 
-        // Get screen height
-        val displayMetrics = DisplayMetrics()
-        (context as Activity).windowManager.defaultDisplay.getMetrics(displayMetrics)
-        val screenHeight = displayMetrics.heightPixels
+        // Get screen height using WindowMetrics (replaces deprecated DisplayMetrics)
+        val windowMetrics = (context as Activity).windowManager.currentWindowMetrics
+        val screenHeight = windowMetrics.bounds.height()
 
         // Calculate available space below and above the anchor
         val spaceBelow = screenHeight - anchorY - anchorHeight

@@ -70,7 +70,6 @@
                 android:layout_weight="1"
                 android:layout_gravity="center"
                 android:gravity="center"
-                android:fontFamily="?attr/fontFamily"
                 android:textColor="#A8A8A8"
                 android:padding="2dp"
                 android:clickable="true"

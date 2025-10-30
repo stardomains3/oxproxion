@@ -70,20 +70,35 @@
         <item name="colorControlActivated">#FF9800</item>
         <item name="colorControlNormal">#79480a</item>   <!-- underline when not focused -->
     </style>
+    <style name="Font.AlanSansRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/alansans_regular</item>
+    </style>
+    <style name="Font.AlexandriaRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/alexandria_regular</item>
+    </style>
+    <style name="Font.AroneSansRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/aronesans_regular</item>
+    </style>
+    <style name="Font.FunnelDisplayRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/funneldisplay_regular</item>
+    </style>
     <style name="Font.GeologicaLight" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/geologica_light</item>
     </style>
-    <style name="Font.LatoRegular" parent="Base.Theme.Oxproxion">
-        <item name="fontFamily">@font/lato_regular</item>
+    <style name="Font.InstrumentSansRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/instrumentsans_regular</item>
     </style>
-    <style name="Font.CabinRegular" parent="Base.Theme.Oxproxion">
-        <item name="fontFamily">@font/cabin_regular</item>
+    <style name="Font.LexendRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/lexend_regular</item>
     </style>
-    <style name="Font.Exo2Regular" parent="Base.Theme.Oxproxion">
-        <item name="fontFamily">@font/exo2_regular</item>
+    <style name="Font.MPlus2Regular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/mplus2_regular</item>
     </style>
-    <style name="Font.GeoramaRegular" parent="Base.Theme.Oxproxion">
-        <item name="fontFamily">@font/georama_regular</item>
+    <style name="Font.NokoraRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/nokora_regular</item>
+    </style>
+    <style name="Font.NotoSansRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/notosans_regular</item>
     </style>
     <style name="Font.OpenSansRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/opensans_regular</item>
@@ -91,14 +106,29 @@
     <style name="Font.OutfitRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/outfit_regular</item>
     </style>
-    <style name="Font.PlayRegular" parent="Base.Theme.Oxproxion">
-        <item name="fontFamily">@font/play_regular</item>
+    <style name="Font.PoppinsRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/poppins_regular</item>
+    </style>
+    <style name="Font.ReadexProRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/readexpro_regular</item>
     </style>
     <style name="Font.RobotoRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/roboto_regular</item>
     </style>
+    <style name="Font.RobotoSerifRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/robotoserif_regular</item>
+    </style>
+    <style name="Font.SourceSerif4Regular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/sourceserif4_regular</item>
+    </style>
+    <style name="Font.TasaOrbiterRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/tasaorbiter_regular</item>
+    </style>
     <style name="Font.UbuntuSansRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/ubuntusans_regular</item>
+    </style>
+    <style name="Font.VendSansRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/vendsans_regular</item>
     </style>
     <style name="Theme.Oxproxion" parent="Base.Theme.Oxproxion" />
 </resources>

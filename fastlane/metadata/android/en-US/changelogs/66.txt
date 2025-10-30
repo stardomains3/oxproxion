@@ -1,0 +1,2 @@
+- Optimized, alphabetized, added-to, and fixed code regarding new fonts.
+- Removed some deprecated code

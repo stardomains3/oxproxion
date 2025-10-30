@@ -566,33 +566,54 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val selectedFontName = sharedPreferencesHelper.getSelectedFont()
         val themeResId = when (selectedFontName) {
             "system_default" -> R.style.Base_Theme_Oxproxion  // System default font (base theme)
-            "lato_regular" -> R.style.Font_LatoRegular
-            "cabin_regular" -> R.style.Font_CabinRegular
-            "exo2_regular" -> R.style.Font_Exo2Regular
+            "alansans_regular" -> R.style.Font_AlanSansRegular
+            "alexandria_regular" -> R.style.Font_AlexandriaRegular
+            "aronesans_regular" -> R.style.Font_AroneSansRegular
+            "funneldisplay_regular" -> R.style.Font_FunnelDisplayRegular
             "geologica_light" -> R.style.Font_GeologicaLight
-            "georama_regular" -> R.style.Font_GeoramaRegular
+            "instrumentsans_regular" -> R.style.Font_InstrumentSansRegular
+            "lexend_regular" -> R.style.Font_LexendRegular
+            "mplus2_regular" -> R.style.Font_MPlus2Regular
+            "nokora_regular" -> R.style.Font_NokoraRegular
+            "notosans_regular" -> R.style.Font_NotoSansRegular
             "opensans_regular" -> R.style.Font_OpenSansRegular
             "outfit_regular" -> R.style.Font_OutfitRegular
-            "play_regular" -> R.style.Font_PlayRegular
+            "poppins_regular" -> R.style.Font_PoppinsRegular
+            "readexpro_regular" -> R.style.Font_ReadexProRegular
             "roboto_regular" -> R.style.Font_RobotoRegular
+            "robotoserif_regular" -> R.style.Font_RobotoSerifRegular
+            "sourceserif4_regular" -> R.style.Font_SourceSerif4Regular
+            "tasaorbiter_regular" -> R.style.Font_TasaOrbiterRegular
             "ubuntusans_regular" -> R.style.Font_UbuntuSansRegular
+            "vendsans_regular" -> R.style.Font_VendSansRegular
             else -> R.style.Font_GeologicaLight // Default
         }
         val typeface = when (selectedFontName) {
             "system_default" -> Typeface.DEFAULT
+            "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
+            "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
+            "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
+            "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
             "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
-            "lato_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lato_regular)
-            "cabin_regular" -> ResourcesCompat.getFont(requireContext(), R.font.cabin_regular)
-            "exo2_regular" -> ResourcesCompat.getFont(requireContext(), R.font.exo2_regular)
-            "georama_regular" -> ResourcesCompat.getFont(requireContext(), R.font.georama_regular)
+            "instrumentsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.instrumentsans_regular)
+            "lexend_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lexend_regular)
+            "mplus2_regular" -> ResourcesCompat.getFont(requireContext(), R.font.mplus2_regular)
+            "nokora_regular" -> ResourcesCompat.getFont(requireContext(), R.font.nokora_regular)
+            "notosans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notosans_regular)
             "opensans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.opensans_regular)
             "outfit_regular" -> ResourcesCompat.getFont(requireContext(), R.font.outfit_regular)
-            "play_regular" -> ResourcesCompat.getFont(requireContext(), R.font.play_regular)
+            "poppins_regular" -> ResourcesCompat.getFont(requireContext(), R.font.poppins_regular)
+            "readexpro_regular" -> ResourcesCompat.getFont(requireContext(), R.font.readexpro_regular)
             "roboto_regular" -> ResourcesCompat.getFont(requireContext(), R.font.roboto_regular)
+            "robotoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.robotoserif_regular)
+            "sourceserif4_regular" -> ResourcesCompat.getFont(requireContext(), R.font.sourceserif4_regular)
+            "tasaorbiter_regular" -> ResourcesCompat.getFont(requireContext(), R.font.tasaorbiter_regular)
             "ubuntusans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.ubuntusans_regular)
+            "vendsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.vendsans_regular)
             else -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
         }
         chatEditText.typeface = typeface ?: Typeface.DEFAULT
+        modelNameTextView.typeface = typeface ?: Typeface.DEFAULT
         requireActivity().setTheme(themeResId)
     }
 
@@ -790,7 +811,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                    /* if (chatAdapter.itemCount > 0) {
                         chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
                     }*/
-                    if (chatAdapter.itemCount > 0) {
+                  /*  if (chatAdapter.itemCount > 0) {
                         // Post with a tiny delay to ensure the adapter has added the new item
                         chatRecyclerView.postDelayed({
                             val newPosition = chatAdapter.itemCount - 1
@@ -798,7 +819,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             // Scroll to the new message with 0 offset to pin its top edge to the top of the visible area
                             layoutManager.scrollToPositionWithOffset(newPosition, 0)
                         }, 50) // 50ms delay - test and increase to 100 if still off on slower devices
+                    }*/
+                    if (chatAdapter.itemCount > 0) {
+                        chatRecyclerView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                            override fun onPreDraw(): Boolean {
+                                chatRecyclerView.viewTreeObserver.removeOnPreDrawListener(this)
+                                val newPosition = chatAdapter.itemCount - 1
+                                if (newPosition >= 0) {
+                                    layoutManager.scrollToPositionWithOffset(newPosition, 0)
+                                }
+                                return true
+                            }
+                        })
                     }
+
                 }
             }
         }
@@ -1150,17 +1184,26 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             // Define font options (display name, font res ID or null for system default, style res ID)
             val fontOptions = listOf(
-                Triple("System Default", null, R.style.Base_Theme_Oxproxion),  // Special case: null fontResId for system font
+                Triple("Alan Sans Regular", R.font.alansans_regular, R.style.Font_AlanSansRegular),
+                Triple("Alexandria Regular", R.font.alexandria_regular, R.style.Font_AlexandriaRegular),
+                Triple("Arone Sans Regular", R.font.aronesans_regular, R.style.Font_AroneSansRegular),
+                Triple("Funnel Display Regular", R.font.funneldisplay_regular, R.style.Font_FunnelDisplayRegular),
                 Triple("Geologica Light", R.font.geologica_light, R.style.Font_GeologicaLight),
-                Triple("Lato Regular", R.font.lato_regular, R.style.Font_LatoRegular),
-                Triple("Cabin Regular", R.font.cabin_regular, R.style.Font_CabinRegular),
-                Triple("Exo 2 Regular", R.font.exo2_regular, R.style.Font_Exo2Regular),
-                Triple("Georama Regular", R.font.georama_regular, R.style.Font_GeoramaRegular),
+                Triple("Instrument Sans Regular", R.font.instrumentsans_regular, R.style.Font_InstrumentSansRegular),
+                Triple("Lexend Regular", R.font.lexend_regular, R.style.Font_LexendRegular),
+                Triple("M Plus 2 Regular", R.font.mplus2_regular, R.style.Font_MPlus2Regular),
+                Triple("Nokora Regular", R.font.nokora_regular, R.style.Font_NokoraRegular),
+                Triple("Noto Sans Regular", R.font.notosans_regular, R.style.Font_NotoSansRegular),
                 Triple("Open Sans Regular", R.font.opensans_regular, R.style.Font_OpenSansRegular),
                 Triple("Outfit Regular", R.font.outfit_regular, R.style.Font_OutfitRegular),
-                Triple("Play Regular", R.font.play_regular, R.style.Font_PlayRegular),
+                Triple("Poppins Regular", R.font.poppins_regular, R.style.Font_PoppinsRegular),
+                Triple("Readex Pro Regular", R.font.readexpro_regular, R.style.Font_ReadexProRegular),
                 Triple("Roboto Regular", R.font.roboto_regular, R.style.Font_RobotoRegular),
-                Triple("Ubuntu Sans Regular", R.font.ubuntusans_regular, R.style.Font_UbuntuSansRegular)
+                Triple("Roboto Serif Regular", R.font.robotoserif_regular, R.style.Font_RobotoSerifRegular),
+                Triple("Source Serif 4 Regular", R.font.sourceserif4_regular, R.style.Font_SourceSerif4Regular),
+                Triple("Tasa Orbiter Regular", R.font.tasaorbiter_regular, R.style.Font_TasaOrbiterRegular),
+                Triple("Ubuntu Sans Regular", R.font.ubuntusans_regular, R.style.Font_UbuntuSansRegular),
+                Triple("Vend Sans Regular", R.font.vendsans_regular, R.style.Font_VendSansRegular),
             )
 
             // Create the dialog first (to make it accessible in the adapter)
@@ -1204,16 +1247,26 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     val currentFont = sharedPreferencesHelper.getSelectedFont()
                     val isSelected = (fontResId == null && currentFont == "system_default") ||
                             (fontResId != null && when (fontResId) {
+                                R.font.alansans_regular -> "alansans_regular"
+                                R.font.alexandria_regular -> "alexandria_regular"
+                                R.font.aronesans_regular -> "aronesans_regular"
+                                R.font.funneldisplay_regular -> "funneldisplay_regular"
                                 R.font.geologica_light -> "geologica_light"
-                                R.font.lato_regular -> "lato_regular"
-                                R.font.cabin_regular -> "cabin_regular"
-                                R.font.exo2_regular -> "exo2_regular"
-                                R.font.georama_regular -> "georama_regular"
+                                R.font.instrumentsans_regular -> "instrumentsans_regular"
+                                R.font.lexend_regular -> "lexend_regular"
+                                R.font.mplus2_regular -> "mplus2_regular"
+                                R.font.nokora_regular -> "nokora_regular"
+                                R.font.notosans_regular -> "notosans_regular"
                                 R.font.opensans_regular -> "opensans_regular"
                                 R.font.outfit_regular -> "outfit_regular"
-                                R.font.play_regular -> "play_regular"
+                                R.font.poppins_regular -> "poppins_regular"
+                                R.font.readexpro_regular -> "readexpro_regular"
                                 R.font.roboto_regular -> "roboto_regular"
+                                R.font.robotoserif_regular -> "robotoserif_regular"
+                                R.font.sourceserif4_regular -> "sourceserif4_regular"
+                                R.font.tasaorbiter_regular -> "tasaorbiter_regular"
                                 R.font.ubuntusans_regular -> "ubuntusans_regular"
+                                R.font.vendsans_regular -> "vendsans_regular"
                                 else -> ""
                             } == currentFont)
                     if (isSelected) {
@@ -1228,16 +1281,26 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             "system_default"  // Special value for system font
                         } else {
                             when (fontResId) {
+                                R.font.alansans_regular -> "alansans_regular"
+                                R.font.alexandria_regular -> "alexandria_regular"
+                                R.font.aronesans_regular -> "aronesans_regular"
+                                R.font.funneldisplay_regular -> "funneldisplay_regular"
                                 R.font.geologica_light -> "geologica_light"
-                                R.font.lato_regular -> "lato_regular"
-                                R.font.cabin_regular -> "cabin_regular"
-                                R.font.exo2_regular -> "exo2_regular"
-                                R.font.georama_regular -> "georama_regular"
+                                R.font.instrumentsans_regular -> "instrumentsans_regular"
+                                R.font.lexend_regular -> "lexend_regular"
+                                R.font.mplus2_regular -> "mplus2_regular"
+                                R.font.nokora_regular -> "nokora_regular"
+                                R.font.notosans_regular -> "notosans_regular"
                                 R.font.opensans_regular -> "opensans_regular"
                                 R.font.outfit_regular -> "outfit_regular"
-                                R.font.play_regular -> "play_regular"
+                                R.font.poppins_regular -> "poppins_regular"
+                                R.font.readexpro_regular -> "readexpro_regular"
                                 R.font.roboto_regular -> "roboto_regular"
+                                R.font.robotoserif_regular -> "robotoserif_regular"
+                                R.font.sourceserif4_regular -> "sourceserif4_regular"
+                                R.font.tasaorbiter_regular -> "tasaorbiter_regular"
                                 R.font.ubuntusans_regular -> "ubuntusans_regular"
+                                R.font.vendsans_regular -> "vendsans_regular"
                                 else -> "geologica_light"
                             }
                         }
