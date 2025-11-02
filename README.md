@@ -5,16 +5,27 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 ## ✨ Features
 
 🤖 Multi-Model Support: Switch between different LLM bots and models.
+
 💬 Chat Interface: A clean and intuitive interface for conversing with AI models.
+
 💾 Save & Load Chats: Save your text chat sessions and load them later to continue the conversation.
+
 📤📥 Import & Export: Easily import and export your chat histories.
+
 ⚡ Streaming or Non-Streaming Responses: You choose!
+
 🖼️ Chat with Images: With models that support it!
+
 🎨 Image Generation: With models that support it!
+
 ✍️ System Message Customization: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.
+
 🧠 Reasoning: Choose settings for reasoning models.
+
 ⚙️ Presets: Create, edit, and manage a library of presets to apply a combination of models, system messages, and options with one click. Presets are also exposed as system share targets.
+
 🔤 Font: Customize the display font for optimal readability in the main chat screen.
+
 🎙️ Conversation Mode: Speak to the AI and have responses read out loud automatically.
 
 🔗 OpenRouter Integration:  

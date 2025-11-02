@@ -536,7 +536,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val line = channel.readUTF8Line() ?: continue
                         if (line.startsWith("data:")) {
                             val jsonString = line.substring(5).trim()
-                            if (jsonString == "[DONE]") break
+                          //  if (jsonString == "[DONE]") break
+                            if (jsonString == "[DONE]") {
+                                // ==== NEW: read the final payload that may contain citations ====
+                                // OpenRouter occasionally sends one more delta *after* [DONE]
+                                // that has the full citations.  We already exited the loop
+                                // too early; instead we simply keep accumulating below.
+                                // (We do NOT break here any more.)
+                                continue
+                            }
 
                             try {
                                 val chunk = json.decodeFromString<StreamedChatResponse>(jsonString)
@@ -554,8 +562,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 finish_reason = choice?.finish_reason ?: finish_reason
                                 lastChoice = choice
                                 val delta = choice?.delta
+                                delta?.annotations?.forEach { accumulatedAnnotations.add(it)}
 
-                                var contentChanged = false
+                                    var contentChanged = false
                                 var reasoningChanged = false
 
                                 if (!delta?.content.isNullOrEmpty()) {
