@@ -54,8 +54,16 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Vision Capable"
-        app:trackDecorationTint="#686868"
+        android:visibility="gone"
+        app:trackDecorationTint="#686868" />
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switchReasoningCapable"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Reasoning Capable"
+        android:visibility="gone"
+        app:trackDecorationTint="#686868" />
 
-        />
 
 </LinearLayout>

@@ -25,6 +25,7 @@ class SharedPreferencesHelper(context: Context) {
     private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
+        private const val KEY_PRESETS = "user_presets"
         private const val KEY_SELECTED_FONT = "selected_font"
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_CONVERSATION_MODE_ENABLED = "conversation_mode_enabled"
@@ -460,6 +461,23 @@ class SharedPreferencesHelper(context: Context) {
     fun saveDefaultSystemMessage(systemMessage: SystemMessage) {
         val jsonString = json.encodeToString(systemMessage)
         mainPrefs.edit { putString(KEY_DEFAULT_SYSTEM_MESSAGE, jsonString) }
+    }
+    fun savePresets(presets: List<Preset>) {
+        val jsonString = json.encodeToString(presets)
+        mainPrefs.edit { putString(KEY_PRESETS, jsonString) }
+    }
+
+    fun getPresets(): List<Preset> {
+        val jsonString = mainPrefs.getString(KEY_PRESETS, null)
+        return if (jsonString != null) {
+            try {
+                json.decodeFromString(jsonString)
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
     }
 
 }

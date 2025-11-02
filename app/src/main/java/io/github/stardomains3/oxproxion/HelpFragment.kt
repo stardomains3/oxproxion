@@ -144,7 +144,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Sending Prompts
             *   **Text Box**: Enter your prompt.
-            *   **Send Button**: Send your prompt to the LLM. **Long-press** it to clear the text box.
+            *   **Send Button**: Send your prompt to the LLM. **Long-press** it to open the Presets screen.
             *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
             *   **Image Button**: Appears for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. 
             *   **Palette Button**: If using Nano-Banana, tap to set aspect ratio of returned generated image.
@@ -175,6 +175,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Extended Dock Button**: Toggles extended dock on or off. If on, an extra row is added to the bottom dock. On the right is a Paste button, which when pressed pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. On the left is either a Speech-to-Text button when the prompt box is empty, or a Clear Prompt button when the prompt box has some text.
             *   **Conversation Button**: Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
             *   **Biometric Button**: Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
+            *   **Presets Button**: Opens the Presets screen. These enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
+            *   **Fonts Button**: Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
             ---
 
             ## 📂 App Screens
@@ -242,6 +244,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   Imports are programmed to not overwrite: System Messages skip duplicates by title, while Saved Chats add new entries even when titles match, leaving all existing items intact.
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
             *   OpenRouter allows Presets which allow you to manage your LLM configurations—models, provider routing, and other features. You can use Presets in oxproxion by just manually adding them in your model list. [https://openrouter.ai/docs/features/presets/](https://openrouter.ai/docs/features/presets/)
+            *   The app is a target for multiple text shares: "Prompt"(set the prompt to the shared text), "System Message Chooser"(set the prompt to the shared text and sets the System Message as chosen in the popup), "Auto Send"(Auto sends the prompt to current model with current settings), and "Presets"(Allows the user to apply a chosen preset and options for the shared text.)
             
             ## What You Can Do With oxproxion
 

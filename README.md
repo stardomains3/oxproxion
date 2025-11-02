@@ -4,14 +4,19 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 
 ## ✨ Features
 
-**🤖 Multi-Model Support**: Switch between different LLM bots and models.  
-**💬 Chat Interface**: A clean and intuitive interface for conversing with AI models.  
-**💾 Save & Load Chats**: Save your text chat sessions and load them later to continue the conversation.  
-**📤📥 Import & Export**: Easily import and export your chat histories.  
-**⚡ Streaming or Non-Streaming Responses**: You choose!  
-**🖼️ Chat with Images**: With models that support it!  
-**🖼️ Image Generation**: With models that support it!  
-✍️ System Message Customization: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.  
+🤖 Multi-Model Support: Switch between different LLM bots and models.
+💬 Chat Interface: A clean and intuitive interface for conversing with AI models.
+💾 Save & Load Chats: Save your text chat sessions and load them later to continue the conversation.
+📤📥 Import & Export: Easily import and export your chat histories.
+⚡ Streaming or Non-Streaming Responses: You choose!
+🖼️ Chat with Images: With models that support it!
+🎨 Image Generation: With models that support it!
+✍️ System Message Customization: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.
+🧠 Reasoning: Choose settings for reasoning models.
+⚙️ Presets: Create, edit, and manage a library of presets to apply a combination of models, system messages, and options with one click. Presets are also exposed as system share targets.
+🔤 Font: Customize the display font for optimal readability in the main chat screen.
+🎙️ Conversation Mode: Speak to the AI and have responses read out loud automatically.
+
 🔗 OpenRouter Integration:  
   • Tap icon in model list to open the OpenRouter models list in your browser.  
   • Long-press the API key icon to view your remaining OpenRouter credits.  
@@ -68,6 +73,11 @@ Here are some screenshots of the app in action:
 
 *Advanced Reasoning Settings*
 
+### Presets
+![Presest Screen](screenshots/10.png)
+
+*Presets Screen*
+
 ## ️ Technologies Used
 
 - **UI**: Android Jetpack, Material Components, View Binding
@@ -97,6 +107,7 @@ This application requires an API key from [OpenRouter.ai](https://openrouter.ai/
 Once you have your key, you can add it to the app where prompted.
 
 **Disclaimer:** This project is not affiliated with, endorsed by, or sponsored by OpenRouter.ai in any way.
+*   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
 
 If you find this app useful, please consider supporting its developer: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
 

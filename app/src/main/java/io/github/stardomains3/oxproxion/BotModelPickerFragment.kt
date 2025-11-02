@@ -245,6 +245,7 @@ class BotModelPickerFragment : Fragment() {
             putString("displayName", modelToEdit.displayName)
             putString("apiIdentifier", modelToEdit.apiIdentifier)
             putBoolean("isVisionCapable", modelToEdit.isVisionCapable)
+            putBoolean("isReasoningCapable", modelToEdit.isReasoningCapable)
         }
         dialog.onModelUpdated = { oldModel, newModel ->
             updateModel(oldModel, newModel)

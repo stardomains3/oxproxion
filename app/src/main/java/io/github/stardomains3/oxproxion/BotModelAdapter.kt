@@ -3,7 +3,6 @@ package io.github.stardomains3.oxproxion
 
 import android.content.Intent
 import android.graphics.Color
-import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -90,7 +89,7 @@ class BotModelAdapter(
         }*/
         holder.editIcon.setOnClickListener {
             if (model.apiIdentifier == "meta-llama/llama-4-maverick") {
-                android.widget.Toast.makeText(holder.itemView.context, "Maverick is the permanent default model and cannot be edited or deleted.", android.widget.Toast.LENGTH_SHORT).show()
+                Toast.makeText(holder.itemView.context, "Maverick is the permanent default model and cannot be edited or deleted.", Toast.LENGTH_SHORT).show()
             } else {
                 showModelPopupWindow(holder.editIcon, model) // Pass the icon as anchor
             }
@@ -158,11 +157,9 @@ class BotModelAdapter(
         val anchorY = location[1]
         val anchorHeight = anchorView.height
 
-        // Get screen height
-        val displayMetrics = DisplayMetrics()
-        val windowManager = anchorView.context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
-        windowManager.defaultDisplay.getMetrics(displayMetrics)
-        val screenHeight = displayMetrics.heightPixels
+        // Get screen height (modern API for API 31+)
+        val wm = context.getSystemService(WindowManager::class.java)
+        val screenHeight = wm.maximumWindowMetrics.bounds.height()
 
         // Calculate available space below and above the anchor
         val spaceBelow = screenHeight - anchorY - anchorHeight

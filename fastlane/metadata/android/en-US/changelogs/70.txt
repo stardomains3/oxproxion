@@ -1,0 +1,6 @@
+- Got rid of some deprecations.
+- Updated okhttp.
+- Removed legacy "Vision Capable" when adding or editing a personal model. But if it is an Openrouter preset ("@preset/") or ends in ":nitro", ":online" or ":floor", "Vision Capable" and "Reasoning Capable" toggles will appear for the user to set.
+- Added app presets(unrelated to aforementioned Openrouter presets) that enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
+- Changed the behavior of long-pressing the Send prompt button to open the Presets screen.
+- Changed "Chooser" share target label to "System Message Chooser".

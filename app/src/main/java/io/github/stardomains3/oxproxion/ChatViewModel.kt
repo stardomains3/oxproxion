@@ -107,9 +107,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun isReasoningModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
-        val allModels = sharedPreferencesHelper.getOpenRouterModels()
-        val model = allModels.find { it.apiIdentifier == modelIdentifier }
-        return model?.isReasoningCapable ?: false
+
+        // 1. built-ins + presets / custom models
+        val customModels = sharedPreferencesHelper.getCustomModels()
+        val own = (getBuiltInModels() + customModels)
+            .find { it.apiIdentifier == modelIdentifier }
+        if (own?.isReasoningCapable == true) return true
+
+        // 2. fall back to the downloaded OR catalogue (in case we ever ship
+        //    official reasoning models there and the user picked one)
+        val fromOr = sharedPreferencesHelper.getOpenRouterModels()
+            .find { it.apiIdentifier == modelIdentifier }
+        return fromOr?.isReasoningCapable ?: false
     }
 
     fun hasImagesInChat(): Boolean = _chatMessages.value?.any { isImageMessage(it) } ?: false
@@ -143,9 +152,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val modelPreferenceToSave: LiveData<String?> = _modelPreferenceToSave
     private val _creditsResult = MutableLiveData<Event<String>>()
     val creditsResult: LiveData<Event<String>> = _creditsResult
-    private val _isStreamingEnabled = MutableLiveData<Boolean>(false)
+    val _isStreamingEnabled = MutableLiveData<Boolean>(false)
     val isStreamingEnabled: LiveData<Boolean> = _isStreamingEnabled
-    private val _isReasoningEnabled = MutableLiveData(false)
+    val _isReasoningEnabled = MutableLiveData(false)
     val isReasoningEnabled: LiveData<Boolean> = _isReasoningEnabled
     private val _isAdvancedReasoningOn = MutableLiveData(false)
     val isAdvancedReasoningOn: LiveData<Boolean> = _isAdvancedReasoningOn
@@ -160,6 +169,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val autosendEvent: LiveData<Event<Unit>> = _autosendEvent
     private val _userScrolledDuringStream = MutableLiveData(false)
     val userScrolledDuringStream: LiveData<Boolean> = _userScrolledDuringStream
+    private val _presetAppliedEvent = MutableLiveData<Event<Unit>>()
+    val presetAppliedEvent: LiveData<Event<Unit>> = _presetAppliedEvent
+
+    fun signalPresetApplied() {
+        _presetAppliedEvent.value = Event(Unit)
+    }
 
     fun toggleStreaming() {
         val newStremingState = !(_isStreamingEnabled.value ?: false)
@@ -981,7 +996,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     }
 
-    private fun getBuiltInModels(): List<LlmModel> {
+    fun getBuiltInModels(): List<LlmModel> {
         return listOf(
             LlmModel("Meta: Llama 4 Maverick", "meta-llama/llama-4-maverick", true)
         )

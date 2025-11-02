@@ -1,12 +1,14 @@
 package io.github.stardomains3.oxproxion
 
+
 import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.PorterDuff
 import android.os.Bundle
-import android.view.LayoutInflater
+import android.view.View
 import android.widget.EditText
 import androidx.core.graphics.toColorInt
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -20,77 +22,97 @@ class EditModelDialogFragment : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val builder = MaterialAlertDialogBuilder(requireContext())
-        val inflater = LayoutInflater.from(requireContext())
-        val view = inflater.inflate(R.layout.dialog_add_model, null)
+        val view = layoutInflater.inflate(R.layout.dialog_add_model, null)
 
-        val editName = view.findViewById<EditText>(R.id.editModelName)
-        val editApiId = view.findViewById<EditText>(R.id.editApiIdentifier)
-        val switchVision = view.findViewById< MaterialSwitch>(R.id.switchVisionCapable)
-        val thumbTintSelector = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(
-                "#000000".toColorInt(),  // Checked state color
-                "#686868".toColorInt()   // Unchecked state color
-            )
-        )
-        val trackTintSelector = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(
-                "#a0610a".toColorInt(),  // On state color
-                "#000000".toColorInt()   // Off state color
-            )
-        )
+        val editName      = view.findViewById<EditText>(R.id.editModelName)
+        val editApiId     = view.findViewById<EditText>(R.id.editApiIdentifier)
+        val switchVision  = view.findViewById<MaterialSwitch>(R.id.switchVisionCapable)
+        val switchReason  = view.findViewById<MaterialSwitch>(R.id.switchReasoningCapable)
 
-// Apply to your MaterialSwitch instance
-        switchVision.trackTintList = trackTintSelector
-        switchVision.thumbTintList = thumbTintSelector
-        switchVision.thumbTintMode = PorterDuff.Mode.SRC_ATOP
-        switchVision.trackTintMode = PorterDuff.Mode.SRC_ATOP
+        /* ----------  tint styling – unchanged  ---------- */
+        val thumbTint = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)),
+            intArrayOf("#000000".toColorInt(), "#686868".toColorInt()))
+        val trackTint = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)),
+            intArrayOf("#a0610a".toColorInt(), "#000000".toColorInt()))
 
+        listOf(switchVision, switchReason).forEach {
+            it.thumbTintList  = thumbTint
+            it.trackTintList  = trackTint
+            it.thumbTintMode  = PorterDuff.Mode.SRC_ATOP
+            it.trackTintMode  = PorterDuff.Mode.SRC_ATOP
+        }
+
+        /* ----------  restore existing model  ---------- */
         existingModel = arguments?.let { args ->
-            val displayName = args.getString("displayName")
-            val apiIdentifier = args.getString("apiIdentifier")
-            if (displayName != null && apiIdentifier != null) {
-                LlmModel(displayName, apiIdentifier, args.getBoolean("isVisionCapable", false))
-            } else {
-                null
-            }
+            val dn = args.getString("displayName")
+            val id = args.getString("apiIdentifier")
+            if (!dn.isNullOrBlank() && !id.isNullOrBlank()) {
+                LlmModel(
+                    displayName  = dn,
+                    apiIdentifier = id,
+                    isVisionCapable = args.getBoolean("isVisionCapable", false),
+                    isReasoningCapable = args.getBoolean("isReasoningCapable", false)
+                )
+            } else null
         }
 
-        existingModel?.let { model ->
-            editName.setText(model.displayName)
-            editApiId.setText(model.apiIdentifier)
-            switchVision.isChecked = model.isVisionCapable
+        existingModel?.let { m ->
+            editName.setText(m.displayName)
+            editApiId.setText(m.apiIdentifier)
+            switchVision.isChecked = m.isVisionCapable
+            switchReason.isChecked = m.isReasoningCapable
             builder.setTitle("Edit Model")
-        } ?: run {
-            builder.setTitle("Add Model")
-        }
+            editApiId.setText(m.apiIdentifier)
+        } ?: builder.setTitle("Add Model")
 
+        /* ----------  watch the api-id field  ---------- */
+        fun updateSwitchesVisibility() {
+            val id = editApiId.text.toString().trim()
+            val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
+                    id.endsWith(":online", ignoreCase = true) ||
+                    id.endsWith(":nitro",  ignoreCase = true) ||
+                    id.endsWith(":floor",  ignoreCase = true)
+
+            switchVision.visibility  = if (isSpecial) View.VISIBLE else View.GONE
+            switchReason.visibility  = if (isSpecial) View.VISIBLE else View.GONE
+        }
+        editApiId.doAfterTextChanged { updateSwitchesVisibility() }
+        updateSwitchesVisibility()   // initial call
+
+        /* ----------  buttons  ---------- */
         builder.setView(view)
             .setPositiveButton("Save") { _, _ ->
                 val name = editName.text.toString().trim()
-                val apiId = editApiId.text.toString().trim()
-                val visionCapable = switchVision.isChecked
+                val id   = editApiId.text.toString().trim()
 
-                if (name.isNotBlank() && apiId.isNotBlank()) {
-                    val newModel = LlmModel(name, apiId, visionCapable)
+                if (name.isBlank() || id.isBlank()) return@setPositiveButton
 
-                    existingModel?.let {
-                        onModelUpdated?.invoke(it, newModel)
-                    } ?: run {
-                        onModelAdded?.invoke(newModel)
-                    }
-                }
+                val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
+                        id.endsWith(":online", ignoreCase = true) ||
+                        id.endsWith(":nitro",  ignoreCase = true) ||
+                        id.endsWith(":floor",  ignoreCase = true)
+
+                val vision    = if (isSpecial) switchVision.isChecked  else false
+                val reasoning = if (isSpecial) switchReason.isChecked else false
+
+
+
+                val newModel = LlmModel(
+                    displayName  = name,
+                    apiIdentifier= id,
+                    isVisionCapable     = vision,
+                    isReasoningCapable  = reasoning
+                )
+
+                existingModel?.let { old -> onModelUpdated?.invoke(old, newModel) }
+                    ?: onModelAdded?.invoke(newModel)
             }
             .setNegativeButton("Cancel", null)
 
         return builder.create()
     }
-
 }

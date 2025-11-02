@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dialog_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- ListView IS the scrollable area -->
+    <ListView
+        android:id="@+id/presetListView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:choiceMode="singleChoice"
+        android:divider="#444444"
+        android:dividerHeight="1dp"
+        android:scrollbars="vertical" />
+
+    <CheckBox
+        android:id="@+id/clearChatCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Clear Chat"
+        android:textColor="#CCCCCC"
+        android:textSize="16sp" />
+
+</LinearLayout>

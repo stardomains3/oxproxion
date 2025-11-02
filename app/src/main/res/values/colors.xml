@@ -22,6 +22,7 @@
     <color name="threetwo">#323232</color>
     <color name="ic_launcherrobot_background">#000000</color>
     <color name="advanced_reasoning_color">#ff0008</color>
+    <color name="gray">#666666</color>
 
 
 </resources>

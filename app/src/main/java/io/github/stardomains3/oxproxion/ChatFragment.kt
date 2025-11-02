@@ -90,6 +90,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var isSpeaking = false
     private var currentSpeakingPosition = -1
     private lateinit var helpButton: MaterialButton
+    private lateinit var presetsButton: MaterialButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
@@ -299,6 +300,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         removeAttachmentButton = view.findViewById(R.id.removeAttachmentButton)
         headerContainer = view.findViewById(R.id.headerContainer)
         helpButton = view.findViewById(R.id.helpButton)
+        presetsButton = view.findViewById(R.id.presetsButton)
         arguments?.getString("shared_text")?.let { sharedText ->
             setSharedText(sharedText)
             arguments?.remove("shared_text") // To prevent re-processing
@@ -537,6 +539,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
             else if (!isEnabled && ForegroundService.isRunningForeground){
                 stopForegroundService()
+            }
+        }
+        viewModel.presetAppliedEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                updateSystemMessageButtonState()
+                convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
             }
         }
         viewModel.scrollToBottomEvent.observe(viewLifecycleOwner) { event ->
@@ -1115,6 +1123,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 .addToBackStack(null)
                 .commit()
         }
+        presetsButton.setOnClickListener {
+            hideMenu()
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, PresetsListFragment())
+                .addToBackStack(null)
+                .commit()
+        }
         reasoningButton.setOnLongClickListener {
             if(reasoningButton.isSelected)
             {
@@ -1356,8 +1372,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
            /* if (!chatEditText.text.isBlank()) {
                 chatEditText.text.clear()
             }*/
-            chatEditText.setText("")
-            chatEditText.text.clear()
+           // chatEditText.setText("")
+            //chatEditText.text.clear()
+
+            hideMenu()
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, PresetsListFragment())
+                .addToBackStack(null)
+                .commit()
 
             true
         }
@@ -1695,6 +1718,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             chatEditText.requestFocus()
             viewModel.checkAdvancedReasoningStatus()
             viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
+            convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         }
     }
 
