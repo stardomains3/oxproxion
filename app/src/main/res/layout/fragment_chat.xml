@@ -665,7 +665,7 @@
                     android:insetLeft="0dp"
                     android:insetRight="0dp"
                     app:iconTint="#A8A8A8"
-                    app:backgroundTint="@color/button_background_col" />
+                    app:backgroundTint="@color/sysbutton_background_col" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
