@@ -1,0 +1,1 @@
+- Presets list is now collapsed and sortable by dragging by the user.

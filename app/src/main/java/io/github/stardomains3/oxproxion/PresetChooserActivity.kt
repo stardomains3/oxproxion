@@ -39,7 +39,7 @@ class PresetChooserActivity : AppCompatActivity() {
 
     private fun showPresetChooser(sharedText: String) {
         val presetRepository = PresetRepository(this)
-        val allPresets = presetRepository.getAll().sortedBy { it.title.lowercase() }
+        val allPresets = presetRepository.getAll()
 
         if (allPresets.isEmpty()) {
             // No presets available

@@ -7,11 +7,13 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import java.util.Collections
 
 class PresetsListFragment : Fragment() {
 
@@ -41,17 +43,16 @@ class PresetsListFragment : Fragment() {
                     parentFragmentManager.popBackStack()
                 }
             },
-
             onItemEdit = { preset ->
                 val dialog = PresetEditFragment.newInstance(preset)
                 parentFragmentManager.beginTransaction()
-                    .replace(R.id.fragment_container, dialog) // replaces current fragment
+                    .replace(R.id.fragment_container, dialog)
                     .addToBackStack(null)
                     .commit()
             },
             onItemDelete = { preset ->
-                MaterialAlertDialogBuilder(requireContext())  // CHANGED: Material for dim/consistency
-                    .setMessage("Delete \"${preset.title}\"?")  // No title, as preferred
+                MaterialAlertDialogBuilder(requireContext())
+                    .setMessage("Delete \"${preset.title}\"?")
                     .setPositiveButton("Delete") { _, _ ->
                         repository.deleteById(preset.id)
                         refresh()
@@ -65,6 +66,37 @@ class PresetsListFragment : Fragment() {
         recycler.layoutManager = LinearLayoutManager(requireContext())
         recycler.adapter = adapter
 
+        // Add drag and drop functionality
+        val callback = object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+            0
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val from = viewHolder.bindingAdapterPosition
+                val to = target.bindingAdapterPosition
+                if (from == RecyclerView.NO_POSITION || to == RecyclerView.NO_POSITION) return false
+
+                adapter.move(from, to)
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                // No-op
+            }
+
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                // Persist the new order when drag is released
+                repository.saveAll(adapter.getItems())
+            }
+        }
+        val itemTouchHelper = ItemTouchHelper(callback)
+        itemTouchHelper.attachToRecyclerView(recycler)
+
         fab.setOnClickListener {
             val dialog = PresetEditFragment.newInstance(null)
             parentFragmentManager.beginTransaction()
@@ -77,7 +109,8 @@ class PresetsListFragment : Fragment() {
     }
 
     private fun refresh() {
-        adapter.update(repository.getAll().sortedBy { it.title.lowercase() })
+        // Load presets in saved order (no sorting)
+        adapter.update(repository.getAll())
     }
 
     private fun applyPresetSafely(preset: Preset): Boolean {

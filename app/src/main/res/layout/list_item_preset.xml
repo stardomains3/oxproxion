@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
-    android:clickable="true"
-    android:focusable="true">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
+
+
+
+    text
+
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -23,6 +22,20 @@
             android:textStyle="bold"
             android:text="Preset Title" />
 
+        <!-- New: Expand chevron -->
+        <ImageView
+            android:id="@+id/iconExpand"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_arrow_downward"
+            android:rotation="0"
+            android:padding="8dp"
+            android:background="@drawable/br_circle"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Expand/collapse"
+            android:tint="@android:color/white" />
+
         <ImageView
             android:id="@+id/iconEditPreset"
             android:layout_width="wrap_content"
@@ -34,16 +47,25 @@
             android:contentDescription="Edit preset" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/textPresetSubtitle"
+    <!-- New: Collapsible container for preview details -->
+    <LinearLayout
+        android:id="@+id/containerPresetSubtitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingBottom="12dp"
-        android:textColor="#CCCCCC"
-        android:textSize="14sp"
-        android:text="Model • System Message • Flags" />
+        android:visibility="gone"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textPresetSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#CCCCCC"
+            android:textSize="14sp"
+            android:text="Model • System Message • Flags" />
+    </LinearLayout>
 
     <View
         android:layout_width="match_parent"

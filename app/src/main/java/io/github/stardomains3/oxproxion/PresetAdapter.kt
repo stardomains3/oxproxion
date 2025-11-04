@@ -1,34 +1,35 @@
 package io.github.stardomains3.oxproxion
 
-import android.graphics.Color
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
-import android.widget.ImageView
-import android.widget.PopupWindow
-import android.widget.TextView
-import androidx.core.graphics.drawable.toDrawable
-import androidx.recyclerview.widget.RecyclerView
+import android.graphics.Color import android.view.LayoutInflater import android.view.View import android.view.ViewGroup import android.view.WindowManager import android.widget.ImageView import android.widget.PopupWindow import android.widget.TextView import androidx.core.graphics.drawable.toDrawable import androidx.recyclerview.widget.RecyclerView
+import androidx.core.view.isVisible
 
-class PresetAdapter(
-    private val onItemClicked: (Preset) -> Unit,
-    private val onItemEdit: (Preset) -> Unit,
-    private val onItemDelete: (Preset) -> Unit
-) : RecyclerView.Adapter<PresetAdapter.PresetVH>() {
+class PresetAdapter( private val onItemClicked: (Preset) -> Unit, private val onItemEdit: (Preset) -> Unit, private val onItemDelete: (Preset) -> Unit ) : RecyclerView.Adapter<PresetAdapter.PresetVH>() {
 
     private val items = mutableListOf<Preset>()
 
     fun update(list: List<Preset>) {
         items.clear()
         items.addAll(list)
+        // Collapse everything on refresh
+        items.forEach { it.isExpanded = false }
         notifyDataSetChanged()
     }
 
+    fun move(from: Int, to: Int) {
+        if (from == to) return
+        val item = items.removeAt(from)
+        items.add(to, item)
+        notifyItemMoved(from, to)
+    }
+
+    fun getItems(): List<Preset> = items
+
     class PresetVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val title: TextView = itemView.findViewById(R.id.textPresetTitle)
+        val subtitleContainer: ViewGroup = itemView.findViewById(R.id.containerPresetSubtitle) // new
         val subtitle: TextView = itemView.findViewById(R.id.textPresetSubtitle)
         val edit: ImageView = itemView.findViewById(R.id.iconEditPreset)
+        val expandIcon: ImageView = itemView.findViewById(R.id.iconExpand) // new
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PresetVH {
@@ -41,25 +42,43 @@ class PresetAdapter(
     override fun onBindViewHolder(holder: PresetVH, position: Int) {
         val preset = items[position]
         holder.title.text = preset.title
-        holder.subtitle.text = buildString {
-            append("Model: ")
-            append(preset.modelIdentifier)
-            append(" • ")
-            append("SysMsg: ")
-            append(preset.systemMessage.title)
-            append(" • Stream: ")
-            append(if (preset.streaming) "On" else "Off")
-            append(" • Reason: ")
-            append(if (preset.reasoning) "On" else "Off")
-            append(" • Convo: ")
-            append(if (preset.conversationMode) "On" else "Off")
+        updateSubtitle(holder, preset)
+        holder.subtitleContainer.visibility = if (preset.isExpanded) View.VISIBLE else View.GONE
+        holder.expandIcon.rotation = if (preset.isExpanded) 180f else 0f
+
+        // Expand/collapse on chevron click only
+        holder.expandIcon.setOnClickListener {
+            preset.isExpanded = !preset.isExpanded
+            notifyItemChanged(position)
         }
 
+        // Apply preset on list item click (root view)
         holder.itemView.setOnClickListener { onItemClicked(preset) }
+
+        // Edit menu
         holder.edit.setOnClickListener {
-            showPresetPopupWindow(holder.edit, preset)  // Anchored dimmed popup near icon
+            showPresetPopupWindow(holder.edit, preset)
         }
     }
+
+    private fun updateSubtitle(holder: PresetVH, preset: Preset) {
+        if (holder.subtitleContainer.isVisible) {
+            holder.subtitle.text = buildString {
+                append("Model: ")
+                append(preset.modelIdentifier)
+                append(" • ")
+                append("SysMsg: ")
+                append(preset.systemMessage.title)
+                append(" • Stream: ")
+                append(if (preset.streaming) "On" else "Off")
+                append(" • Reason: ")
+                append(if (preset.reasoning) "On" else "Off")
+                append(" • Convo: ")
+                append(if (preset.conversationMode) "On" else "Off")
+            }
+        }
+    }
+
     private fun showPresetPopupWindow(anchorView: View, preset: Preset) {
         val inflater = LayoutInflater.from(anchorView.context)
         val menuView = inflater.inflate(R.layout.menu_popup_layout, null)
@@ -113,13 +132,9 @@ class PresetAdapter(
         val anchorY = location[1]
         val anchorHeight = anchorView.height
 
-        // UPDATED: Modern API for screen height (no deprecations on API 30+)
-        val screenHeight: Int = {
-            val wm = context.getSystemService(WindowManager::class.java)
-            val metrics = wm.maximumWindowMetrics
-            metrics.bounds.height()
-        }()
-
+        val wm = context.getSystemService(WindowManager::class.java)
+        val metrics = wm.maximumWindowMetrics
+        val screenHeight = metrics.bounds.height()
 
         val spaceBelow = screenHeight - anchorY - anchorHeight
         val spaceAbove = anchorY
@@ -132,6 +147,4 @@ class PresetAdapter(
             popupWindow.showAsDropDown(anchorView)
         }
     }
-
-
 }
