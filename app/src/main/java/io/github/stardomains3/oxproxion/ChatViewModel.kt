@@ -1271,9 +1271,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val provider = sharedPreferencesHelper.getLanProvider()
         return when (provider) {
             SharedPreferencesHelper.LAN_PROVIDER_LM_STUDIO -> fetchLmStudioModels()
+            SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP -> fetchLlamaCppModels() // NEW
             else -> fetchOllamaModels() // Default to Ollama
         }
     }
+
     suspend fun fetchLmStudioModels(): List<LlmModel> {
         val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
         if (lanEndpoint.isNullOrBlank()) {
@@ -1368,6 +1370,51 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 null // Skip malformed entries
             }
         }.sortedBy { it.displayName.lowercase() }
+    }
+
+    suspend fun fetchLlamaCppModels(): List<LlmModel> {
+        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+        if (lanEndpoint.isNullOrBlank()) {
+            throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
+        }
+
+        try {
+            val response = httpClient.get("$lanEndpoint/v1/models")
+            if (!response.status.isSuccess()) {
+                throw Exception("Server returned ${response.status}: ${response.status.description}")
+            }
+
+            val responseBody = response.body<JsonObject>()
+            val modelsArray = responseBody["models"]?.jsonArray ?: return emptyList()
+
+            return modelsArray.mapNotNull { modelJson ->
+                try {
+                    val modelObj = modelJson.jsonObject
+                    val name = modelObj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    val description = modelObj["description"]?.jsonPrimitive?.content ?: ""
+                    val capabilities = modelObj["capabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+
+
+
+                    LlmModel(
+                        displayName = if (description.isNotEmpty()) "$name - $description" else name,
+                        apiIdentifier = name,
+                        isVisionCapable = false,
+                        isImageGenerationCapable = false, // llama.cpp doesn't typically do image generation
+                        isReasoningCapable = false,
+                        created = 0L, // Not available from llama.cpp API
+                        isFree = true, // Local models are always free
+                        isLANModel = true
+                    )
+                } catch (e: Exception) {
+                    Log.e("LlamaCppModels", "Failed to parse model: ${e.message}", e)
+                    null // Skip malformed entries
+                }
+            }.sortedBy { it.displayName.lowercase() }
+        } catch (e: Exception) {
+            Log.e("LlamaCppModels", "Failed to fetch llama.cpp models", e)
+            throw e
+        }
     }
     fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()
 

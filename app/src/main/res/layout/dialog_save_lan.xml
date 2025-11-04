@@ -85,6 +85,14 @@
                 android:text="LM Studio"
                 android:textColor="#FFFFFF"
                 android:buttonTint="#a0610a" />
+            <CheckBox
+                android:id="@+id/checkbox_llama_cpp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="llama.cpp"
+                android:textColor="#FFFFFF"
+                android:buttonTint="#a0610a"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
         <!-- Buttons -->

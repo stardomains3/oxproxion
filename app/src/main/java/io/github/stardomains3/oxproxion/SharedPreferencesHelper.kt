@@ -26,6 +26,7 @@ class SharedPreferencesHelper(context: Context) {
 
     companion object {
         const val LAN_PROVIDER_KEY = "lan_provider"
+        const val LAN_PROVIDER_LLAMA_CPP = "llama_cpp"
         const val LAN_PROVIDER_OLLAMA = "ollama"
         const val LAN_PROVIDER_LM_STUDIO = "lm_studio"
         private const val KEY_LAN_ENDPOINT = "lan_endpoint"
@@ -496,12 +497,8 @@ class SharedPreferencesHelper(context: Context) {
         return mainPrefs.getString(KEY_LAN_ENDPOINT, null)
     }
     fun getLanProvider(): String {
-        return mainPrefs.getString(
-            LAN_PROVIDER_KEY,
-            LAN_PROVIDER_OLLAMA
-        ) ?: LAN_PROVIDER_OLLAMA
+        return mainPrefs.getString(LAN_PROVIDER_KEY, LAN_PROVIDER_OLLAMA) ?: LAN_PROVIDER_OLLAMA
     }
-
     fun setLanProvider(provider: String) {
         mainPrefs.edit().putString(LAN_PROVIDER_KEY, provider).apply()
     }

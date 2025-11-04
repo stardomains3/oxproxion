@@ -44,6 +44,7 @@ class SaveLANDialogFragment : DialogFragment() {
         val editTextUrl = view.findViewById<TextInputEditText>(R.id.edit_text_lan_url)
         val checkboxOllama = view.findViewById<CheckBox>(R.id.checkbox_ollama)
         val checkboxLmStudio = view.findViewById<CheckBox>(R.id.checkbox_lm_studio)
+        val checkboxLlamaCpp = view.findViewById<CheckBox>(R.id.checkbox_llama_cpp)
         val btnSave   = view.findViewById<MaterialButton>(R.id.button_save_lan)
         val btnCancel = view.findViewById<MaterialButton>(R.id.button_cancel_lan)
 
@@ -53,14 +54,28 @@ class SaveLANDialogFragment : DialogFragment() {
         when (currentProvider) {
             SharedPreferencesHelper.LAN_PROVIDER_OLLAMA -> checkboxOllama.isChecked = true
             SharedPreferencesHelper.LAN_PROVIDER_LM_STUDIO -> checkboxLmStudio.isChecked = true
+            SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP -> checkboxLlamaCpp.isChecked = true
         }
 
         // Handle checkbox mutual exclusion
         checkboxOllama.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) checkboxLmStudio.isChecked = false
+            if (isChecked) {
+                checkboxLmStudio.isChecked = false
+                checkboxLlamaCpp.isChecked = false // NEW
+            }
         }
         checkboxLmStudio.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) checkboxOllama.isChecked = false
+            if (isChecked) {
+                checkboxOllama.isChecked = false
+                checkboxLlamaCpp.isChecked = false // NEW
+            }
+        }
+// NEW: Handle llama.cpp checkbox
+        checkboxLlamaCpp.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                checkboxOllama.isChecked = false
+                checkboxLmStudio.isChecked = false
+            }
         }
 
         btnSave.setOnClickListener {
@@ -70,16 +85,17 @@ class SaveLANDialogFragment : DialogFragment() {
                 raw.isBlank() -> {
                     editTextUrl.error = "Please enter a LAN endpoint URL"
                 }
-                !checkboxOllama.isChecked && !checkboxLmStudio.isChecked -> {
-                    Toast.makeText(requireContext(), "Please select Ollama or LM Studio", Toast.LENGTH_SHORT).show()
+                !checkboxOllama.isChecked && !checkboxLmStudio.isChecked && !checkboxLlamaCpp.isChecked -> { // UPDATED
+                    Toast.makeText(requireContext(), "Please select Ollama, LM Studio, or llama.cpp", Toast.LENGTH_SHORT).show() // UPDATED
                 }
                 raw.startsWith("http://") || raw.startsWith("https://") || raw.contains("://") -> {
                     prefs.setLanEndpoint(raw)
 
                     // Save provider preference
-                    val provider = when {
+                    val provider = when { // UPDATED
                         checkboxOllama.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_OLLAMA
                         checkboxLmStudio.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_LM_STUDIO
+                        checkboxLlamaCpp.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP // NEW
                         else -> SharedPreferencesHelper.LAN_PROVIDER_OLLAMA
                     }
                     prefs.setLanProvider(provider)
@@ -92,6 +108,7 @@ class SaveLANDialogFragment : DialogFragment() {
                 }
             }
         }
+
 
         btnCancel.setOnClickListener {
             dismiss()

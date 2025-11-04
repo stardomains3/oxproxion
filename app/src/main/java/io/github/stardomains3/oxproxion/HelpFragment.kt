@@ -97,7 +97,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             Welcome! This guide will help you understand how to use the **oxproxion** app.
 
-            **oxproxion** is an open-source Android app for chatting with OpenRouter LLMs, supporting both text and image inputs for compatible models. It now also allows chat with Ollama and LM Studio models served on your LAN.
+            **oxproxion** is an open-source Android app for chatting with OpenRouter LLMs, supporting both text and image inputs for compatible models. It now also allows chat with Ollama, LM Studio, or llama.cpp models served on your LAN.
 
             ---
 
@@ -198,7 +198,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **View Model Info**: Tap the icon on the right of the model to open its info page on the OpenRouter website.
             *   **Refresh**: Tap the **refresh icon** to get the latest list of models from OpenRouter.
             
-            ### "LAN Models" Screen (Ollama or LM Studio models)
+            ### "LAN Models" Screen (Ollama, LM Studio, or llama.cpp models)
             *   **Add to Your List**: Tap any model to add it to your "Select Model" screen.
             *   **Refresh**: The list will refresh when opened.
             
@@ -250,8 +250,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
             *   OpenRouter allows Presets which allow you to manage your LLM configurations—models, provider routing, and other features. You can use Presets in oxproxion by just manually adding them in your model list. [https://openrouter.ai/docs/features/presets/](https://openrouter.ai/docs/features/presets/)
             *   The app is a target for multiple text shares: "Prompt"(set the prompt to the shared text), "System Message Chooser"(set the prompt to the shared text and sets the System Message as chosen in the popup), "Auto Send"(Auto sends the prompt to current model with current settings), and "Presets"(Allows the user to apply a chosen preset and options for the shared text.)
-            *   Ollama and LM Studio endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
-            *   Ollama and LM Studio function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served on your LAN.
+            *   Ollama, LM Studio, and llama.cpp endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
+            *   Ollama, LM Studio, and llama.cpp function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served on your LAN.
             
             ## What You Can Do With oxproxion
 

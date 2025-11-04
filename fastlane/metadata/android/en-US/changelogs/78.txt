@@ -1,0 +1,1 @@
+- Add llama.cpp as a locally-served LAN AI served option.

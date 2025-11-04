@@ -1,6 +1,7 @@
 Android chat application designed to interact with various Language Learning Models (LLMs)
 
 🤖 Multi-Model Support: Switch between different LLM bots and models.
+🤖 Chat with OpenRouter models or locally served models using Ollama, LM Studio or llama.cpp.
 💬 Chat Interface: A clean and intuitive interface for conversing with AI models.
 💾 Save & Load Chats: Save your chat sessions and load them later to continue the conversation.
 📤📥 Import & Export: Easily import and export your chat histories.
