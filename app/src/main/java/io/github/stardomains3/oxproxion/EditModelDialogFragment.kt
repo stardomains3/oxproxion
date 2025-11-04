@@ -55,7 +55,8 @@ class EditModelDialogFragment : DialogFragment() {
                     displayName  = dn,
                     apiIdentifier = id,
                     isVisionCapable = args.getBoolean("isVisionCapable", false),
-                    isReasoningCapable = args.getBoolean("isReasoningCapable", false)
+                    isReasoningCapable = args.getBoolean("isReasoningCapable", false),
+                    isLANModel = args.getBoolean("isLANModel", false)
                 )
             } else null
         }
@@ -66,7 +67,6 @@ class EditModelDialogFragment : DialogFragment() {
             switchVision.isChecked = m.isVisionCapable
             switchReason.isChecked = m.isReasoningCapable
             builder.setTitle("Edit Model")
-            editApiId.setText(m.apiIdentifier)
         } ?: builder.setTitle("Add Model")
 
         /* ----------  watch the api-id field  ---------- */
@@ -75,7 +75,8 @@ class EditModelDialogFragment : DialogFragment() {
             val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
                     id.endsWith(":online", ignoreCase = true) ||
                     id.endsWith(":nitro",  ignoreCase = true) ||
-                    id.endsWith(":floor",  ignoreCase = true)
+                    id.endsWith(":floor",  ignoreCase = true) ||
+                    existingModel?.isLANModel == true
 
             switchVision.visibility  = if (isSpecial) View.VISIBLE else View.GONE
             switchReason.visibility  = if (isSpecial) View.VISIBLE else View.GONE
@@ -94,7 +95,8 @@ class EditModelDialogFragment : DialogFragment() {
                 val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
                         id.endsWith(":online", ignoreCase = true) ||
                         id.endsWith(":nitro",  ignoreCase = true) ||
-                        id.endsWith(":floor",  ignoreCase = true)
+                        id.endsWith(":floor",  ignoreCase = true) ||
+                        existingModel?.isLANModel == true
 
                 val vision    = if (isSpecial) switchVision.isChecked  else false
                 val reasoning = if (isSpecial) switchReason.isChecked else false

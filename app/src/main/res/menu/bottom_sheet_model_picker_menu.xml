@@ -1,7 +1,11 @@
 <!-- res/menu/bottom_sheet_model_picker_menu.xml -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-
+    <item
+        android:id="@+id/action_lan_models"
+        android:title="LAN Models"
+        android:icon="@drawable/ic_lan"
+        app:showAsAction="always" />
     <!-- Existing OpenRouter item -->
     <item
         android:id="@+id/action_open_router_models"

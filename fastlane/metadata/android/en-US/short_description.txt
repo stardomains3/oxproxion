@@ -1,1 +1,1 @@
-Chat with OpenRouter LLMs
+Chat with OpenRouter, Ollama and LM Studio LLMs

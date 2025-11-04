@@ -11,7 +11,7 @@
 <item android:state_focused="true" android:state_enabled="true" android:color="@color/focused_color"/>
 
 <!-- Selected state (only when enabled) -->
-<item android:state_selected="true" android:state_enabled="true" android:color="#6D2E0F" />
+<item android:state_selected="true" android:state_enabled="true" android:color="@color/pressed_color" />
 
 <!-- Default state (enabled but none of the above) -->
 <item android:state_enabled="true" android:color="#000000"/>

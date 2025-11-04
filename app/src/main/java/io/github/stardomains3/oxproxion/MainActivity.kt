@@ -285,6 +285,10 @@ class MainActivity : AppCompatActivity() {
 
 
             PresetManager.applyPreset(this, vm, preset)
+            if (ForegroundService.isRunningForeground && prefs.getNotiPreference()) {
+                val displayName = vm.getModelDisplayName(preset.title)
+                ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")
+            }
             vm.signalPresetApplied()
             Toast.makeText(this, "Preset Applied: ${preset.title}", Toast.LENGTH_SHORT).show()
 

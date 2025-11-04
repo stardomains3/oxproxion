@@ -50,6 +50,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.putJsonArray
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.text.TextContentRenderer
@@ -405,6 +406,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             userMessage = userMessage.copy(imageUri = uriStr)  // Embed string
             pendingUserImageUri = null
         }
+        activeChatUrl = "https://openrouter.ai/api/v1/chat/completions"
+        activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
+
+        if (activeModelIsLan())
+        {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint == null) { Toast.makeText( getApplication<Application>().applicationContext, "Please configure LAN endpoint in settings", Toast.LENGTH_SHORT ).show()
+                return }
+            activeChatUrl = "$lanEndpoint/v1/chat/completions"
+            activeChatApiKey = "any-non-empty-string" // Ollama/LM Studio typically ignore the key
+        }
+
+
+
         val thinkingMessage = THINKING_MESSAGE
 
         val messagesForApiRequest = mutableListOf<FlexibleMessage>()
@@ -1245,6 +1260,119 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         return downloadedUris  // NEW: Return list
     }
+    fun getActiveLlmModel(): LlmModel? {
+        val id = _activeChatModel.value ?: return null
+        val customModels = sharedPreferencesHelper.getCustomModels()
+        val builtIns = getBuiltInModels()
+        return customModels.find { it.apiIdentifier == id } ?: builtIns.find { it.apiIdentifier == id } }
+    fun activeModelIsLan(): Boolean = getActiveLlmModel()?.isLANModel == true
+
+    suspend fun fetchLanModels(): List<LlmModel> {
+        val provider = sharedPreferencesHelper.getLanProvider()
+        return when (provider) {
+            SharedPreferencesHelper.LAN_PROVIDER_LM_STUDIO -> fetchLmStudioModels()
+            else -> fetchOllamaModels() // Default to Ollama
+        }
+    }
+    suspend fun fetchLmStudioModels(): List<LlmModel> {
+        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+        if (lanEndpoint.isNullOrBlank()) {
+            throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
+        }
+
+        try {
+            val response = httpClient.get("$lanEndpoint/v1/models")
+            if (!response.status.isSuccess()) {
+                throw Exception("Server returned ${response.status}: ${response.status.description}")
+            }
+
+            val responseBody = response.body<JsonObject>()
+            val modelsArray = responseBody["data"]?.jsonArray ?: return emptyList()
+
+            return modelsArray.mapNotNull { modelJson ->
+                try {
+                    val modelObj = modelJson.jsonObject
+                    val id = modelObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+
+                    // Try to determine capabilities from model name
+                    val isVisionCapable = false
+                    val isReasoningCapable = false
+
+                    LlmModel(
+                        displayName = id,
+                        apiIdentifier = id,
+                        isVisionCapable = isVisionCapable,
+                        isImageGenerationCapable = false, // LM Studio doesn't typically do image generation
+                        isReasoningCapable = isReasoningCapable,
+                        created = 0L, // Not available from LM Studio API
+                        isFree = true, // Local models are always free
+                        isLANModel = true
+                    )
+                } catch (e: Exception) {
+                    Log.e("LmStudioModels", "Failed to parse model: ${e.message}", e)
+                    null // Skip malformed entries
+                }
+            }.sortedBy { it.displayName.lowercase() }
+        } catch (e: Exception) {
+            Log.e("LmStudioModels", "Failed to fetch LM Studio models", e)
+            throw e
+        }
+    }
+    suspend fun fetchOllamaModels(): List<LlmModel> {
+        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+        if (lanEndpoint == null) {
+            throw IllegalStateException("LAN endpoint not configured")
+        }
+
+        val response = httpClient.get("$lanEndpoint/api/tags")
+        if (!response.status.isSuccess()) {
+            throw Exception("Failed to fetch LAN models: ${response.status}")
+        }
+
+        val responseBody = response.body<JsonObject>()
+        val modelsArray = responseBody["models"]?.jsonArray ?: return emptyList()
+
+        return modelsArray.mapNotNull { modelJson ->
+            try {
+                val modelObj = modelJson.jsonObject
+                val name = modelObj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                val modifiedAtStr = modelObj["modified_at"]?.jsonPrimitive?.content
+                val size = modelObj["size"]?.jsonPrimitive?.longOrNull ?: 0L
+                val details = modelObj["details"]?.jsonObject
+
+                // Try to determine capabilities from model name and details
+                val isVisionCapable = false
+                val isImageGenerationCapable = false // Ollama doesn't typically do image generation
+                val isReasoningCapable = false
+
+                // Parse modified_at to timestamp (Ollama format: "2025-10-12T03:25:16.957624109-04:00")
+                val created = try {
+                    if (!modifiedAtStr.isNullOrEmpty()) {
+                        java.time.ZonedDateTime.parse(modifiedAtStr).toInstant().toEpochMilli()
+                    } else 0L
+                } catch (e: Exception) {
+                    0L
+                }
+
+                LlmModel(
+                    displayName = name,
+                    apiIdentifier = name,
+                    isVisionCapable = isVisionCapable,
+                    isImageGenerationCapable = isImageGenerationCapable,
+                    isReasoningCapable = isReasoningCapable,
+                    created = created,
+                    isFree = true, // Local models are always free
+                    isLANModel = true // All models from LAN endpoint are LAN models
+                )
+            } catch (e: Exception) {
+                null // Skip malformed entries
+            }
+        }.sortedBy { it.displayName.lowercase() }
+    }
+    fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()
+
+
+    fun getCurrentLanProvider(): String = sharedPreferencesHelper.getLanProvider()
     fun setUserScrolledDuringStream(value: Boolean) {
         _userScrolledDuringStream.value = value
     }

@@ -29,10 +29,17 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 🎙️ Conversation Mode: Speak to the AI and have responses read out loud automatically.
 
 🔗 OpenRouter Integration:  
-  • Tap icon in model list to open the OpenRouter models list in your browser.  
+
+  • Tap icon in model list to open the OpenRouter model's info in your browser.  
   • Long-press the API key icon to view your remaining OpenRouter credits.  
-📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard.  
-📄 On-Device PDF Export: Long-press the AI avatar icon to generate a PDF of that specific response, created locally using Android's native tools.  
+
+🔗 Ollama and LM Studio Integration:
+
+  • It now also allows chat with Ollama and LM Studio models served on your LAN.
+
+
+📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard. Long-press the response avatar to copy in Markdown.
+📄 On-Device PDF Export: Make a PDF of the whole chat with the PDF button in the options area. Or press the PDF icon/button on the response to generate a PDF of that specific response; All created locally using Android's native tools.  
 **🛠️ Built with Modern Tech**: 100 % Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
 
 ## Screenshots
@@ -88,6 +95,11 @@ Here are some screenshots of the app in action:
 ![Presest Screen](screenshots/10.png)
 
 *Presets Screen*
+
+### Ollama or LM studio Models
+![LAN Screen](screenshots/11.png)
+
+*LAN Screen*
 
 ## ️ Technologies Used
 

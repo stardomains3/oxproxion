@@ -25,6 +25,10 @@ class SharedPreferencesHelper(context: Context) {
     private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
+        const val LAN_PROVIDER_KEY = "lan_provider"
+        const val LAN_PROVIDER_OLLAMA = "ollama"
+        const val LAN_PROVIDER_LM_STUDIO = "lm_studio"
+        private const val KEY_LAN_ENDPOINT = "lan_endpoint"
         private const val KEY_PRESETS = "user_presets"
         private const val KEY_SELECTED_FONT = "selected_font"
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
@@ -478,6 +482,28 @@ class SharedPreferencesHelper(context: Context) {
         } else {
             emptyList()
         }
+    }
+    fun setLanEndpoint(url: String?) {
+        // Removing the entry is handy for “clear” / “reset” actions
+        mainPrefs.edit {
+            if (url.isNullOrBlank()) remove(KEY_LAN_ENDPOINT)
+            else putString(KEY_LAN_ENDPOINT, url)
+        }
+    }
+
+    fun getLanEndpoint(): String? {
+        // May be null if the user never set a value
+        return mainPrefs.getString(KEY_LAN_ENDPOINT, null)
+    }
+    fun getLanProvider(): String {
+        return mainPrefs.getString(
+            LAN_PROVIDER_KEY,
+            LAN_PROVIDER_OLLAMA
+        ) ?: LAN_PROVIDER_OLLAMA
+    }
+
+    fun setLanProvider(provider: String) {
+        mainPrefs.edit().putString(LAN_PROVIDER_KEY, provider).apply()
     }
 
 }

@@ -119,6 +119,7 @@
 
 
         <FrameLayout
+            android:id="@+id/chatFrameView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
@@ -130,7 +131,15 @@
                 android:clipToPadding="false"
                 android:padding="8dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
-
+            <View
+                android:id="@+id/dimOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                android:background="#000000"
+                android:clickable="true"
+                android:focusable="true"
+                android:alpha="0.9" />
             <LinearLayout
                 android:id="@+id/headerContainer"
                 android:layout_width="wrap_content"
@@ -286,22 +295,7 @@
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/fontsButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_fonts"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/convoButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -334,22 +328,7 @@
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/presetsButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_presets"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/notiButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -369,12 +348,67 @@
 
 
                     </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/buttonsRowAux"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
+                        android:layout_gravity="center_horizontal">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/fontsButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_fonts"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/lanButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_lan"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/presetsButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_presets"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+                    </LinearLayout>
 
                     <LinearLayout
                         android:id="@+id/buttonsRow2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-
+                        android:layout_marginTop="12dp"
                         android:orientation="horizontal"
                         android:layout_gravity="center_horizontal">
 
@@ -387,7 +421,6 @@
                             app:iconGravity="textStart"
                             app:iconSize="28dp"
                             app:cornerRadius="24dp"
-                            android:layout_marginTop="12dp"
                             android:layout_marginEnd="14dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
@@ -402,7 +435,6 @@
                             app:icon="@drawable/ic_pdfnew"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:layout_marginTop="12dp"
                             app:iconGravity="textStart"
                             app:iconSize="28dp"
                             app:cornerRadius="24dp"
@@ -412,10 +444,6 @@
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
-
-
-
-
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>

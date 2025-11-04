@@ -10,5 +10,6 @@ data class LlmModel(
     val isImageGenerationCapable: Boolean = false,
     val isReasoningCapable: Boolean = false,
     val created: Long = 0L,
-    val isFree: Boolean = apiIdentifier.endsWith(":free")
+    val isFree: Boolean = apiIdentifier.endsWith(":free"),
+    val isLANModel: Boolean = false
 )

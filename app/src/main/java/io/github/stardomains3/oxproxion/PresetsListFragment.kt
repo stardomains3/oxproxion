@@ -96,6 +96,10 @@ class PresetsListFragment : Fragment() {
         }
 
         PresetManager.applyPreset(requireContext(), viewModel, preset)
+        if (ForegroundService.isRunningForeground && SharedPreferencesHelper(requireContext()).getNotiPreference()) {
+            val displayName = viewModel.getModelDisplayName(preset.title)
+            ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")
+        }
 
         Toast.makeText(requireContext(), "Preset applied: ${preset.title}", Toast.LENGTH_SHORT).show()
         return true

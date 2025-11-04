@@ -18,8 +18,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
-import androidx.biometric.BiometricManager
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
@@ -45,6 +43,8 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.toColorInt
@@ -80,14 +80,16 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var isFontUpdate = false
+    private var menuClosedByTouch = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private var isSpeaking = false
+    private lateinit var chatFrameView: FrameLayout
+    private var dimOverlay: View? = null
     private var currentSpeakingPosition = -1
     private lateinit var helpButton: MaterialButton
     private lateinit var presetsButton: MaterialButton
@@ -113,6 +115,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var copyChatButton: MaterialButton
     private lateinit var menuButton: MaterialButton
     private lateinit var saveapiButton: MaterialButton
+    private lateinit var lanButton: MaterialButton
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
@@ -291,7 +294,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         openSavedChatsButton = view.findViewById(R.id.openSavedChatsButton)
         copyChatButton = view.findViewById(R.id.copyChatButton)
         menuButton = view.findViewById(R.id.menuButton)
+        chatFrameView = view.findViewById(R.id.chatFrameView)
         saveapiButton = view.findViewById(R.id.saveapiButton)
+        lanButton = view.findViewById(R.id.lanButton)
         setMaxTokensButton = view.findViewById(R.id.setMaxTokensButton)
         buttonsContainer = view.findViewById(R.id.buttonsContainer)
         modelNameTextView = view.findViewById(R.id.modelNameTextView)
@@ -384,6 +389,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 if (event.action == MotionEvent.ACTION_DOWN) {
                     if (headerContainer.isVisible && isTouchOutsideHeader(event.rawX, event.rawY) && !isTouchOnMenuButton(event.rawX, event.rawY)) {
                         hideMenu()
+                        menuClosedByTouch = true
                         // Return false to pass the touch to the button underneath
                         return@setOnTouchListener false
                     }
@@ -393,6 +399,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
         rootView.addView(overlayView)
+        dimOverlay = view.findViewById<View>(R.id.dimOverlay)
 
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
@@ -747,10 +754,21 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 //   viewModel.playCancelTone()
             } else {
                 // --- API Key Check ---
-                if (viewModel.activeChatApiKey.isBlank()) {
-                    Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT)
-                        .show()
-                    return@setOnClickListener // Stop the process
+                if (viewModel.activeModelIsLan()) {
+                    // LAN model: Check endpoint instead of API key
+                    val lanEndpoint = viewModel.getLanEndpoint()
+                    if (lanEndpoint.isNullOrBlank()) {
+                        Toast.makeText(requireContext(), "LAN endpoint is not configured.", Toast.LENGTH_SHORT)
+                            .show()
+                        return@setOnClickListener
+                    }
+                } else {
+                    // Non-LAN model: Check API key
+                    if (viewModel.activeChatApiKey.isBlank()) {
+                        Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT)
+                            .show()
+                        return@setOnClickListener
+                    }
                 }
 
                 val prompt = chatEditText.text.toString().trim()
@@ -1083,6 +1101,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             if (headerContainer.isVisible) {
                 hideMenu()
             } else {
+                chatEditText.hideKeyboard()
                 showMenu()
             }
         }
@@ -1146,6 +1165,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             hideMenu()
             val dialog = SaveApiDialogFragment()
             dialog.show(childFragmentManager, "SaveApiDialogFragment")
+        }
+        lanButton.setOnClickListener {
+            hideMenu()
+            SaveLANDialogFragment().show(childFragmentManager, SaveLANDialogFragment.TAG)
         }
         setMaxTokensButton.setOnClickListener {
             hideMenu()
@@ -1560,14 +1583,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
     }
     private fun showMenu() {
-        buttonsContainer.visibility = View.VISIBLE
-        headerContainer.isVisible = true
         overlayView?.visibility = View.VISIBLE
-    }
+        headerContainer.visibility = View.VISIBLE
+        (chatFrameView as ViewGroup).bringChildToFront(headerContainer)
+        dimOverlay?.visibility = View.VISIBLE
 
+    }
     private fun hideMenu() {
-        buttonsContainer.visibility = View.GONE
-        headerContainer.isVisible = false
+        dimOverlay?.visibility = View.GONE
+        headerContainer.visibility = View.GONE
         overlayView?.visibility = View.GONE
     }
 
@@ -1747,8 +1771,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         if (headerContainer.isVisible) {
             hideMenu()
             return true
+        } else if (menuClosedByTouch) {
+            menuClosedByTouch = false  // Reset immediately
+            return true  // Consume to prevent app hide (menu already closed by touch)
         }
-        return false
+        return false  // Allow normal back (e.g., exit app)
     }
     private fun launchCamera() {
         val contentValues = ContentValues().apply {

@@ -86,6 +86,14 @@ class BotModelPickerFragment : Fragment() {
 
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                R.id.action_lan_models -> {
+                    // NEW: Open LAN Models fragment
+                    parentFragmentManager.beginTransaction()
+                        .replace(android.R.id.content, LanModelsFragment())
+                        .addToBackStack(null)
+                        .commit()
+                    true
+                }
                 R.id.action_open_router_models -> {
                     parentFragmentManager.beginTransaction()
                         .replace(android.R.id.content, OpenRouterModelsFragment())
@@ -246,6 +254,7 @@ class BotModelPickerFragment : Fragment() {
             putString("apiIdentifier", modelToEdit.apiIdentifier)
             putBoolean("isVisionCapable", modelToEdit.isVisionCapable)
             putBoolean("isReasoningCapable", modelToEdit.isReasoningCapable)
+            putBoolean("isLANModel", modelToEdit.isLANModel)
         }
         dialog.onModelUpdated = { oldModel, newModel ->
             updateModel(oldModel, newModel)

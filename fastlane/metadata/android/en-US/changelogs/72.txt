@@ -1,0 +1,4 @@
+- Fix for when the menu is opened and user does a back gesture. Now it will close the menu without hiding the app.
+- Nominal style/color changes
+- Added ability to chat with Ollama or LM Studio models served on your LAN. Ollama and LM Studio endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them. Ollama and LM Studio function is nascent and might not support all capabilities at this time. Furthermore you must properly set them to be served on your LAN.
+- Notification when a preset is set.
