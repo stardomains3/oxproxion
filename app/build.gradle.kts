@@ -16,8 +16,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 74
-        versionName = "1.7.4"
+        versionCode = 75
+        versionName = "1.7.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -51,11 +51,12 @@ android {
     }
     kotlin {
         compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) // Use the JvmTarget enum
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
         sourceSets.all {
             languageSettings {
-                languageVersion = "2.1"
+                languageVersion = "2.2"
+                apiVersion = "2.2"
             }
         }
     }
@@ -83,9 +84,9 @@ dependencies {
     implementation(libs.linkify)
     implementation(libs.markwon.core)
     implementation(libs.markwon.html)
-    implementation(libs.markwon.tables)      // <-- Add this
+    implementation(libs.markwon.tables)
     implementation(libs.markwon.taskList)
-    implementation(libs.markwon.image.coil) // Markwon's Coil plugin
+    implementation(libs.markwon.image.coil)
     implementation(libs.coil.kt)
     implementation(libs.markwon.strikethrough)
     implementation(libs.gson)
@@ -99,7 +100,7 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.kotlin.stdlib)
+   // implementation(libs.kotlin.stdlib)
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.auth)
     implementation(libs.json)

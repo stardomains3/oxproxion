@@ -113,6 +113,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var saveChatButton: MaterialButton
     private lateinit var openSavedChatsButton: MaterialButton
     private lateinit var copyChatButton: MaterialButton
+    private lateinit var buttonsRow2: LinearLayout
     private lateinit var menuButton: MaterialButton
     private lateinit var saveapiButton: MaterialButton
     private lateinit var lanButton: MaterialButton
@@ -293,6 +294,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         saveChatButton = view.findViewById(R.id.saveChatButton)
         openSavedChatsButton = view.findViewById(R.id.openSavedChatsButton)
         copyChatButton = view.findViewById(R.id.copyChatButton)
+        buttonsRow2 = view.findViewById(R.id.buttonsRow2)
         menuButton = view.findViewById(R.id.menuButton)
         chatFrameView = view.findViewById(R.id.chatFrameView)
         saveapiButton = view.findViewById(R.id.saveapiButton)
@@ -445,8 +447,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             saveChatButton.isEnabled = hasMessages
             resetChatButton.isEnabled = hasMessages
-            pdfChatButton.isVisible = hasMessages
-            copyChatButton.isVisible = hasMessages
+           // pdfChatButton.isVisible = hasMessages
+            //copyChatButton.isVisible = hasMessages
+            buttonsRow2.isVisible = hasMessages
 
 
         }

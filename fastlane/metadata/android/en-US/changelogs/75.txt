@@ -1,0 +1,2 @@
+- Remove an unnecessary dependency.
+- Styling fixes.
