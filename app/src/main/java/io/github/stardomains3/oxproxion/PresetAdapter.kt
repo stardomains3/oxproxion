@@ -42,7 +42,20 @@ class PresetAdapter( private val onItemClicked: (Preset) -> Unit, private val on
     override fun onBindViewHolder(holder: PresetVH, position: Int) {
         val preset = items[position]
         holder.title.text = preset.title
-        updateSubtitle(holder, preset)
+        holder.subtitle.text = buildString {
+            append("Model: ")
+            append(preset.modelIdentifier)
+            append(" • ")
+            append("SysMsg: ")
+            append(preset.systemMessage.title)
+            append(" • Stream: ")
+            append(if (preset.streaming) "On" else "Off")
+            append(" • Reason: ")
+            append(if (preset.reasoning) "On" else "Off")
+            append(" • Convo: ")
+            append(if (preset.conversationMode) "On" else "Off")
+        }
+       // updateSubtitle(holder, preset)
         holder.subtitleContainer.visibility = if (preset.isExpanded) View.VISIBLE else View.GONE
         holder.expandIcon.rotation = if (preset.isExpanded) 180f else 0f
 
