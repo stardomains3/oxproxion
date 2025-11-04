@@ -147,7 +147,7 @@
                 android:layout_gravity="center"
                 android:clickable="true"
                 android:focusable="true"
-                android:background="@drawable/bg_rounded_lin"
+                android:background="@drawable/bg_rounded_frame"
                 android:visibility="gone"
                 android:layout_marginTop="2dp"
                 android:orientation="vertical"
