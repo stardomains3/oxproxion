@@ -1,0 +1,1 @@
+- Fix for when using a LAN model and user uses: magic prompt correction function(long-press menu button) and AI generate chat save title; The local model loaded will be used.

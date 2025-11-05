@@ -998,7 +998,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun checkRemainingCredits() {
         viewModelScope.launch {
             val remaining = withContext(Dispatchers.IO) {
-                llmService.getRemainingCredits(activeChatApiKey)
+                llmService.getRemainingCredits(sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key"))
             }
             if (remaining != null) {
                 val formattedCredits = String.format("%.4f", remaining)
@@ -1016,9 +1016,42 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     suspend fun getSuggestedChatTitle(): String? {
         val chatContent = getFormattedChatHistory()
-        return llmService.getSuggestedChatTitle(chatContent, activeChatApiKey)
 
+        // Determine what model, endpoint, and auth to use
+        val isLanModel = activeModelIsLan()
+
+        val (modelId, endpoint, apiKey) = if (isLanModel) {
+            // LAN model: use active model ID and LAN endpoint
+            val activeModel = getActiveLlmModel()
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+
+            if (activeModel?.apiIdentifier == null || lanEndpoint.isNullOrBlank()) {
+                return null
+            }
+
+            Triple(
+                activeModel.apiIdentifier,
+                "$lanEndpoint/v1/chat/completions",
+                "any-non-empty-string" // LAN models ignore this
+            )
+        } else {
+            // Non-LAN model: use default model and OpenRouter endpoint
+            Triple(
+                "qwen/qwen3-30b-a3b-instruct-2507", // your default title model
+                "https://openrouter.ai/api/v1/chat/completions",
+                activeChatApiKey
+            )
+        }
+
+        return llmService.getSuggestedChatTitle(
+            chatContent = chatContent,
+            apiKey = apiKey,
+            modelId = modelId,
+            endpoint = endpoint,
+            isLanModel = isLanModel
+        )
     }
+
 
     fun getBuiltInModels(): List<LlmModel> {
         return listOf(
@@ -1051,7 +1084,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun correctText(input: String): String? {
         if (input.isBlank()) return null
 
-        if (activeChatApiKey.isBlank()) return null
+        // Check if we're using a LAN model
+        val isLanModel = activeModelIsLan()
+
+        // For LAN models, check if endpoint is configured instead of API key
+        if (!isLanModel) {
+            if (activeChatApiKey.isBlank()) return null
+        } else {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint.isNullOrBlank()) return null
+        }
 
         return try {
             withTimeout(15000) {
@@ -1068,12 +1110,37 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
+                    // Determine the correct model to use
+                    val modelToUse = if (isLanModel) {
+                        // For LAN models, use the active model identifier
+                        _activeChatModel.value ?: return@withContext null
+                    } else {
+                        // For non-LAN models, use the hardcoded correction model
+                        "ibm-granite/granite-4.0-h-micro"
+                    }
+
+                    // Ensure we have the correct endpoint and API key set
+                    if (isLanModel) {
+                        // Configure LAN endpoint for this request
+                        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+                        if (lanEndpoint.isNullOrBlank()) {
+                            localClient.close()
+                            return@withContext null
+                        }
+                        // Override the global activeChatUrl for this request
+                        activeChatUrl = "$lanEndpoint/v1/chat/completions"
+                        activeChatApiKey = "any-non-empty-string" // LAN providers typically ignore the key
+                    } else {
+                        // Reset to OpenRouter for non-LAN models
+                        activeChatUrl = "https://openrouter.ai/api/v1/chat/completions"
+                        activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
+                    }
+
                     // Build raw JSON payload (curl-equivalent, no shared classes)
                     val requestBody = buildJsonObject {
-                        put("model", JsonPrimitive("mistralai/mistral-small-3.2-24b-instruct"))
+                        put("model", JsonPrimitive(modelToUse)) // Use dynamic model
                         put("top_p", JsonPrimitive(1.0))
                         put("temperature", JsonPrimitive(0))
-                        // put("model", JsonPrimitive("openai/gpt-oss-20b"))
                         putJsonArray("messages") {
                             add(buildJsonObject {
                                 put("role", JsonPrimitive("system"))
@@ -1105,17 +1172,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val choices = chatResponse["choices"]?.jsonArray
                     val message = choices?.firstOrNull()?.jsonObject?.get("message")?.jsonObject
                     message?.get("content")?.jsonPrimitive?.content
-
                 }
-
             }
-
         } catch (e: Throwable) {
             Log.e("ChatViewModel", "Correction failed", e)
             null
         }
-
-
     }
     fun setSortOrder(sortOrder: SortOrder) {
         _sortOrder.value = sortOrder

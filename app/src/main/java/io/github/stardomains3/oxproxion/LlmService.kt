@@ -30,16 +30,29 @@ class LlmService(
         private const val DEFAULT_TITLE_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
     }
 
-    suspend fun getSuggestedChatTitle(chatContent: String, apiKey: String): String? {
+    suspend fun getSuggestedChatTitle(
+        chatContent: String,
+        apiKey: String,
+        modelId: String,           // NEW: model to use
+        endpoint: String,          // NEW: endpoint to call
+        isLanModel: Boolean = false // NEW: tells service what auth header to use
+    ): String? {
         val prompt = "Respond only with a 1 to 8 word title for a save title for this chat. Do not use Markdown in your response. Chat Contents: ```$chatContent```"
+
         val messages = listOf(
             FlexibleMessage(role = "user", content = JsonPrimitive(prompt))
         )
 
         try {
             return withTimeout(SUGGESTION_TIMEOUT_MS) {
+                val authHeader = if (isLanModel) {
+                    "Bearer any-non-empty-string"
+                } else {
+                    "Bearer $apiKey"
+                }
+
                 val chatRequest = ChatRequest(
-                    model = DEFAULT_TITLE_MODEL,
+                    model = modelId,
                     messages = messages,
                     max_tokens = 100,
                     logprobs = false,
@@ -47,8 +60,8 @@ class LlmService(
                     stream = false
                 )
 
-                val response = httpClient.post(baseUrl) {
-                    header("Authorization", "Bearer $apiKey")
+                val response = httpClient.post(endpoint) {
+                    header("Authorization", authHeader)
                     contentType(ContentType.Application.Json)
                     setBody(chatRequest)
                 }
@@ -56,7 +69,6 @@ class LlmService(
                 if (!response.status.isSuccess()) {
                     val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details available" }
                     val errorMessage = "Error: API request failed with status ${response.status.value} - $errorBody"
-                    // Log.e(TAG, errorMessage)  // Uncomment if you want to log it
                     return@withTimeout errorMessage
                 }
 
@@ -73,10 +85,10 @@ class LlmService(
                 is IOException -> "Network error getting title."
                 else -> "Unexpected error getting title: ${e.localizedMessage ?: "Unknown"}"
             }
-            Log.e(TAG, errorMsg, e)
             return null
         }
     }
+
     suspend fun getRemainingCredits(apiKey: String): Double? {
         if (apiKey.isBlank()) {
             Log.e(TAG, "API key is blank. Cannot fetch credits.")
