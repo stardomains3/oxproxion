@@ -258,40 +258,49 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _modelPreferenceToSave.value = model
     }
 
+    fun getCurrentSessionId(): Long? = currentSessionId
+
+    suspend fun getCurrentSessionTitle(): String? {
+        val sessionId = currentSessionId ?: return null
+        val session = repository.getSessionById(sessionId) ?: return null
+        return session.title
+    }
+
     fun saveCurrentChat(title: String) {
         viewModelScope.launch {
             val sessionId = currentSessionId ?: repository.getNextSessionId()
-            val session = ChatSession(
-                id = sessionId,
-                title = title,
-                modelUsed = _activeChatModel.value ?: ""
-            )
+            val existingSession = if (sessionId == currentSessionId) repository.getSessionById(sessionId) else null
+            val isUpdate = existingSession != null && existingSession.title != title
 
-            // Get the current messages
-            val originalMessages = _chatMessages.value ?: emptyList()
-
-            // Only process if there are images; otherwise, use originals
-            val messagesToSave = if (hasImagesInChat()) {
-                originalMessages.map { message ->
-                    // Strip images from the JsonElement content
-                    val cleanedContent = removeImagesFromJsonElement(message.content)
-                    message.copy(content = cleanedContent)  // Create a cleaned FlexibleMessage
-                }
+            if (isUpdate) {
+                // Just update title (efficient for existing chats)
+                repository.updateSessionTitle(sessionId, title)
             } else {
-                originalMessages  // No images, so no changes needed
-            }
-
-            // Map to ChatMessage as usual (now with cleaned content)
-            val chatMessages = messagesToSave.map {
-                ChatMessage(
-                    sessionId = sessionId,
-                    role = it.role,
-                    content = json.encodeToString(JsonElement.serializer(), it.content)
+                // Full save (new or full replace)
+                val session = ChatSession(
+                    id = sessionId,
+                    title = title,
+                    modelUsed = _activeChatModel.value ?: ""
                 )
+                val originalMessages = _chatMessages.value ?: emptyList()
+                val messagesToSave = if (hasImagesInChat()) {
+                    originalMessages.map { message ->
+                        val cleanedContent = removeImagesFromJsonElement(message.content)
+                        message.copy(content = cleanedContent)
+                    }
+                } else {
+                    originalMessages
+                }
+                val chatMessages = messagesToSave.map {
+                    ChatMessage(
+                        sessionId = sessionId,
+                        role = it.role,
+                        content = json.encodeToString(JsonElement.serializer(), it.content)
+                    )
+                }
+                repository.insertSessionAndMessages(session, chatMessages)
             }
-
-            repository.insertSessionAndMessages(session, chatMessages)
-            currentSessionId = sessionId
+            currentSessionId = sessionId  // Ensure it's set
         }
     }
     private fun removeImagesFromJsonElement(element: JsonElement): JsonElement {

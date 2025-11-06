@@ -1,0 +1,4 @@
+- If you are in an existing saved chat that you have changed, when you save it again the existing title will prepopulate the title prompt.
+- Added an option for clearing the current chat on the presets list screen.
+- Added an option for clearing the current chat on the presets share target screen.
+- Updated a dependency.

@@ -68,13 +68,19 @@ class SaveChatDialogFragment : DialogFragment() {
         buttonSave.setOnClickListener {
             val title = editTextTitle.text.toString()
             if (title.isNotBlank()) {
-                // Use Fragment Result API to send data back
-                setFragmentResult(REQUEST_KEY, bundleOf(BUNDLE_KEY_TITLE to title))
-                dismiss() // Close the dialog
+                val currentSessionId = chatViewModel.getCurrentSessionId()
+                val bundle = bundleOf(BUNDLE_KEY_TITLE to title)
+                if (currentSessionId != null) {
+                    bundle.putLong("session_id", currentSessionId)
+                    bundle.putBoolean("is_update", true)
+                }
+                setFragmentResult(REQUEST_KEY, bundle)
+                dismiss()
             } else {
-                editTextTitle.error = "Title cannot be empty" // Show an error
+                editTextTitle.error = "Title cannot be empty"
             }
         }
+
         buttonLlmSuggestName.setOnClickListener {
             // Provide immediate feedback and disable button
             buttonLlmSuggestName.isEnabled = false
@@ -99,9 +105,22 @@ class SaveChatDialogFragment : DialogFragment() {
         }
 
         // Request focus and show keyboard automatically
-        editTextTitle.requestFocus()
-        // Ensure the window is not null before trying to set soft input mode
-        dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        // Request focus and show keyboard automatically
+        lifecycleScope.launch {
+            val currentSessionId = chatViewModel.getCurrentSessionId()
+            if (currentSessionId != null) {
+                val existingTitle = chatViewModel.getCurrentSessionTitle()
+                if (!existingTitle.isNullOrBlank()) {
+                    editTextTitle.setText(existingTitle)
+                    // Optional: Add a hint or disable editing if you don't want title changes
+                    // noticeTextView.text = "Update title for existing chat?"  // Reuse notice if desired
+                    // Or: buttonLlmSuggestName.isEnabled = false  // Disable suggest for existing
+                }
+            }
+            editTextTitle.requestFocus()
+            // Ensure the window is not null before trying to set soft input mode
+            dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        }
     }
 
     // REMOVED: fun setSaveChatDialogListener(listener: SaveChatDialogListener) { ... }

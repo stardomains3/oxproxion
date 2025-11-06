@@ -25,6 +25,8 @@ class SharedPreferencesHelper(context: Context) {
     private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
+        private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
+        private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
         const val LAN_PROVIDER_KEY = "lan_provider"
         const val LAN_PROVIDER_LLAMA_CPP = "llama_cpp"
         const val LAN_PROVIDER_OLLAMA = "ollama"
@@ -500,7 +502,21 @@ class SharedPreferencesHelper(context: Context) {
         return mainPrefs.getString(LAN_PROVIDER_KEY, LAN_PROVIDER_OLLAMA) ?: LAN_PROVIDER_OLLAMA
     }
     fun setLanProvider(provider: String) {
-        mainPrefs.edit().putString(LAN_PROVIDER_KEY, provider).apply()
+        mainPrefs.edit { putString(LAN_PROVIDER_KEY, provider) }
+    }
+    fun saveClearChatDefault(checked: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_CLEAR_CHAT_DEFAULT, checked) }
+    }
+
+    fun getClearChatDefault(): Boolean {
+        return mainPrefs.getBoolean(KEY_CLEAR_CHAT_DEFAULT, false)  // Default to unchecked (false)
+    }
+    fun saveClearChatDefault2(checked: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_CLEAR_CHAT_DEFAULT2, checked) }
+    }
+
+    fun getClearChatDefault2(): Boolean {
+        return mainPrefs.getBoolean(KEY_CLEAR_CHAT_DEFAULT2, false)  // Default to unchecked (false)
     }
 
 }

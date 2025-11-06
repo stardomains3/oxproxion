@@ -1,10 +1,14 @@
 package io.github.stardomains3.oxproxion
 
+
+import android.content.res.ColorStateList
+import android.graphics.PorterDuff
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -13,7 +17,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import java.util.Collections
+import com.google.android.material.materialswitch.MaterialSwitch
+
 
 class PresetsListFragment : Fragment() {
 
@@ -29,7 +34,7 @@ class PresetsListFragment : Fragment() {
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         val recycler = view.findViewById<RecyclerView>(R.id.recyclerViewPresets)
         val fab = view.findViewById<FloatingActionButton>(R.id.fabAddPreset)
-
+        setupClearChatSwitch()
         toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
         }
@@ -112,7 +117,48 @@ class PresetsListFragment : Fragment() {
         // Load presets in saved order (no sorting)
         adapter.update(repository.getAll())
     }
+    private fun setupClearChatSwitch() {
+        val switch = view?.findViewById<MaterialSwitch>(R.id.switchClearChat)  // Updated type
+        switch?.apply {
+            // Optional: Custom tints if XML doesn't match your theme (uncomment if needed)
+            // thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), android.R.color.white))
+            // trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), android.R.color.darker_gray))
+            val thumbTintSelector = ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf(-android.R.attr.state_checked)
+                ),
+                intArrayOf(
+                    "#000000".toColorInt(),  // Checked state color
+                    "#686868".toColorInt()   // Unchecked state color
+                )
+            )
+            val trackTintSelector = ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf(-android.R.attr.state_checked)
+                ),
+                intArrayOf(
+                    "#a0610a".toColorInt(),  // On state color
+                    "#000000".toColorInt()   // Off state color
+                )
+            )
+            switch.trackTintList = trackTintSelector
+            switch.thumbTintList = thumbTintSelector
+            switch.thumbTintMode = PorterDuff.Mode.SRC_ATOP
+            switch.trackTintMode = PorterDuff.Mode.SRC_ATOP
+            // Restore state from SharedPreferences
+            val sharedPrefs = SharedPreferencesHelper(requireContext())
+            isChecked = sharedPrefs.getClearChatDefault2()
 
+            // One-tap toggle: Saves state immediately
+            setOnCheckedChangeListener { _, isChecked ->
+                sharedPrefs.saveClearChatDefault2(isChecked)
+                // Optional: Toast feedback
+                // Toast.makeText(requireContext(), if (isChecked) "Will clear chat" else "Won't clear", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     private fun applyPresetSafely(preset: Preset): Boolean {
         val allModels = (viewModel.getBuiltInModels() + SharedPreferencesHelper(requireContext()).getCustomModels()).distinctBy { it.apiIdentifier.lowercase() }
         val selectedModel = allModels.find { it.apiIdentifier.equals(preset.modelIdentifier, ignoreCase = true) }
@@ -129,6 +175,10 @@ class PresetsListFragment : Fragment() {
         }
 
         PresetManager.applyPreset(requireContext(), viewModel, preset)
+        val sharedPrefs = SharedPreferencesHelper(requireContext())
+        if (sharedPrefs.getClearChatDefault2()) {
+            viewModel.startNewChat()
+        }
         if (ForegroundService.isRunningForeground && SharedPreferencesHelper(requireContext()).getNotiPreference()) {
             val displayName = viewModel.getModelDisplayName(preset.title)
             ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")

@@ -1605,9 +1605,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 val title = bundle.getString(SaveChatDialogFragment.BUNDLE_KEY_TITLE)
                 if (!title.isNullOrBlank()) {
                     viewModel.saveCurrentChat(title)
+                    // Optional: Feedback based on update
+                    val isUpdate = bundle.getBoolean("is_update", false)
+                    val sessionId = bundle.getLong("session_id", -1L)
+                    if (isUpdate) {
+                        // e.g., Toast.makeText(context, "Chat title updated!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        // e.g., Toast.makeText(context, "Chat saved!", Toast.LENGTH_SHORT).show()
+                    }
+                    // buttonsContainer.visibility = View.GONE
+                    // modelNameTextView.isVisible = false
                 }
             }
         }
+
         dialog.show(childFragmentManager, SaveChatDialogFragment.TAG)
     }
 

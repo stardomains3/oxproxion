@@ -72,10 +72,17 @@ class LlmService(
                     return@withTimeout errorMessage
                 }
 
+
                 val chatResponse = response.body<ChatResponse>()
-                chatResponse.choices.firstOrNull()?.message?.content?.trim()?.let {
-                    it.replace("\"", "").replace("'", "").trim()
+                val message = chatResponse.choices.firstOrNull()?.message ?: return@withTimeout "Untitled Chat"
+                val content = message.content ?: "Untitled Chat"
+
+                val trimmed = content.trim()
+                if (trimmed.isBlank()) {
+                    return@withTimeout "Untitled Chat"
                 }
+
+                trimmed
             }
         } catch (e: Exception) {
             val errorMsg = when (e) {

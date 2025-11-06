@@ -58,7 +58,13 @@ class PresetChooserActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_preset_chooser, null)
         val listView = dialogView.findViewById<ListView>(R.id.presetListView)
         val checkBox = dialogView.findViewById<CheckBox>(R.id.clearChatCheckBox)
+        val prefsHelper = SharedPreferencesHelper(this)
+        checkBox.isChecked = prefsHelper.getClearChatDefault()
 
+        // NEW: Save the state whenever the user toggles the checkbox (sticks even on cancel)
+        checkBox.setOnCheckedChangeListener { _, isChecked ->
+            prefsHelper.saveClearChatDefault(isChecked)
+        }
         // Set up adapter (unchanged)
         val adapter = PresetDialogAdapter(this, titles)
         listView.adapter = adapter

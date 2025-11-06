@@ -14,7 +14,21 @@
         app:title="Presets"
         app:titleTextColor="@android:color/white"
         android:background="#1C1C1E"
-        app:navigationIcon="@drawable/is_backarrow" />
+        app:navigationIcon="@drawable/is_backarrow">
+
+        <!-- NEW: MaterialSwitch as direct child (positions on right, one-tap toggle) -->
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchClearChat"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end|center_vertical"
+            android:text="Clear chat?"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp"
+        android:contentDescription="Toggle to clear chat history when applying a preset"
+        />
+
+    </com.google.android.material.appbar.MaterialToolbar>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewPresets"
