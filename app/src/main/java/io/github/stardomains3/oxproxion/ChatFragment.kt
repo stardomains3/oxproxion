@@ -1814,6 +1814,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatEditText.requestFocus()
         viewModel.checkAdvancedReasoningStatus()
         viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
+        val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(2)
 
         /*if (viewModel.isChatLoading.value == false) {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
