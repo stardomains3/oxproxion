@@ -1,0 +1,3 @@
+- Fixed issue if user resent a prompt with a image loaded.
+- Added a delete message button for the user message bubble.
+- Added ability for when saving a chat that is a loaded saved chat as a new chat.

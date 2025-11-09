@@ -39,7 +39,9 @@ class ChatAdapter(
     private val onSpeakText: (String, Int) -> Unit,
     private val ttsAvailable: Boolean,
     private val onEditMessage: (Int, String) -> Unit,
-    private val onRedoMessage: (Int, JsonElement) -> Unit
+    private val onRedoMessage: (Int, JsonElement) -> Unit,
+    private val onDeleteMessage: (Int) -> Unit
+
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
     var currentSpeakingPosition = -1
@@ -151,6 +153,8 @@ class ChatAdapter(
         private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
         private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
+        private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
+
 
         fun bind(message: FlexibleMessage) {
             messageTextView.typeface = currentTypeface
@@ -216,6 +220,10 @@ class ChatAdapter(
             resendButton.setOnClickListener {
                 onRedoMessage(bindingAdapterPosition, message.content)  // Invoke callback with position and original content
             }
+            deleteButton.setOnClickListener {
+                onDeleteMessage(bindingAdapterPosition)
+            }
+
         }
     }
 

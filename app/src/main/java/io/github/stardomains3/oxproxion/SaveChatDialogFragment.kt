@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.CheckBox
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
@@ -16,48 +17,34 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 
-// REMOVED: interface SaveChatDialogListener { ... }
-// REMOVED: private var listener: SaveChatDialogListener? = null
-
 class SaveChatDialogFragment : DialogFragment() {
     private lateinit var chatViewModel: ChatViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NORMAL, R.style.RoundedCornersDialog)
         chatViewModel = ViewModelProvider(requireActivity())[ChatViewModel::class.java]
-
-        // Optionally apply a dialog style for rounded corners, full width, etc.
-        // For example: style = R.style.FullScreenDialog or a custom theme
-        // For a standard material dialog look, you might not need a custom style here.
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate your custom layout
         return inflater.inflate(R.layout.dialog_save_chat, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         dialog?.window?.apply {
-            // Set dialog width to match parent, height to wrap content
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-
-            // Set gravity to top-center
             setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL)
-
-            // Optional: Add a small top margin/offset if you don't want it exactly at the very top
-            // val params = attributes
-            // params.y = resources.getDimensionPixelSize(R.dimen.dialog_top_margin) // Define this dimen in dimens.xml (e.g., <dimen name="dialog_top_margin">64dp</dimen>)
-            // attributes = params
         }
         val editTextTitle = view.findViewById<TextInputEditText>(R.id.edit_text_title)
         val buttonSave = view.findViewById<MaterialButton>(R.id.button_save)
         val buttonCancel = view.findViewById<MaterialButton>(R.id.button_cancel)
         val buttonLlmSuggestName = view.findViewById<MaterialButton>(R.id.button_suggest_title)
-        val noticeTextView = view.findViewById<TextView>(R.id.notice_text_view)  // Find the notice TextView
+        val noticeTextView = view.findViewById<TextView>(R.id.notice_text_view)
+        // NEW: Checkbox for save as new
+        val checkboxSaveAsNew = view.findViewById<CheckBox>(R.id.checkbox_save_as_new)
 
         if (chatViewModel.hasImagesInChat() || chatViewModel.hasGeneratedImagesInChat()) {
             noticeTextView.visibility = View.VISIBLE
@@ -70,7 +57,10 @@ class SaveChatDialogFragment : DialogFragment() {
             if (title.isNotBlank()) {
                 val currentSessionId = chatViewModel.getCurrentSessionId()
                 val bundle = bundleOf(BUNDLE_KEY_TITLE to title)
-                if (currentSessionId != null) {
+                // NEW: Always include save_as_new (default false)
+                bundle.putBoolean("save_as_new", checkboxSaveAsNew.isChecked)
+                if (currentSessionId != null && !checkboxSaveAsNew.isChecked) {
+                    // Backward compatible: only include for overwrite mode
                     bundle.putLong("session_id", currentSessionId)
                     bundle.putBoolean("is_update", true)
                 }
@@ -80,50 +70,51 @@ class SaveChatDialogFragment : DialogFragment() {
                 editTextTitle.error = "Title cannot be empty"
             }
         }
-
         buttonLlmSuggestName.setOnClickListener {
-            // Provide immediate feedback and disable button
             buttonLlmSuggestName.isEnabled = false
-            editTextTitle.setText("Generating title...") // Indicate loading
-            editTextTitle.error = null // Clear any previous errors
+            editTextTitle.setText("Generating title...")
+            editTextTitle.error = null
 
-            // Launch a coroutine in the fragment's lifecycle scope
             lifecycleScope.launch {
                 val suggestedTitle = chatViewModel.getSuggestedChatTitle()
                 if (suggestedTitle != null) {
                     editTextTitle.setText(suggestedTitle)
                 } else {
-                    editTextTitle.setText("") // Clear or keep "Generating title..."
+                    editTextTitle.setText("")
                     editTextTitle.error = "Failed to suggest title. Please enter manually."
                 }
-                buttonLlmSuggestName.isEnabled = true // Re-enable button
+                buttonLlmSuggestName.isEnabled = true
             }
         }
 
         buttonCancel.setOnClickListener {
-            dismiss() // Close the dialog
+            dismiss()
         }
 
-        // Request focus and show keyboard automatically
-        // Request focus and show keyboard automatically
+        // NEW/UPDATED: Handle prefilling and checkbox visibility
         lifecycleScope.launch {
             val currentSessionId = chatViewModel.getCurrentSessionId()
             if (currentSessionId != null) {
+                // Loaded chat: Show checkbox (default false = overwrite), prefill title, update notice
+                checkboxSaveAsNew.visibility = View.VISIBLE
+                checkboxSaveAsNew.isChecked = false  // Default to overwrite
                 val existingTitle = chatViewModel.getCurrentSessionTitle()
                 if (!existingTitle.isNullOrBlank()) {
                     editTextTitle.setText(existingTitle)
-                    // Optional: Add a hint or disable editing if you don't want title changes
-                    // noticeTextView.text = "Update title for existing chat?"  // Reuse notice if desired
-                    // Or: buttonLlmSuggestName.isEnabled = false  // Disable suggest for existing
                 }
+                // Optional: Update notice to hint at overwrite vs. new
+                //  noticeTextView.text = "Modifications will overwrite the existing chat unless 'Save as new chat' is checked."
+                //noticeTextView.visibility = View.VISIBLE  // Always show for loaded chats
+            } else {
+                // New chat: Hide checkbox (always saves as new), no special notice
+                checkboxSaveAsNew.visibility = View.GONE
+                // noticeTextView.visibility = if (chatViewModel.hasImagesInChat() || chatViewModel.hasGeneratedImagesInChat()) View.VISIBLE else View.GONE
             }
+
             editTextTitle.requestFocus()
-            // Ensure the window is not null before trying to set soft input mode
             dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         }
     }
-
-    // REMOVED: fun setSaveChatDialogListener(listener: SaveChatDialogListener) { ... }
 
     companion object {
         const val TAG = "SaveChatDialogFragment"

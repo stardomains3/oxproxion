@@ -30,7 +30,6 @@
             android:layout_height="wrap_content"
             android:textSize="20sp"
             android:inputType="textCapSentences"
-
             android:textColor="#ffffff"
             android:singleLine="true" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -44,6 +43,18 @@
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         app:icon="@drawable/ic_auto" />
 
+    <!-- NEW: Save as new chat checkbox -->
+    <CheckBox
+        android:id="@+id/checkbox_save_as_new"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Save as new chat (don't overwrite existing)"
+        android:textColor="#C2C2C2"
+        android:textSize="16sp"
+        android:layout_marginTop="8dp"
+        android:checked="false"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/notice_text_view"
         android:layout_width="match_parent"
@@ -53,7 +64,7 @@
         android:textSize="15sp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="8dp"
-        android:visibility="gone" />  <!-- Hidden by default; shown conditionally -->
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"

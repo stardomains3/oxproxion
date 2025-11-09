@@ -682,23 +682,64 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     .setNegativeButton("Cancel") { dialog, _ ->
                         dialog.dismiss()  // Do nothing
                     }
-                    .setPositiveButton("Redo") { _, _ ->
-                        // Truncate from position + 1 (keep original user message, remove everything after)
-                        viewModel.truncateHistory(position )
-                        // Fetch current system message (as in sendChatButton logic)
+                    .setPositiveButton("Resend") { _, _ ->
+                        // NEW: Truncate only AFTER position (keep original user message)
+                        viewModel.truncateHistory(position + 1)
+
+                        // NEW: Get system message (as before)
                         val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
-                        // Auto-resend the original content (triggers thinking bubble + new response)
-                        viewModel.sendUserMessage(originalContent, systemMessage)
+
+                        // NEW: Use specialized resend (keeps original UI, sends content)
+                        viewModel.resendExistingPrompt(position, systemMessage)
+
                         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                             val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                             val displayName = viewModel.getModelDisplayName(apiIdentifier)
-                            ForegroundService.updateNotificationStatusSilently(displayName, "Prompt sent. Awaiting Response.")
+                            ForegroundService.updateNotificationStatusSilently(displayName, "Prompt resent. Awaiting Response.")
                         }
+                        // UI polish: Hide menu, scroll to bottom (after resend starts)
                         hideMenu()
+                        // Scroll to the kept user message + new thinking
+                        chatRecyclerView.post {
+                            if (chatAdapter.itemCount > 0) {
+                                layoutManager.scrollToPosition(chatAdapter.itemCount - 1)
+                            }
+                        }
+                    }
+                    .setCancelable(true)
+                    .show()
+            },
+            onDeleteMessage = { position ->
+                // NEW: Confirmation dialog (similar to edit/redo)
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Delete this message?")
+                    .setMessage("This will remove the message and all following responses from the chat. This action cannot be undone.\n\nProceed?")
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setPositiveButton("Delete") { _, _ ->
+                        // Call ViewModel to delete (removes message + after)
+                        viewModel.deleteMessageAt(position)
+
+                        // UI polish: Hide menu (if open), optional scroll to bottom
+                        hideMenu()
+                        chatRecyclerView.post {
+                            if (chatAdapter.itemCount > 0) {
+                                layoutManager.scrollToPosition(chatAdapter.itemCount - 1)
+                            }
+                        }
+
+                        // Optional: Notification update
+                        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                            val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
+                            val displayName = viewModel.getModelDisplayName(apiIdentifier)
+                            ForegroundService.updateNotificationStatusSilently(displayName, "Message deleted.")
+                        }
                     }
                     .setCancelable(true)
                     .show()
             }
+
         )
         chatRecyclerView.apply {
             adapter = chatAdapter
@@ -1599,14 +1640,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             if (key == SaveChatDialogFragment.REQUEST_KEY) {
                 val title = bundle.getString(SaveChatDialogFragment.BUNDLE_KEY_TITLE)
                 if (!title.isNullOrBlank()) {
-                    viewModel.saveCurrentChat(title)
-                    // Optional: Feedback based on update
-                    val isUpdate = bundle.getBoolean("is_update", false)
-                    val sessionId = bundle.getLong("session_id", -1L)
-                    if (isUpdate) {
-                        // e.g., Toast.makeText(context, "Chat title updated!", Toast.LENGTH_SHORT).show()
+                    // UPDATED: Extract saveAsNew and pass to ViewModel
+                    val saveAsNew = bundle.getBoolean("save_as_new", false)
+                    viewModel.saveCurrentChat(title, saveAsNew)
+
+                    // Optional: Feedback
+                    val sessionId = bundle.getLong("session_id", -1L)  // Still available for toasts if needed
+                    if (saveAsNew) {
+                        // e.g., Toast.makeText(context, "Chat saved as new!", Toast.LENGTH_SHORT).show()
                     } else {
-                        // e.g., Toast.makeText(context, "Chat saved!", Toast.LENGTH_SHORT).show()
+                        // e.g., Toast.makeText(context, "Chat updated!", Toast.LENGTH_SHORT).show()
                     }
                     // buttonsContainer.visibility = View.GONE
                     // modelNameTextView.isVisible = false

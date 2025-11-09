@@ -266,24 +266,71 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return session.title
     }
 
-    fun saveCurrentChat(title: String) {
+    fun saveCurrentChat(title: String, saveAsNew: Boolean = false) {
         viewModelScope.launch {
-            val sessionId = currentSessionId ?: repository.getNextSessionId()
-            val existingSession = if (sessionId == currentSessionId) repository.getSessionById(sessionId) else null
-            val isUpdate = existingSession != null && existingSession.title != title
-
-            if (isUpdate) {
-                // Just update title (efficient for existing chats)
-                repository.updateSessionTitle(sessionId, title)
+            val currentSessionId = getCurrentSessionId()  // This is Long? (nullable)
+            // Determine sessionId based on saveAsNew
+            val sessionId = if (saveAsNew || currentSessionId == null) {
+                repository.getNextSessionId()  // Always non-null Long
             } else {
-                // Full save (new or full replace)
+                currentSessionId  // Safe here? No—still typed as Long?, but we know it's non-null from the else
+            }
+
+            val existingSession = if (!saveAsNew && currentSessionId != null) {
+                repository.getSessionById(currentSessionId)  // Pass nullable? No—use !! here for safety
+            } else {
+                null
+            }
+
+            // Logic for overwrite vs. new
+            if (!saveAsNew && existingSession != null) {
+                // Overwrite mode: We're in a safe block (currentSessionId != null guaranteed)
+                // FIXED: Extract to non-nullable local var to satisfy type checker (avoids multiple !!)
+                val existingId = currentSessionId!!  // Non-null assertion: safe due to outer if guard
+
+                val currentModel = _activeChatModel.value ?: ""
+                val titleUnchanged = existingSession.title == title
+                val modelUnchanged = existingSession.modelUsed == currentModel
+                val hasImages = hasImagesInChat() || hasGeneratedImagesInChat()
+                val isPureTitleUpdate = titleUnchanged && modelUnchanged && !hasImages  // Simple heuristic
+
+                if (isPureTitleUpdate && title != existingSession.title) {  // Edge: title changed but nothing else
+                    // FIXED: Use non-nullable existingId
+                    repository.updateSessionTitle(existingId, title)
+                } else {
+                    // Full replace: Overwrite session/messages/model under existing ID
+                    val session = ChatSession(
+                        id = existingId,  // FIXED: Use non-nullable
+                        title = title,
+                        modelUsed = currentModel  // Capture any model change
+                    )
+                    val originalMessages = _chatMessages.value ?: emptyList()
+                    val messagesToSave = if (hasImages) {
+                        originalMessages.map { message ->
+                            val cleanedContent = removeImagesFromJsonElement(message.content)
+                            message.copy(content = cleanedContent)
+                        }
+                    } else {
+                        originalMessages
+                    }
+                    val chatMessages = messagesToSave.map {
+                        ChatMessage(
+                            sessionId = existingId,  // FIXED: Use non-nullable
+                            role = it.role,
+                            content = json.encodeToString(JsonElement.serializer(), it.content)
+                        )
+                    }
+                    repository.insertSessionAndMessages(session, chatMessages)  // Replaces due to OnConflict.REPLACE
+                }
+            } else {
+                // New chat mode: Always full insert with new ID (sessionId is already non-null)
                 val session = ChatSession(
                     id = sessionId,
                     title = title,
                     modelUsed = _activeChatModel.value ?: ""
                 )
                 val originalMessages = _chatMessages.value ?: emptyList()
-                val messagesToSave = if (hasImagesInChat()) {
+                val messagesToSave = if (hasImagesInChat() || hasGeneratedImagesInChat()) {
                     originalMessages.map { message ->
                         val cleanedContent = removeImagesFromJsonElement(message.content)
                         message.copy(content = cleanedContent)
@@ -293,16 +340,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val chatMessages = messagesToSave.map {
                     ChatMessage(
-                        sessionId = sessionId,
+                        sessionId = sessionId,  // Non-null by construction
                         role = it.role,
                         content = json.encodeToString(JsonElement.serializer(), it.content)
                     )
                 }
                 repository.insertSessionAndMessages(session, chatMessages)
             }
-            currentSessionId = sessionId  // Ensure it's set
+            // Set currentSessionId to the final ID (new or existing; sessionId is always non-null here)
+            this@ChatViewModel.currentSessionId = sessionId
         }
     }
+
     private fun removeImagesFromJsonElement(element: JsonElement): JsonElement {
         return when (element) {
             is JsonArray -> {
@@ -466,6 +515,57 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     _scrollToBottomEvent.postValue(Event(Unit))
                 }
                 if (_isStreamingEnabled.value != true) {
+                    _scrollToBottomEvent.postValue(Event(Unit))
+                }
+                networkJob = null
+            }
+        }
+    }
+    // NEW: Specialized resend for existing user prompt (keeps original UI bubble intact)
+    fun resendExistingPrompt(userMessageIndex: Int, systemMessage: String? = null) {
+        if (userMessageIndex < 0 || userMessageIndex >= (_chatMessages.value?.size ?: 0)) {
+          //  Log.w("ChatViewModel", "Invalid user message index for resend: $userMessageIndex")
+            return
+        }
+
+        val currentMessages = _chatMessages.value ?: emptyList()
+        val userMessage = currentMessages[userMessageIndex]  // Original message (with imageUri if vision)
+
+        // Truncate ONLY responses after user message (keep user intact)
+        truncateHistory(userMessageIndex + 1)
+
+        // Build API messages: History up to (and including) the user message
+        val messagesForApiRequest = mutableListOf<FlexibleMessage>()
+        if (systemMessage != null) {
+            messagesForApiRequest.add(FlexibleMessage(role = "system", content = JsonPrimitive(systemMessage)))
+        }
+        // Add history BEFORE user message
+        messagesForApiRequest.addAll(currentMessages.take(userMessageIndex))
+        // Add the ORIGINAL user message (preserves imageUri for any future needs, but API uses content)
+        messagesForApiRequest.add(userMessage)
+
+        // UI: Add only thinking (no new user bubble—original is kept)
+        val uiMessages = _chatMessages.value?.toMutableList() ?: mutableListOf()
+        uiMessages.add(THINKING_MESSAGE)
+        _chatMessages.value = uiMessages
+
+        _isAwaitingResponse.value = true
+        _userScrolledDuringStream.value = false
+
+        // Same networking as sendUserMessage (reuse handleStreamed/NonStreamed)
+        networkJob = viewModelScope.launch {
+            try {
+                val modelForRequest = _activeChatModel.value ?: throw IllegalStateException("No active chat model")
+                if (_isStreamingEnabled.value == true) {
+                    handleStreamedResponse(modelForRequest, messagesForApiRequest, THINKING_MESSAGE)
+                } else {
+                    handleNonStreamedResponse(modelForRequest, messagesForApiRequest, THINKING_MESSAGE)
+                }
+            } catch (e: Throwable) {
+                handleError(e, THINKING_MESSAGE)
+            } finally {
+                _isAwaitingResponse.postValue(false)
+                if (_userScrolledDuringStream.value != true || _isStreamingEnabled.value != true) {
                     _scrollToBottomEvent.postValue(Event(Unit))
                 }
                 networkJob = null
@@ -994,6 +1094,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             _chatMessages.value = current
         }
     }
+    // NEW: Delete message at index and all after (like truncate, but starts at index)
+    fun deleteMessageAt(index: Int) {
+        val current = _chatMessages.value?.toMutableList() ?: return
+        if (index >= 0 && index < current.size) {
+            current.subList(index, current.size).clear()
+            _chatMessages.value = current
+        }
+    }
+
     fun hasWebpInHistory(): Boolean {
         val messages = _chatMessages.value ?: return false
         return messages.any {
