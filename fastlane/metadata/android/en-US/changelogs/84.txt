@@ -1,0 +1,2 @@
+- Removed stop button from notification as it was confusing.
+- Made notifications default to on for new installs as it is almost necessary for proper background functioning.

@@ -229,7 +229,7 @@ class SharedPreferencesHelper(context: Context) {
         return mainPrefs.getString(KEY_SELECTED_FONT, "geologica_light") ?: "geologica_light"
     }
     fun getNotiPreference(): Boolean {
-        return mainPrefs.getBoolean(KEY_NOTI_ENABLED, false)
+        return mainPrefs.getBoolean(KEY_NOTI_ENABLED, true)
     }
 
     fun saveNotiPreference(isEnabled: Boolean) {

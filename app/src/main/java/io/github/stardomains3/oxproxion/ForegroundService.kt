@@ -171,7 +171,7 @@ class ForegroundService : Service() {
             .setSmallIcon(R.mipmap.ic_launcherrobot)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .addAction(0, "Stop", stopPendingIntent) // 0 = no icon; replace with a drawable resource if available (e.g., android.R.drawable.ic_menu_close_clear_cancel)
+           // .addAction(0, "Stop", stopPendingIntent) // 0 = no icon; replace with a drawable resource if available (e.g., android.R.drawable.ic_menu_close_clear_cancel)
             .build()
     }
     private fun toggleNotiPreference() {
