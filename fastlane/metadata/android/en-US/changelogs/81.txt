@@ -1,0 +1,1 @@
+- Fix an issue where if the user shared text to the app with a url in it, the prompt box would only show the url.

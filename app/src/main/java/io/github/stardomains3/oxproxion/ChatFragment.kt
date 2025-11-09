@@ -634,20 +634,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
     }
 
-    fun setSharedText(sharedText: String) {
-        var spookyValue = sharedText
-        val httpIndex = spookyValue.indexOf("http", 0, true)
-        if (httpIndex != 0 && httpIndex != -1) {
-            spookyValue = spookyValue.substring(httpIndex)
-            val spaceIndex = spookyValue.indexOf(" ")
-            if(spaceIndex != -1){
-                spookyValue = spookyValue.substring(0, spaceIndex)
-            }
-            spookyValue = spookyValue.trim()
-            spookyValue = spookyValue.trim('"')
+    private fun setSharedText(sharedText: String) {
+        if (sharedText.isBlank()) {
+            chatEditText.setText("")  // Handle empty case
+            return
         }
-        spookyValue = spookyValue.trim()
-        chatEditText.setText(spookyValue)
+
+        // Just set the raw text (trimmed for leading/trailing spaces)
+        chatEditText.setText(sharedText.trim())
     }
 
     private fun setupRecyclerView() {
