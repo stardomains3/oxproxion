@@ -1,5 +1,6 @@
 package io.github.stardomains3.oxproxion
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -13,13 +14,11 @@ import androidx.core.app.NotificationCompat
 
 class ForegroundService : Service() {
 
+    private val FOREGROUND_CHANNEL_ID = "ForegroundChannel"
     private val CHANNEL_ID = "ForegroundServiceChannel"
-    private val SILENT_CHANNEL_ID = "SilentUpdatesChannel" // New silent channel
 
     companion object {
         private var instance: ForegroundService? = null
-
-        private const val STOP_ACTION = "io.github.stardomains3.oxproxion.STOP_SERVICE"
 
         fun stopService() {
             instance?.stop()
@@ -27,11 +26,6 @@ class ForegroundService : Service() {
 
         fun updateNotificationStatus(title: String, contentText: String) {
             instance?.updateNotification(title, contentText)
-        }
-
-        // New silent update function
-        fun updateNotificationStatusSilently(title: String, contentText: String) {
-            instance?.updateNotificationSilently(title, contentText)
         }
 
         @Volatile
@@ -43,7 +37,6 @@ class ForegroundService : Service() {
         try {
             stopSelf()
         } catch (e: Exception) {
-         //   Log.e("ForegroundService", "Error stopping service", e)
         }
     }
 
@@ -59,33 +52,17 @@ class ForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        intent?.action?.let { action ->
-            if (action == STOP_ACTION) {
-                toggleNotiPreference()
-                stopSelf()
+        createNotificationChannels()
 
+        val notification = buildNotification("Connectivity Service", "Ensures reliable messaging connectivity", FOREGROUND_CHANNEL_ID)
 
-                return START_NOT_STICKY
-            }
-        }
-
-        /* if (!ChatServiceGate.shouldRunService) {
-             stopSelf()
-             return START_NOT_STICKY
-         }*/
-
-        createNotificationChannels() // Note: plural now
-        val initialTitle = intent?.getStringExtra("initial_title") ?: "oxproxion is Running."  // Fallback if not provided
-        val notification = buildNotification(initialTitle, "oxproxion is Ready.", SILENT_CHANNEL_ID)
-       // val notification = buildNotification("oxproxion is Running.", "oxproxion is Ready.", SILENT_CHANNEL_ID)
-        val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {  // API 34
+        val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
         } else {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC  // Fallback for lower APIs (e.g., for data sync/messaging)
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         }
 
         startForeground(1, notification, foregroundServiceType)
-       // startForeground(1, notification)
         isRunningForeground = true
         return START_NOT_STICKY
     }
@@ -94,53 +71,54 @@ class ForegroundService : Service() {
         return null
     }
 
-    // Updated to create both channels
     private fun createNotificationChannels() {
         val notificationManager = getSystemService(NotificationManager::class.java)
 
-        // Main foreground service channel
-        val serviceChannel = NotificationChannel(
-            CHANNEL_ID,
-            "Foreground Service Channel",
+        val foregroundChannel = NotificationChannel(
+            FOREGROUND_CHANNEL_ID,
+            "Connectivity Service Channel",
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Channel for foreground service"
+            description = "Notification for the running foreground service"
         }
 
-        // Silent updates channel
-        val silentChannel = NotificationChannel(
-            SILENT_CHANNEL_ID,
-            "Silent Updates Channel",
-            NotificationManager.IMPORTANCE_MIN // Silent
+        val serviceChannel = NotificationChannel(
+            CHANNEL_ID,
+            "Main Updates Channel",
+            NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Channel for silent notification updates"
-            setSound(null, null)
-            enableVibration(false)
+            description = "Channel for main notification updates"
         }
 
         notificationManager.createNotificationChannels(
-            listOf(serviceChannel, silentChannel)
+            listOf(foregroundChannel, serviceChannel)
         )
     }
 
-    // Regular update (uses main channel)
     fun updateNotification(title: String, contentText: String) {
-        updateNotificationWithChannel(title, contentText, CHANNEL_ID)
+        if (!isAppInForeground()) {
+            updateNotificationWithChannel(title, contentText, CHANNEL_ID)
+        }
     }
 
-    // Silent update (uses silent channel)
-    fun updateNotificationSilently(title: String, contentText: String) {
-        updateNotificationWithChannel(title, contentText, SILENT_CHANNEL_ID)
+    private fun isAppInForeground(): Boolean {
+        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        val appProcesses = activityManager.runningAppProcesses ?: return false
+        for (appProcess in appProcesses) {
+            if (appProcess.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
+                appProcess.processName == packageName) {
+                return true
+            }
+        }
+        return false
     }
 
-    // Helper function to update with specific channel
     private fun updateNotificationWithChannel(title: String, contentText: String, channelId: String) {
         val notification = buildNotification(title, contentText, channelId)
         val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(1, notification)
+        notificationManager.notify(2, notification)
     }
 
-    // Helper function to build the notification with stop action
     private fun buildNotification(title: String, contentText: String, channelId: String): Notification {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         launchIntent?.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -154,39 +132,18 @@ class ForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val stopIntent = Intent(this, ForegroundService::class.java).apply {
-            action = STOP_ACTION
-        }
-
-        val stopPendingIntent = PendingIntent.getService(
-            this,
-            1,
-            stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Builder(this, channelId)
+        val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcherrobot)
             .setContentIntent(pendingIntent)
-            .setOngoing(true)
-           // .addAction(0, "Stop", stopPendingIntent) // 0 = no icon; replace with a drawable resource if available (e.g., android.R.drawable.ic_menu_close_clear_cancel)
-            .build()
-    }
-    private fun toggleNotiPreference() {
-        // Instantiate your SharedPreferencesHelper (adjust if it's not context-based)
-        val prefsHelper = SharedPreferencesHelper(applicationContext)
 
-        // Get current state
-        val currentState =
-            prefsHelper.getNotiPreference()  // Default to true if null, like your original toggleNoti()
+        if (channelId == FOREGROUND_CHANNEL_ID) {
+            builder.setOngoing(true)
+        } else {
+            builder.setOngoing(false).setAutoCancel(true)
+        }
 
-        // Toggle
-        val newNotiState = !currentState
-
-        // Save
-        prefsHelper.saveNotiPreference(newNotiState)
-
+        return builder.build()
     }
 }

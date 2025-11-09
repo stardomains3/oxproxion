@@ -179,10 +179,10 @@ class PresetsListFragment : Fragment() {
         if (sharedPrefs.getClearChatDefault2()) {
             viewModel.startNewChat()
         }
-        if (ForegroundService.isRunningForeground && SharedPreferencesHelper(requireContext()).getNotiPreference()) {
+       /* if (ForegroundService.isRunningForeground && SharedPreferencesHelper(requireContext()).getNotiPreference()) {
             val displayName = viewModel.getModelDisplayName(preset.title)
             ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")
-        }
+        }*/
 
         Toast.makeText(requireContext(), "Preset applied: ${preset.title}", Toast.LENGTH_SHORT).show()
         return true

@@ -150,8 +150,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
-
-        if (sharedPreferencesHelper.getNotiPreference()) startForegroundService()
+        startForegroundService()
+       // if (sharedPreferencesHelper.getNotiPreference()) startForegroundService()
     }
 
     private fun askNotificationPermission() {
@@ -169,12 +169,12 @@ class MainActivity : AppCompatActivity() {
         try {
             val serviceIntent = Intent(this, ForegroundService::class.java)
             // Optionally pass initial title if needed
-            val vm: ChatViewModel by viewModels()
-            val displayName = vm.getModelDisplayName(vm.activeChatModel.value ?: "Unknown Model")
-            serviceIntent.putExtra("initial_title", displayName)
+           // val vm: ChatViewModel by viewModels()
+           // val displayName = vm.getModelDisplayName(vm.activeChatModel.value ?: "Unknown Model")
+           // serviceIntent.putExtra("initial_title", displayName)
             startService(serviceIntent)
         } catch (e: Exception) {
-            Log.e("MainActivity", "Failed to start foreground service", e)
+           // Log.e("MainActivity", "Failed to start foreground service", e)
         }
     }
     /*private fun startForegroundService() {
@@ -285,10 +285,10 @@ class MainActivity : AppCompatActivity() {
 
 
             PresetManager.applyPreset(this, vm, preset)
-            if (ForegroundService.isRunningForeground && prefs.getNotiPreference()) {
+          /*  if (ForegroundService.isRunningForeground && prefs.getNotiPreference()) {
                 val displayName = vm.getModelDisplayName(preset.title)
                 ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")
-            }
+            }*/
             vm.signalPresetApplied()
             Toast.makeText(this, "Preset Applied: ${preset.title}", Toast.LENGTH_SHORT).show()
 

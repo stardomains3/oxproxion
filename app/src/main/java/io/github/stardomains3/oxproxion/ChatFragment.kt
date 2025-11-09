@@ -3,6 +3,7 @@ package io.github.stardomains3.oxproxion
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
@@ -544,12 +545,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         viewModel.isNotiEnabled.observe(viewLifecycleOwner) { isEnabled ->
             notiButton.isSelected = isEnabled
-            if(isEnabled && !ForegroundService.isRunningForeground ){
+         /*   if(isEnabled && !ForegroundService.isRunningForeground ){
                 startForegroundService()
             }
             else if (!isEnabled && ForegroundService.isRunningForeground){
                 stopForegroundService()
-            }
+            }*/
         }
         viewModel.presetAppliedEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
@@ -615,6 +616,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatEditText.typeface = typeface ?: Typeface.DEFAULT
         modelNameTextView.typeface = typeface ?: Typeface.DEFAULT
         chatAdapter.updateFont(typeface)
+        val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        if (notificationManager != null) {
+            val channels = notificationManager.notificationChannels
+            val channelIds = channels.map { it.id }
+            if (channelIds.contains("SilentUpdatesChannel")) {
+                notificationManager.deleteNotificationChannel("SilentUpdatesChannel")
+            }
+        }
+            // end onviewcreated
     }
 
     private fun updateSystemMessageButtonState() {
@@ -692,11 +702,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         // NEW: Use specialized resend (keeps original UI, sends content)
                         viewModel.resendExistingPrompt(position, systemMessage)
 
-                        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                       /* if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                             val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                             val displayName = viewModel.getModelDisplayName(apiIdentifier)
                             ForegroundService.updateNotificationStatusSilently(displayName, "Prompt resent. Awaiting Response.")
-                        }
+                        }*/
                         // UI polish: Hide menu, scroll to bottom (after resend starts)
                         hideMenu()
                         // Scroll to the kept user message + new thinking
@@ -730,11 +740,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         }
 
                         // Optional: Notification update
-                        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                        /*if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                             val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                             val displayName = viewModel.getModelDisplayName(apiIdentifier)
                             ForegroundService.updateNotificationStatusSilently(displayName, "Message deleted.")
-                        }
+                        }*/
                     }
                     .setCancelable(true)
                     .show()
@@ -817,11 +827,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                          startForegroundService()
                      }*/
 
-                    if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                  /*  if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                         val displayName = viewModel.getModelDisplayName(apiIdentifier)
                         ForegroundService.updateNotificationStatusSilently(displayName, "Prompt sent. Awaiting Response.")
-                    }
+                    }*/
                     chatEditText.setText("")
                     chatEditText.text.clear()
                     chatEditText.hideKeyboard()
@@ -961,11 +971,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     else
                     {
                         viewModel.setModel(modelString)
-                        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                        /*if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                             val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                             val displayName = viewModel.getModelDisplayName(apiIdentifier)
                             ForegroundService.updateNotificationStatusSilently(displayName, "Model Changed")
-                        }
+                        }*/
                     }
                 }
             }
@@ -984,11 +994,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 .commit()
         }
         resetChatButton.setOnLongClickListener {
-            if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+           /* if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                 val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                 val displayName = viewModel.getModelDisplayName(apiIdentifier)
                 ForegroundService.updateNotificationStatusSilently(displayName, "oxproxion is Ready.")
-            }
+            }*/
             viewModel.startNewChat()
             true
         }
@@ -1004,11 +1014,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     dialog.dismiss()
                 }
                 .setPositiveButton("Reset") { dialog, which ->
-                    if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                   /* if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                         val displayName = viewModel.getModelDisplayName(apiIdentifier)
                         ForegroundService.updateNotificationStatusSilently(displayName, "oxproxion is Ready.")
-                    }
+                    }*/
                     /*if (ForegroundService.isRunningForeground) {
                         stopForegroundService()
                     }
@@ -1436,7 +1446,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }*/
            // chatEditText.setText("")
             //chatEditText.text.clear()
-
+            chatEditText.hideKeyboard()
             hideMenu()
             parentFragmentManager.beginTransaction()
                 .hide(this)

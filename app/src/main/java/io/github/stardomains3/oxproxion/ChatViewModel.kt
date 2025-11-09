@@ -399,13 +399,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 session?.let {
                     _activeChatModel.postValue(it.modelUsed)
                     _modelPreferenceToSave.postValue(it.modelUsed)
-                    withContext(Dispatchers.Main) {
+                   /* withContext(Dispatchers.Main) {
                         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                             val apiIdentifier = it.modelUsed ?: "Unknown Model"
                             val displayName = getModelDisplayName(apiIdentifier)
                             ForegroundService.updateNotificationStatusSilently(displayName, "Saved Chat Loaded")
                         }
-                    }
+                    }*/
                 }
             } finally {
                 _isChatLoading.postValue(false)
