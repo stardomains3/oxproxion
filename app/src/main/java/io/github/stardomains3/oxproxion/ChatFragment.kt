@@ -642,6 +642,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         // Just set the raw text (trimmed for leading/trailing spaces)
         chatEditText.setText(sharedText.trim())
+        chatEditText.setSelection(chatEditText.length())
     }
 
     private fun setupRecyclerView() {
