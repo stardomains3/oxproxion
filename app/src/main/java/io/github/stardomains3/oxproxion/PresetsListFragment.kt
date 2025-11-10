@@ -184,7 +184,7 @@ class PresetsListFragment : Fragment() {
             ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")
         }*/
 
-        Toast.makeText(requireContext(), "Preset applied: ${preset.title}", Toast.LENGTH_SHORT).show()
+       // Toast.makeText(requireContext(), "Preset applied: ${preset.title}", Toast.LENGTH_SHORT).show()
         return true
     }
 }

@@ -1,0 +1,1 @@
+- Nascent support for PDF page uploads to vision-enabled models. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. If needed just select additional pages in following rounds of the chat.

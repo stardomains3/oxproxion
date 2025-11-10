@@ -11,16 +11,20 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognizerIntent
@@ -47,6 +51,7 @@ import androidx.annotation.DrawableRes
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
@@ -81,6 +86,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -142,6 +150,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var imagePicker: ActivityResultLauncher<Intent>  // Renamed for clarity (gallery picker)
     private lateinit var layoutManager: LinearLayoutManager
+    private lateinit var pdfPicker: ActivityResultLauncher<Array<String>>
+    private var currentTempImageFile: File? = null  // Tracks PDF PNG temp file
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -274,6 +284,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     }
                 }
             }
+        }
+        pdfPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            uri?.let { processPdfUri(it) }  // Null-safe: Call if non-null
         }
         // --- Initialize Views from fragment_chat.xml ---
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
@@ -795,6 +808,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             selectedImageMime = null
             attachmentPreviewContainer.visibility = View.GONE
             viewModel.setPendingUserImageUri(null)
+            previewImageView.setImageBitmap(null)
+            currentTempImageFile?.delete()
+            currentTempImageFile = null
             Toast.makeText(requireContext(), "Attachment removed", Toast.LENGTH_SHORT).show()
         }
         sendChatButton.setOnClickListener {
@@ -1026,6 +1042,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         ChatServiceGate.shouldRunService = false
                     }*/
                     viewModel.startNewChat()
+                    currentTempImageFile?.delete()
+                    currentTempImageFile = null
+                    previewImageView.setImageBitmap(null)
                 }
                 .show()
         }
@@ -1681,33 +1700,32 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         plusButton.setOnClickListener {
             val model = viewModel.activeChatModel.value
             if (model == null || !viewModel.isVisionModel(model)) {
-                Toast.makeText(
-                    requireContext(),
-                    "Image selection not supported for the current model.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(requireContext(), "Image/PDF selection not supported for the current model.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
+            // NEW: Check if vision model supports PDF (all do, but future-proof)
+            val supportsPdf = true // Or add model check if needed
+
+            val items = mutableListOf("Take a Photo", "Choose from Gallery")
+            if (supportsPdf) items.add("Choose PDF") // NEW: Add PDF option
+
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Load Image")
-                .setItems(arrayOf("Take a Photo", "Choose from Gallery")) { _, which ->
+                .setTitle("Load Image or PDF")
+                .setItems(items.toTypedArray()) { _, which ->
                     when (which) {
-                        0 -> { // Take Photo (Camera)
+                        0 -> { // Take Photo
                             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             } else {
                                 launchCamera()
                             }
                         }
-                        1 -> { // Choose from Gallery
+                        1 -> { // Gallery
+                            // Your existing gallery code...
                             val allowedMimeTypes: Array<String> = when {
-                                model.lowercase().contains("grok") -> {
-                                    arrayOf("image/jpeg", "image/png")
-                                }
-                                else -> {
-                                    arrayOf("image/jpeg", "image/png", "image/webp")
-                                }
+                                model.lowercase().contains("grok") -> arrayOf("image/jpeg", "image/png")
+                                else -> arrayOf("image/jpeg", "image/png", "image/webp")
                             }
                             val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -1716,6 +1734,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             }
                             imagePicker.launch(intent)
                         }
+                        2 -> { // Choose PDF
+                            pdfPicker.launch(arrayOf("application/pdf"))  // NEW: Launches document picker with PDF filter
+                        }
+
                     }
                 }
                 .setNegativeButton("Cancel", null)
@@ -1873,6 +1895,173 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         } else {
             startSpeechRecognition()
         }
+    }
+    private fun processPdfUri(pdfUri: Uri) {
+        lifecycleScope.launch {
+            var parcelFd: ParcelFileDescriptor? = null
+            var tempPdfFile: File? = null
+            try {
+                // Try direct ParcelFileDescriptor (OpenDocument makes this reliable)
+                parcelFd = withContext(Dispatchers.IO) {
+                    requireContext().contentResolver.openFileDescriptor(pdfUri, "r")
+                } ?: run {
+                    // Fallback copy (rare now)
+                    Log.d("ChatFragment", "Direct access failed; copying PDF to cache...")
+                    val inputStream = requireContext().contentResolver.openInputStream(pdfUri)
+                        ?: run {
+                            chatEditText.setText("No read access to PDF.")
+                            chatEditText.postDelayed({ chatEditText.setText("") }, 5000)
+                            return@launch
+                        }
+
+                    val cacheDir = requireContext().cacheDir
+                    tempPdfFile = File(cacheDir, "temp_pdf_${System.currentTimeMillis()}.pdf")
+                    withContext(Dispatchers.IO) {
+                        inputStream.use { input ->
+                            FileOutputStream(tempPdfFile!!).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    }
+                    inputStream.close()
+
+                    ParcelFileDescriptor.open(tempPdfFile!!, ParcelFileDescriptor.MODE_READ_ONLY)
+                }
+
+                if (parcelFd == null) {
+                    chatEditText.setText("Failed to access PDF.")
+                    chatEditText.postDelayed({ chatEditText.setText("") }, 5000)
+                    return@launch
+                }
+
+                // Create renderer once, pass to branches (branches will close it)
+                val pdfRenderer = PdfRenderer(parcelFd)  // Local var for safety
+                val pageCount = pdfRenderer.pageCount
+
+                when {
+                    pageCount == 0 -> {
+                        chatEditText.setText("PDF has no pages.")
+                        chatEditText.postDelayed({ chatEditText.setText("") }, 3000)
+                        pdfRenderer.close()  // Close if no pages
+                        return@launch
+                    }
+                    pageCount == 1 -> {
+                        // Single page: Render and close immediately
+                        val bitmap = renderPdfPageToBitmap(pdfRenderer, 0)
+                        processPdfBitmap(bitmap, "Page 1 of 1")
+                        pdfRenderer.close()  // Close here
+                    }
+                    else -> {
+                        // Multi-page: Pass renderer to dialog (dialog closes after selection)
+                        showPageSelectionDialog(pdfRenderer, pageCount)  // No pdfUri needed now
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ChatFragment", "PDF processing error", e)
+                val errorMsg = "Failed to process PDF: ${e.message}"
+                chatEditText.setText(errorMsg)
+                chatEditText.postDelayed({ chatEditText.setText("") }, 5000)
+            } finally {
+                // Only close parcelFd and temp file (renderer closed in branches)
+                try {
+                    parcelFd?.close()
+                    tempPdfFile?.delete()
+                } catch (e: Exception) {
+                    Log.e("ChatFragment", "Error closing PDF resources", e)
+                }
+            }
+        }
+    }
+
+
+
+
+    private suspend fun renderPdfPageToBitmap(renderer: PdfRenderer, pageIndex: Int): Bitmap {
+        return withContext(Dispatchers.IO) {
+            val page = renderer.openPage(pageIndex)
+            val width = (page.width * 1.5f).toInt() // Scale for quality (adjust if too big)
+            val height = (page.height * 1.5f).toInt()
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val bounds = Rect(0, 0, width, height)
+            page.render(bitmap, bounds, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            page.close()  // Close page immediately
+            bitmap
+        }
+    }
+
+
+    private suspend fun processPdfBitmap(bitmap: Bitmap, description: String) {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+        val bytes = byteArrayOutputStream.toByteArray()
+
+        if (bytes.size > 12_000_000) {
+            Toast.makeText(requireContext(), "PDF page too large (max 12MB). Try a different page.", Toast.LENGTH_SHORT).show()
+            bitmap.recycle()
+            return
+        }
+
+        selectedImageBytes = bytes
+        selectedImageMime = "image/png"
+
+        // Save PNG to temp file for chat preview
+        val cacheDir = requireContext().cacheDir
+        val tempPngFile = File(cacheDir, "pdf_page_${System.currentTimeMillis()}.png")
+        withContext(Dispatchers.IO) {  // Off UI: Write bytes to file
+            tempPngFile.outputStream().use { out ->
+                out.write(bytes)
+            }
+        }
+        currentTempImageFile = tempPngFile  // Track for cleanup
+
+        val pngUri = FileProvider.getUriForFile(
+            requireContext(),
+            "${requireContext().packageName}.fileprovider",
+            tempPngFile
+        )
+
+        // Set for ViewModel (enables bubble preview)
+        viewModel.setPendingUserImageUri(pngUri.toString())
+
+        val previewBmp = bitmap.copy(Bitmap.Config.ARGB_8888, false)
+        previewImageView.setImageBitmap(previewBmp)
+        attachmentPreviewContainer.visibility = View.VISIBLE
+
+        Toast.makeText(requireContext(), "$description converted to image", Toast.LENGTH_SHORT).show()
+
+        // Recycle originals
+        bitmap.recycle()
+        // After copy
+    }
+
+
+
+
+    private fun showPageSelectionDialog(pdfRenderer: PdfRenderer, pageCount: Int) {
+        val pageTitles = (1..pageCount).map { "Page $it" }.toTypedArray()
+        var selectedPage = 0
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Select PDF Page")
+            .setSingleChoiceItems(pageTitles, 0) { _, which -> selectedPage = which }
+            .setPositiveButton("Convert") { _, _ ->
+                // Launch coroutine: Render, process, then close
+                lifecycleScope.launch {
+                    try {
+                        val bitmap = renderPdfPageToBitmap(pdfRenderer, selectedPage)
+                        processPdfBitmap(bitmap, "Page ${selectedPage + 1} of $pageCount")
+                    } finally {
+                        // Close renderer here (after use)—safe, no double-close
+                        pdfRenderer.close()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .setOnCancelListener {
+                // Close if canceled (no render happened)
+                pdfRenderer.close()
+            }
+            .show()
     }
 
 }

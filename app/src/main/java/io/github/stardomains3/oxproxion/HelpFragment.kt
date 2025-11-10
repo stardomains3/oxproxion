@@ -146,7 +146,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Text Box**: Enter your prompt.
             *   **Send Button**: Send your prompt to the LLM. **Long-press** it to open the Presets screen.
             *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
-            *   **Image Button**: Appears for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. 
+            *   **Image Button**: Appears for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. 
             *   **Palette Button**: If using Nano-Banana, tap to set aspect ratio of returned generated image.
             
             ### Other Buttons

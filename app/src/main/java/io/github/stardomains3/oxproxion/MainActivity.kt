@@ -290,7 +290,7 @@ class MainActivity : AppCompatActivity() {
                 ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")
             }*/
             vm.signalPresetApplied()
-            Toast.makeText(this, "Preset Applied: ${preset.title}", Toast.LENGTH_SHORT).show()
+            //Toast.makeText(this, "Preset Applied: ${preset.title}", Toast.LENGTH_SHORT).show()
 
             val sharedText = intent.getStringExtra("shared_text")
             if (sharedText != null) {

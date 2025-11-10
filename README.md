@@ -41,7 +41,9 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 
 
 📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard. Long-press the response avatar to copy in Markdown.
-📄 On-Device PDF Export: Make a PDF of the whole chat with the PDF button in the options area. Or press the PDF icon/button on the response to generate a PDF of that specific response; All created locally using Android's native tools.  
+
+📄 On-Device PDF Export: Make a PDF of the whole chat with the PDF button in the options area. Or press the PDF icon/button on the response to generate a PDF of that specific response; All created locally using Android's native tools. 
+
 **🛠️ Built with Modern Tech**: 100 % Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
 
 ## Screenshots

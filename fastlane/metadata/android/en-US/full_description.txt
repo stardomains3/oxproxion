@@ -14,7 +14,7 @@ Long-press the model name to open the OpenRouter models list in your browser.
 Long-press the API key icon to view your remaining OpenRouter credits.
 📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard.
 oxproxion app does not have trackers, analytics, nor ads.
-📄 On-Device PDF Export: Long-press the AI avatar icon to generate a PDF of that specific response. Or use menu PDF button for full chat PDF. PDFs created locally using Android's native tools.
+📄 On-Device PDF Export: Generate a PDF of that specific response. Or use menu PDF button for full chat PDF. PDFs created locally using Android's native tools.
 ✨And Much More! Download and check it out. See Help section in the app for the complete guide.
 🛠️ Built with Modern Tech: 100 % Kotlin, leveraging Jetpack libraries, Coroutines for asynchronous tasks, and Ktor for networking.
 
