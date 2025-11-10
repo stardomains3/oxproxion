@@ -1,0 +1,2 @@
+- Added a "LAN" filter for your AI models list screen.
+- Also a note about the PDF uploads new function in the app: If the page has a white background the conversion may make that transparent, but this shouldn't be an issue with the vision model; It just may look different in the image preview you see.

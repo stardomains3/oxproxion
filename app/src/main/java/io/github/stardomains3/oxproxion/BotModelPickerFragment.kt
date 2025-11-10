@@ -39,7 +39,7 @@ class BotModelPickerFragment : Fragment() {
     }
 
     enum class CostFilter {
-        ALL, FREE, PAID
+        ALL, FREE, PAID, LAN  // UPDATED: Added LAN
     }
 
     enum class SortOrder {
@@ -83,7 +83,6 @@ class BotModelPickerFragment : Fragment() {
         toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
         }
-
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_lan_models -> {
@@ -164,6 +163,7 @@ class BotModelPickerFragment : Fragment() {
                     R.id.costFilterAllButton -> CostFilter.ALL
                     R.id.costFilterFreeButton -> CostFilter.FREE
                     R.id.costFilterPaidButton -> CostFilter.PAID
+                    R.id.costFilterLanButton -> CostFilter.LAN  // NEW: Handle LAN button
                     else -> CostFilter.ALL
                 }
                 filterAndSortModels(searchView.query.toString())  // Re-filter and sort
@@ -211,11 +211,12 @@ class BotModelPickerFragment : Fragment() {
             FilterType.IMAGE_GEN -> tempFiltered.filter { it.isImageGenerationCapable }.toMutableList()
         }
 
-        // Apply cost filter
+        // Apply cost filter (UPDATED: Added LAN case)
         tempFiltered = when (currentCostFilter) {
             CostFilter.ALL -> tempFiltered
             CostFilter.FREE -> tempFiltered.filter { it.isFree }.toMutableList()
             CostFilter.PAID -> tempFiltered.filter { !it.isFree }.toMutableList()
+            CostFilter.LAN -> tempFiltered.filter { it.isLANModel }.toMutableList()  // NEW: Filter by LAN models
         }
 
         // Apply search filter

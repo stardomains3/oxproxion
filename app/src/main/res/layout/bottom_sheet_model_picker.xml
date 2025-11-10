@@ -96,7 +96,7 @@
                 app:strokeColor="@color/chestnut"/>
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Cost Filter Bar -->
+        <!-- Cost Filter Bar (UPDATED: Added LAN button) -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/costFilterBar"
             android:layout_width="0dp"
@@ -133,6 +133,17 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Paid"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+
+            <!-- NEW: LAN Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/costFilterLanButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="LAN"
                 style="?attr/materialButtonOutlinedStyle"
                 app:backgroundTint="@color/toggle_background_selector"
                 app:strokeColor="@color/chestnut"/>
