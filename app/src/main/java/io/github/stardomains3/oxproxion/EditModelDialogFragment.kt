@@ -107,7 +107,8 @@ class EditModelDialogFragment : DialogFragment() {
                     displayName  = name,
                     apiIdentifier= id,
                     isVisionCapable     = vision,
-                    isReasoningCapable  = reasoning
+                    isReasoningCapable  = reasoning,
+                    isLANModel         = existingModel?.isLANModel ?: false
                 )
 
                 existingModel?.let { old -> onModelUpdated?.invoke(old, newModel) }

@@ -64,26 +64,26 @@ class SharedPreferencesHelper(context: Context) {
 
     private fun migrateFromGson() {
         if (!mainPrefs.getBoolean(KEY_MIGRATION_COMPLETE, false)) {
-            Log.d("Migration", "Starting migration from Gson to Kotlin Serialization")
+         //   Log.d("Migration", "Starting migration from Gson to Kotlin Serialization")
 
             runCatching { migrateCustomModels() }.onFailure {
-                Log.e("Migration", "Failed to migrate custom models", it)
+            //    Log.e("Migration", "Failed to migrate custom models", it)
             }
             runCatching { migrateSystemMessages() }.onFailure {
-                Log.e("Migration", "Failed to migrate system messages", it)
+           //     Log.e("Migration", "Failed to migrate system messages", it)
             }
             runCatching { migrateOpenRouterModels() }.onFailure {
-                Log.e("Migration", "Failed to migrate OpenRouter models", it)
+             //   Log.e("Migration", "Failed to migrate OpenRouter models", it)
             }
             runCatching { migrateSelectedSystemMessage() }.onFailure {
-                Log.e("Migration", "Failed to migrate selected system message", it)
+              //  Log.e("Migration", "Failed to migrate selected system message", it)
             }
             runCatching { migrateDefaultSystemMessage() }.onFailure {
-                Log.e("Migration", "Failed to migrate default system message", it)
+              //  Log.e("Migration", "Failed to migrate default system message", it)
             }
 
             mainPrefs.edit { putBoolean(KEY_MIGRATION_COMPLETE, true) }
-            Log.d("Migration", "Migration to Kotlin Serialization complete")
+          //  Log.d("Migration", "Migration to Kotlin Serialization complete")
         }
     }
 
@@ -285,7 +285,7 @@ class SharedPreferencesHelper(context: Context) {
                 putString("${alias}_iv", ivString)
             }
         } catch (e: Exception) {
-            Log.e("API_KEY_STORAGE", "Error encrypting $alias", e)
+          //  Log.e("API_KEY_STORAGE", "Error encrypting $alias", e)
         }
     }
 
@@ -301,7 +301,7 @@ class SharedPreferencesHelper(context: Context) {
                 val iv = Base64.decode(ivString, Base64.DEFAULT)
                 decryptApiKey(alias, iv, encryptedKey)
             } catch (e: Exception) {
-                Log.e("API_KEY_RETRIEVAL", "Error decrypting $alias", e)
+            //    Log.e("API_KEY_RETRIEVAL", "Error decrypting $alias", e)
                 ""
             }
         }
@@ -342,7 +342,7 @@ class SharedPreferencesHelper(context: Context) {
             val decryptedData = cipher.doFinal(encryptedData)
             return String(decryptedData, Charsets.UTF_8)
         } catch (e: Exception) {
-            Log.e("API_KEY_DECRYPTION", "Error decrypting $alias", e)
+          //  Log.e("API_KEY_DECRYPTION", "Error decrypting $alias", e)
             return ""
         }
     }

@@ -753,7 +753,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 accumulatedAnnotations.addAll(delta?.annotations ?: emptyList())
                                 delta?.images?.forEach { accumulatedImages.add(it.image_url.url) }
                             } catch (e: Exception) {
-                                Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
+                               // Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
                             }
                         }
                     }
@@ -784,7 +784,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             // Normal cases
                         }
                         else -> {
-                            Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
+                           // Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
                         }
                     }
 
@@ -925,7 +925,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     else -> {
                         // Unknown reason: Log for debugging
-                        Log.w("ChatViewModel", "Unknown finish_reason: $finishReason (native: ${choice.native_finish_reason})")
+                     //   Log.w("ChatViewModel", "Unknown finish_reason: $finishReason (native: ${choice.native_finish_reason})")
                     }
                 }
                     }
@@ -983,7 +983,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val detailedMsg = "**Error:**\n---\n(Code: ${error.code}): ${error.message}"
         // Optionally, include metadata if present
         error.metadata?.let { meta ->
-            Log.e("ChatViewModel", "Error metadata: $meta")
+        //    Log.e("ChatViewModel", "Error metadata: $meta")
         }
 
         // Update the UI with the detailed message (similar to handleError)
@@ -1293,7 +1293,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         } catch (e: Throwable) {
-            Log.e("ChatViewModel", "Correction failed", e)
+           // Log.e("ChatViewModel", "Correction failed", e)
             null
         }
     }
@@ -1491,12 +1491,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         isLANModel = true
                     )
                 } catch (e: Exception) {
-                    Log.e("LmStudioModels", "Failed to parse model: ${e.message}", e)
+                 //   Log.e("LmStudioModels", "Failed to parse model: ${e.message}", e)
                     null // Skip malformed entries
                 }
             }.sortedBy { it.displayName.lowercase() }
         } catch (e: Exception) {
-            Log.e("LmStudioModels", "Failed to fetch LM Studio models", e)
+          //  Log.e("LmStudioModels", "Failed to fetch LM Studio models", e)
             throw e
         }
     }
@@ -1587,12 +1587,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         isLANModel = true
                     )
                 } catch (e: Exception) {
-                    Log.e("LlamaCppModels", "Failed to parse model: ${e.message}", e)
+                  //  Log.e("LlamaCppModels", "Failed to parse model: ${e.message}", e)
                     null // Skip malformed entries
                 }
             }.sortedBy { it.displayName.lowercase() }
         } catch (e: Exception) {
-            Log.e("LlamaCppModels", "Failed to fetch llama.cpp models", e)
+         //   Log.e("LlamaCppModels", "Failed to fetch llama.cpp models", e)
             throw e
         }
     }

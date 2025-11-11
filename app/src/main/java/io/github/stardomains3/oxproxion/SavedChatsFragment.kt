@@ -67,7 +67,7 @@ class SavedChatsFragment : Fragment() {
                             throw Exception("Failed to read file content.")
                         }
                     } catch (e: Exception) {
-                        Log.e("Import", "Import failed", e)
+                       // Log.e("Import", "Import failed", e)
                         Toast.makeText(requireContext(), "Import failed. Check file format.", Toast.LENGTH_SHORT).show()
                     }
                 }

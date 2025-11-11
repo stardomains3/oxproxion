@@ -234,10 +234,10 @@ class PdfGenerator(private val context: Context) {
             document.close()
             return uri.toString()
         } catch (e: IOException) {
-            Log.e("PdfGenerator", "Error creating Markdown PDF with image", e)
+           // Log.e("PdfGenerator", "Error creating Markdown PDF with image", e)
             return null
         } catch (e: Exception) {
-            Log.e("PdfGenerator", "Error rendering Markdown PDF with image", e)
+         //   Log.e("PdfGenerator", "Error rendering Markdown PDF with image", e)
             return null
         }
     }
@@ -348,10 +348,10 @@ class PdfGenerator(private val context: Context) {
             document.close()
             return uri.toString()
         } catch (e: IOException) {
-            Log.e("PdfGenerator", "Error creating Markdown PDF", e)
+         //   Log.e("PdfGenerator", "Error creating Markdown PDF", e)
             return null
         } catch (e: Exception) {
-            Log.e("PdfGenerator", "Error rendering Markdown PDF", e)
+         //   Log.e("PdfGenerator", "Error rendering Markdown PDF", e)
             return null
         }
     }
@@ -485,7 +485,7 @@ class PdfGenerator(private val context: Context) {
             document.close()
             return file.absolutePath
         } catch (e: IOException) {
-            Log.e("PdfGenerator", "Error creating PDF with generated images", e)
+         //   Log.e("PdfGenerator", "Error creating PDF with generated images", e)
             return null
         }
     }
@@ -499,7 +499,7 @@ class PdfGenerator(private val context: Context) {
             val inputStream = context.contentResolver.openInputStream(uri)
             BitmapFactory.decodeStream(inputStream)
         } catch (e: Exception) {
-            Log.e("PdfGenerator", "Failed to load bitmap from URI: $uriString", e)
+         //   Log.e("PdfGenerator", "Failed to load bitmap from URI: $uriString", e)
             null
         }
     }
@@ -625,7 +625,7 @@ class PdfGenerator(private val context: Context) {
             return file.absolutePath
 
         } catch (e: IOException) {
-            Log.e("PdfGenerator", "Error creating PDF", e)
+           // Log.e("PdfGenerator", "Error creating PDF", e)
             return null
         }
     }
@@ -844,7 +844,7 @@ class PdfGenerator(private val context: Context) {
             val imageBytes = Base64.decode(base64Data, Base64.DEFAULT)
             BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
         } catch (e: Exception) {
-            Log.e("PdfGenerator", "Failed to decode image for PDF", e)
+           // Log.e("PdfGenerator", "Failed to decode image for PDF", e)
             null
         }
     }

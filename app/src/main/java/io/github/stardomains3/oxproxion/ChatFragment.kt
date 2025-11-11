@@ -89,6 +89,7 @@ import kotlinx.serialization.json.buildJsonArray
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import androidx.core.graphics.createBitmap
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -227,7 +228,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     // Notify for gallery refresh
                     requireContext().contentResolver.notifyChange(imageUri, null)
                 } catch (e: Exception) {
-                    Log.e("ChatFragment", "Error processing photo: ${e.message}", e)
+                 //   Log.e("ChatFragment", "Error processing photo: ${e.message}", e)
                     Toast.makeText(requireContext(), "Failed to process photo", Toast.LENGTH_SHORT).show()
                     requireContext().contentResolver.delete(imageUri, null, null)
                 }
@@ -275,9 +276,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             // Set pending as string for FlexibleMessage
                             viewModel.setPendingUserImageUri(u.toString())
 
-                            Log.d("ChatFragment", "Persistent URI granted for gallery: $u")
+                          //  Log.d("ChatFragment", "Persistent URI granted for gallery: $u")
                         } catch (e: SecurityException) {
-                            Log.e("ChatFragment", "Persistent permission failed: ${e.message}", e)
+                         //   Log.e("ChatFragment", "Persistent permission failed: ${e.message}", e)
                             Toast.makeText(requireContext(), "Image access limited; tap won't open full file", Toast.LENGTH_SHORT).show()
                             // Fallback: No Uri set, use base64 display only
                         }
@@ -965,6 +966,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
         modelNameTextView.setOnClickListener {
+            chatEditText.hideKeyboard()
             val picker = BotModelPickerFragment().apply {
                 onModelSelected = { modelString ->
                     val newModelSupportsWebp = viewModel.supportsWebp(modelString)
@@ -1003,6 +1005,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
 
         systemMessageButton.setOnClickListener {
+            chatEditText.hideKeyboard()
             parentFragmentManager.beginTransaction()
                 .hide(this)
                 .add(R.id.fragment_container, SystemMessageLibraryFragment())
@@ -1059,6 +1062,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
 
         openSavedChatsButton.setOnClickListener {
+            chatEditText.hideKeyboard()
             parentFragmentManager.beginTransaction()
                 .hide(this)
                 .add(R.id.fragment_container, SavedChatsFragment())
@@ -1109,7 +1113,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e("ChatFragment", "PDF generation failed", e)
+                      //  Log.e("ChatFragment", "PDF generation failed", e)
                         null
                     }
                 }
@@ -1698,6 +1702,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     // NEW: Separate setup for plusButton listener (with dialog options)
     private fun setupPlusButtonListener() {
         plusButton.setOnClickListener {
+            chatEditText.hideKeyboard()
             val model = viewModel.activeChatModel.value
             if (model == null || !viewModel.isVisionModel(model)) {
                 Toast.makeText(requireContext(), "Image/PDF selection not supported for the current model.", Toast.LENGTH_SHORT).show()
@@ -1790,7 +1795,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             serviceIntent.putExtra("initial_title", displayName)
             requireContext().startService(serviceIntent)
         } catch (e: Exception) {
-            Log.e("ChatFragment", "Failed to start foreground service", e)
+          //  Log.e("ChatFragment", "Failed to start foreground service", e)
         }
     }
 
@@ -1906,11 +1911,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     requireContext().contentResolver.openFileDescriptor(pdfUri, "r")
                 } ?: run {
                     // Fallback copy (rare now)
-                    Log.d("ChatFragment", "Direct access failed; copying PDF to cache...")
+                   // Log.d("ChatFragment", "Direct access failed; copying PDF to cache...")
                     val inputStream = requireContext().contentResolver.openInputStream(pdfUri)
                         ?: run {
-                            chatEditText.setText("No read access to PDF.")
-                            chatEditText.postDelayed({ chatEditText.setText("") }, 5000)
+                            Toast.makeText(requireContext(), "No read access to PDF.", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
 
@@ -1929,8 +1933,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
 
                 if (parcelFd == null) {
-                    chatEditText.setText("Failed to access PDF.")
-                    chatEditText.postDelayed({ chatEditText.setText("") }, 5000)
+                    Toast.makeText(requireContext(), "Failed to access PDF.", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
 
@@ -1940,8 +1943,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
                 when {
                     pageCount == 0 -> {
-                        chatEditText.setText("PDF has no pages.")
-                        chatEditText.postDelayed({ chatEditText.setText("") }, 3000)
+                        Toast.makeText(requireContext(), "PDF has no pages.", Toast.LENGTH_SHORT).show()
                         pdfRenderer.close()  // Close if no pages
                         return@launch
                     }
@@ -1957,17 +1959,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ChatFragment", "PDF processing error", e)
+              //  Log.e("ChatFragment", "PDF processing error", e)
                 val errorMsg = "Failed to process PDF: ${e.message}"
-                chatEditText.setText(errorMsg)
-                chatEditText.postDelayed({ chatEditText.setText("") }, 5000)
+                Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_SHORT).show()
             } finally {
                 // Only close parcelFd and temp file (renderer closed in branches)
                 try {
                     parcelFd?.close()
                     tempPdfFile?.delete()
                 } catch (e: Exception) {
-                    Log.e("ChatFragment", "Error closing PDF resources", e)
+                 //   Log.e("ChatFragment", "Error closing PDF resources", e)
                 }
             }
         }
@@ -1981,7 +1982,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             val page = renderer.openPage(pageIndex)
             val width = (page.width * 1.5f).toInt() // Scale for quality (adjust if too big)
             val height = (page.height * 1.5f).toInt()
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val bitmap = createBitmap(width, height)
             val bounds = Rect(0, 0, width, height)
             page.render(bitmap, bounds, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             page.close()  // Close page immediately

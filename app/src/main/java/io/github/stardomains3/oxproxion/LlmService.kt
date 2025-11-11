@@ -98,7 +98,7 @@ class LlmService(
 
     suspend fun getRemainingCredits(apiKey: String): Double? {
         if (apiKey.isBlank()) {
-            Log.e(TAG, "API key is blank. Cannot fetch credits.")
+           // Log.e(TAG, "API key is blank. Cannot fetch credits.")
             return null
         }
         try {
@@ -108,14 +108,14 @@ class LlmService(
 
             if (!response.status.isSuccess()) {
                 val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details" }
-                Log.e(TAG, "API Error getting credits: ${response.status} - $errorBody")
+              //  Log.e(TAG, "API Error getting credits: ${response.status} - $errorBody")
                 return null
             }
 
             val creditsResponse = response.body<CreditsResponse>()
             return creditsResponse.data.totalCredits - creditsResponse.data.totalUsage
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch credits", e)
+         //   Log.e(TAG, "Failed to fetch credits", e)
             return null
         }
     }
