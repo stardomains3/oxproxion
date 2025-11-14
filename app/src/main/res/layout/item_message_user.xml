@@ -49,6 +49,8 @@
                 android:textColorHighlight="#756151"
                 android:textIsSelectable="true"
                 android:textSize="16sp"
+                android:linksClickable="true"
+                android:textColorLink="@android:color/holo_blue_dark"
                 app:layout_constrainedWidth="true"
                 app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintEnd_toEndOf="parent"

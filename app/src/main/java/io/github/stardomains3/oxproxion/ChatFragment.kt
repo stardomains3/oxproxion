@@ -103,6 +103,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var currentSpeakingPosition = -1
     private lateinit var helpButton: MaterialButton
     private lateinit var presetsButton: MaterialButton
+    private lateinit var attachmentButton: MaterialButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
@@ -153,7 +154,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var layoutManager: LinearLayoutManager
     private lateinit var pdfPicker: ActivityResultLauncher<Array<String>>
     private var currentTempImageFile: File? = null  // Tracks PDF PNG temp file
+    data class AttachedFile(
+        val fileName: String,
+        val content: String,
+        val size: Long
+    )
 
+    private lateinit var textFilePicker: ActivityResultLauncher<String>
+    private val pendingFiles = mutableListOf<AttachedFile>()
+    private val MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB total
+    private val MAX_SINGLE_FILE_SIZE = 1024 * 1024 // 1MB per file
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -289,6 +299,21 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             uri?.let { processPdfUri(it) }  // Null-safe: Call if non-null
         }
+        textFilePicker = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+            if (uris.isNotEmpty()) {
+                // Process each URI (with size/MIME checks via processTextFile)
+                var successCount = 0
+                var errorCount = 0
+                uris.forEach { uri ->
+                    processTextFile(uri)  // Your updated function—handles one at a time
+                    // Note: Since processTextFile is async, we don't await here; toasts/UI update inside it
+                    // For batch feedback, you could collect results, but simple loop + toasts work fine
+                }
+                // Optional: Single toast after all (but since async, use a counter or LiveData)
+
+                //  Toast.makeText(requireContext(), "${uris.size} files processed", Toast.LENGTH_SHORT).show()
+            }
+        }
         // --- Initialize Views from fragment_chat.xml ---
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
@@ -313,6 +338,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         menuButton = view.findViewById(R.id.menuButton)
         chatFrameView = view.findViewById(R.id.chatFrameView)
         saveapiButton = view.findViewById(R.id.saveapiButton)
+        attachmentButton = view.findViewById(R.id.attachmentButton)
         lanButton = view.findViewById(R.id.lanButton)
         setMaxTokensButton = view.findViewById(R.id.setMaxTokensButton)
         buttonsContainer = view.findViewById(R.id.buttonsContainer)
@@ -391,6 +417,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         biometricButton = view.findViewById(R.id.biometricButton)
         setupClickListeners()
         setupPlusButtonListener()
+        setupTextFilePicker()
         updateSystemMessageButtonState()
         updateInitialUI()
         val rootView = view as FrameLayout // The root FrameLayout (fragment_container)
@@ -421,8 +448,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
                 modelNameTextView.text = viewModel.getModelDisplayName(model)
-               // modelNameTextView.text = formatModelName(model)
-                plusButton.visibility = if (viewModel.isVisionModel(model)) View.VISIBLE else View.GONE
+                if(viewModel.isVisionModel(model)){
+                    plusButton.icon.alpha = 255
+                    plusButton.isEnabled = true
+                }
+                else
+                {
+                    plusButton.icon.alpha = 102
+                    plusButton.isEnabled = false
+                }
                 genButton.visibility = if (viewModel.isImageGenerationModel(model)) View.VISIBLE else View.GONE
                 reasoningButton.visibility = if (viewModel.isReasoningModel(model)) View.VISIBLE else View.GONE
                 // BUG FIX START: Clear staged image if new model is not a vision model
@@ -837,7 +871,30 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     }
                 }
 
-                val prompt = chatEditText.text.toString().trim()
+                var prompt = chatEditText.text.toString().trim()
+                if (pendingFiles.isNotEmpty()) {
+                    val fileSections = pendingFiles.mapIndexed { index, file ->  // Explicit -> String
+                        val cleanContent = file.content.trim()
+                        if (cleanContent.isNotBlank()) {
+                            // Raw string for if branch: No escaping needed, newline after filename
+                            """File ${index + 1} (${file.fileName}):
+
+```text
+$cleanContent
+```"""
+                        } else {
+                            // Raw string for else branch: Matches type, no escaping
+                            """File ${index + 1} (${file.fileName}): (empty file)"""
+                        }
+                    }.joinToString("\n\n")  // Now safely String
+
+                    // Reassign prompt: Type-safe since fileSections is String
+                    prompt = if (prompt.isNotBlank()) {
+                        "$fileSections\n\n**User message:**\n$prompt"
+                    } else {
+                        "$fileSections\n\nPlease analyze these attached files."
+                    }
+                }
                 if (prompt.isNotBlank() || selectedImageBytes != null) {
                     /* if (!ForegroundService.isRunningForeground) {
                          ChatServiceGate.shouldRunService = true
@@ -889,6 +946,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     selectedImageBytes = null
                     selectedImageMime = null
                     attachmentPreviewContainer.visibility = View.GONE
+                    pendingFiles.clear()
+                    updateAttachmentButton()
                    /* if (chatAdapter.itemCount > 0) {
                         chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
                     }*/
@@ -1019,6 +1078,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 ForegroundService.updateNotificationStatusSilently(displayName, "oxproxion is Ready.")
             }*/
             viewModel.startNewChat()
+            currentTempImageFile?.delete()
+            currentTempImageFile = null
+            previewImageView.setImageBitmap(null)
+            // Add to reset logic
+            pendingFiles.clear()
+            updateAttachmentButton()
             true
         }
         resetChatButton.setOnClickListener {
@@ -1048,6 +1113,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     currentTempImageFile?.delete()
                     currentTempImageFile = null
                     previewImageView.setImageBitmap(null)
+                    pendingFiles.clear()
+                    updateAttachmentButton()
                 }
                 .show()
         }
@@ -1698,7 +1765,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             .substringBefore("@")
             .substringBefore(":")
     }
+    private fun setupTextFilePicker() {
+        attachmentButton.setOnClickListener {
+            // Launch multi-picker with primary MIME (broadens to text-like; client-side filters the rest)
+            val mimeType = "*/*"  // Or "text/plain" for stricter start; fallback handles .kt etc.
+            textFilePicker.launch(mimeType)
+        }
 
+        attachmentButton.setOnLongClickListener {
+            showAttachedFiles()
+            true
+        }
+    }
     // NEW: Separate setup for plusButton listener (with dialog options)
     private fun setupPlusButtonListener() {
         plusButton.setOnClickListener {
@@ -2063,6 +2141,131 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 pdfRenderer.close()
             }
             .show()
+    }
+    private fun processTextFile(uri: Uri) {
+        lifecycleScope.launch {
+            try {
+                // Get file info (your existing query for filename)
+                val fileName = try {
+                    val cursor = requireContext().contentResolver.query(uri, null, null, null, null)
+                    cursor?.use {
+                        if (it.moveToFirst()) {
+                            val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            if (nameIndex != -1) it.getString(nameIndex) else "unknown.txt"
+                        } else "unknown.txt"
+                    } ?: "unknown.txt"
+                } catch (e: Exception) {
+                    "unknown.txt"
+                }
+
+                // Get MIME type and extension for validation (before reading content)
+                val mimeType = requireContext().contentResolver.getType(uri)
+                val extension = fileName.substringAfterLast('.', "").lowercase()
+
+                // TEMP DEBUG LOG: Remove after testing
+                // android.util.Log.d("ProcessTextFile", "File: $fileName, MIME: '$mimeType', Extension: '$extension'")
+
+                // Allowed MIME types (your list from earlier)
+                val allowedTypes = setOf(
+                    "text/plain", "text/html", "text/css", "text/javascript", "application/javascript",
+                    "application/json", "application/xml", "text/yaml", "application/toml",
+                    "text/csv", "application/sql", "text/markdown", "image/svg+xml"
+                )
+
+                // FIXED: Fallback if MIME is known-good OR (unknown/non-text + code extension)
+                val isAllowed = if (mimeType != null && allowedTypes.contains(mimeType)) {
+                    true  // Known text MIME: Accept
+                } else {
+                    // MIME is null, unknown (e.g., octet-stream), or non-text: Fallback to extension
+                    val codeExtensions = setOf(
+                        "kt", "java", "py", "js", "ts", "cpp", "c", "h", "cs", "php", "rb", "go", "rs", "swift",
+                        "html", "css", "json", "xml", "yaml", "yml", "md", "txt", "sh", "sql", "csv", "log"
+                    )
+                    codeExtensions.contains(extension)
+                }
+
+                if (!isAllowed) {
+                    Toast.makeText(requireContext(), "Unsupported file: $fileName ($mimeType). Please select text/code files.", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                // Check current total size first (your existing logic)
+                val currentTotalSize = pendingFiles.sumOf { it.size }
+
+                // Read content and check individual file size (your buffered reading)
+                val content = withContext(Dispatchers.IO) {
+                    requireContext().contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
+                        val contentBuilder = StringBuilder()
+                        val buffer = CharArray(8192)
+                        var charsRead: Int
+                        while (reader.read(buffer).also { charsRead = it } > 0) {
+                            contentBuilder.append(buffer, 0, charsRead)
+                        }
+                        contentBuilder.toString()
+                    }
+                } ?: throw Exception("Could not read file")
+
+                val fileSize = content.toByteArray().size.toLong()
+
+                // Size validation (your existing checks)
+                if (fileSize > MAX_SINGLE_FILE_SIZE) {
+                    Toast.makeText(requireContext(), "File too large: $fileName (max ${MAX_SINGLE_FILE_SIZE / 1024 / 1024}MB per file)", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                if (currentTotalSize + fileSize > MAX_FILE_SIZE) {
+                    Toast.makeText(requireContext(), "Total attachments exceed limit: $fileName would make ${(currentTotalSize + fileSize) / 1024 / 1024}MB (max ${MAX_FILE_SIZE / 1024 / 1024}MB total)", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                // Add to pending files (your existing AttachedFile)
+                pendingFiles.add(AttachedFile(fileName, content, fileSize))
+
+                // Update UI (your existing)
+                updateAttachmentButton()
+                Toast.makeText(requireContext(), "File attached: $fileName", Toast.LENGTH_SHORT).show()
+
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Failed to read file: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+
+
+    private fun updateAttachmentButton() {
+        attachmentButton.isSelected = pendingFiles.isNotEmpty()
+    }
+
+    private fun showAttachedFiles() {
+        if (pendingFiles.isEmpty()) return
+
+        val filesList = pendingFiles.joinToString("\n") { file ->
+            "${file.fileName} (${formatFileSize(file.size)})"
+        }
+
+        val builder = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Attached Files (${pendingFiles.size})")
+            .setMessage(filesList)
+            .setPositiveButton("Remove All") { _, _ ->
+                pendingFiles.clear()
+                updateAttachmentButton()
+            }
+            .setNegativeButton("Close", null)
+
+        val dialog = builder.show()
+
+        // Apply dim amount of 0.8f
+        dialog.window?.setDimAmount(0.8f)
+    }
+
+
+    private fun formatFileSize(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "${bytes}B"
+            bytes < 1024 * 1024 -> String.format("%.1fKB", bytes / 1024f)
+            else -> String.format("%.1fMB", bytes / 1024f / 1024f)
+        }
     }
 
 }

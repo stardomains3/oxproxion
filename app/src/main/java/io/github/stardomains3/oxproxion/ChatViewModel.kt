@@ -1234,7 +1234,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         _activeChatModel.value ?: return@withContext null
                     } else {
                         // For non-LAN models, use the hardcoded correction model
-                        "ibm-granite/granite-4.0-h-micro"
+                      //  "ibm-granite/granite-4.0-h-micro"
+                        "qwen/qwen3-30b-a3b-instruct-2507"
                     }
 
                     // Ensure we have the correct endpoint and API key set

@@ -1,0 +1,2 @@
+- Added **Attach Document(s) Button**: Click icon to attach **text-based only** files to send with your prompt.
+- Changed magic prompt corrector function to use model "qwen/qwen3-30b-a3b-instruct-2507"

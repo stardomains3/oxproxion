@@ -146,7 +146,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Text Box**: Enter your prompt.
             *   **Send Button**: Send your prompt to the LLM. **Long-press** it to open the Presets screen.
             *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
-            *   **Image Button**: Appears for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. 
+            *   **Attach Document(s) Button**: Click icon to attach **text-based only** files to send with your prompt.
+            *   **Image Button**: Enabled for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. 
             *   **Palette Button**: If using Nano-Banana, tap to set aspect ratio of returned generated image.
             
             ### Other Buttons
@@ -160,7 +161,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ##  Menu
 
             Tap the **menu button** (the one on the lower left with nine dots) to show or hide the main menu. The menu will also hide if you tap outside of it.
-            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "mistralai/mistral-small-3.2-24b-instruct" to fix it and it will automatically correct the prompt in the prompt box.
+            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "qwen/qwen3-30b-a3b-instruct-2507" to fix it and it will automatically correct the prompt in the prompt box.
 
             ### Contextual Buttons (Enabled during a chat)
             *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.

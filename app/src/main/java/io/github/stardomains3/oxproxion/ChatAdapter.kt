@@ -124,7 +124,7 @@ class ChatAdapter(
         return when (viewType) {
             VIEW_TYPE_USER -> {
                 val view = inflater.inflate(R.layout.item_message_user, parent, false)
-                UserViewHolder(view)
+                UserViewHolder(view, markwon)
             }
             else -> { // Both AI and Thinking use the same base layout
                 val view = inflater.inflate(R.layout.item_message_ai, parent, false)
@@ -147,7 +147,7 @@ class ChatAdapter(
     override fun getItemCount(): Int = messages.size
 
     // ViewHolder for User messages
-    inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class UserViewHolder(itemView: View, private val markwon: Markwon) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val copyButtonuser: ImageButton = itemView.findViewById(R.id.copyButtonuser)
         private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)
@@ -158,7 +158,11 @@ class ChatAdapter(
 
         fun bind(message: FlexibleMessage) {
             messageTextView.typeface = currentTypeface
-            messageTextView.text = getMessageText(message.content)
+
+            // UPDATED: Render with Markwon for Markdown support (code blocks, bold, etc.)
+            val userContent = getMessageText(message.content)
+            markwon.setMarkdown(messageTextView, userContent)
+            messageTextView.movementMethod = LinkMovementMethod.getInstance()
             val imageUriStr = message.imageUri
             if (!imageUriStr.isNullOrEmpty()) {
                 try {
@@ -210,6 +214,13 @@ class ChatAdapter(
                 val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
                 clipboard.setPrimaryClip(clip)
                 // Toast.makeText(itemView.context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+            copyButtonuser.setOnLongClickListener {
+                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Copied Markdown", userContent)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
+                true // Consume the long click
             }
             editButton.setOnClickListener {
                 val messageText = messageTextView.text.toString()

@@ -20,11 +20,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:padding="2dp"
-            android:background="@drawable/bg_rounded_lin"
+            android:background="@drawable/bg_rounded_lin">
 
-            >
-
-            <!-- Saved Chats Button (left) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/openSavedChatsButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -41,11 +38,31 @@
                 app:iconTint="#A8A8A8"
                 app:backgroundTint="@color/button_background_col" />
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/genButton"
+                android:id="@+id/attachmentButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                app:backgroundTint="@color/button_background_col"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/ic_attachdoc"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="#A8A8A8"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:layout_gravity="top" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/genButton"
+                style="@style/Widget.Material3.Button.IconButton.Filled"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+
                 android:layout_marginEnd="2dp"
                 android:visibility="gone"
                 app:backgroundTint="@color/button_background_col"
@@ -70,11 +87,12 @@
                 android:layout_weight="1"
                 android:layout_gravity="center"
                 android:gravity="center"
+
                 android:textColor="#A8A8A8"
                 android:padding="2dp"
                 android:clickable="true"
                 android:background="@drawable/background_selector"
-                android:textSize="17sp"
+                android:textSize="15sp"
                 android:ellipsize="end"
                 android:singleLine="true"
                 android:visibility="visible"
@@ -85,7 +103,6 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_marginStart="2dp"
-                android:visibility="gone"
                 app:backgroundTint="@color/button_background_col"
                 app:cornerRadius="24dp"
                 app:icon="@drawable/ic_imgup"
@@ -106,6 +123,7 @@
                 app:icon="@drawable/ic_savechat"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:layout_marginStart="2dp"
                 app:iconGravity="textStart"
                 app:iconSize="28dp"
                 app:cornerRadius="24dp"
@@ -122,10 +140,12 @@
             android:id="@+id/chatFrameView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:background="#000000"
             android:layout_weight="1">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/chatRecyclerView"
+                android:background="#000000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
