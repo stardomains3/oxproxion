@@ -118,6 +118,15 @@ class MainActivity : AppCompatActivity() {
                 .add(R.id.fragment_container, chatFragment)
                 .commitNow()
         }
+        // NEW: Auto‑apply "digital assistant" preset for assistant launches
+        if (intent?.action in listOf(Intent.ACTION_ASSIST, Intent.ACTION_VOICE_COMMAND)) {
+            val digitalAssistantPreset = findDigitalAssistantPreset()
+            if (digitalAssistantPreset != null) {
+                val vm: ChatViewModel by viewModels()
+                PresetManager.applyPreset(this, vm, digitalAssistantPreset)
+                vm.signalPresetApplied()
+            }
+        }
         val vm: ChatViewModel by viewModels()
         handlePresetIntent(intent)
         if (intent.getBooleanExtra("autosend", false)) {
@@ -239,11 +248,24 @@ class MainActivity : AppCompatActivity() {
         }
         val isAssistLaunch = intent.action in listOf(Intent.ACTION_ASSIST)
         if (isAssistLaunch) {
+            val digitalAssistantPreset = findDigitalAssistantPreset()
+            if (digitalAssistantPreset != null) {
+                val vm: ChatViewModel by viewModels()
+                PresetManager.applyPreset(this, vm, digitalAssistantPreset)
+                vm.signalPresetApplied()
+            }
             val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container) as? ChatFragment
             fragment?.startSpeechRecognitionSafely()  // Custom method below
         }
     }
 
+    private fun findDigitalAssistantPreset(): Preset? {
+        val repository = PresetRepository(this)
+        val allPresets = repository.getAll()
+        return allPresets.find { preset ->
+            preset.title.lowercase().trim() == "digital assistant"
+        }
+    }
 
     private fun handlePresetIntent(intent: Intent) {
         if (intent.getBooleanExtra("apply_preset", false)) {
