@@ -551,7 +551,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         _isAwaitingResponse.value = true
         _userScrolledDuringStream.value = false
+        activeChatUrl = "https://openrouter.ai/api/v1/chat/completions"
+        activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
 
+        if (activeModelIsLan()) {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint == null) {
+                // Show toast and bail out (same as sendUserMessage)
+                Toast.makeText(getApplication<Application>().applicationContext, "Please configure LAN endpoint in settings", Toast.LENGTH_SHORT).show()
+                _isAwaitingResponse.value = false  // Reset state
+                return
+            }
+            activeChatUrl = "$lanEndpoint/v1/chat/completions"
+            activeChatApiKey = "any-non-empty-string" // Ollama/LM Studio typically ignore the key
+        }
         // Same networking as sendUserMessage (reuse handleStreamed/NonStreamed)
         networkJob = viewModelScope.launch {
             try {
@@ -1487,7 +1500,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         isVisionCapable = isVisionCapable,
                         isImageGenerationCapable = false, // LM Studio doesn't typically do image generation
                         isReasoningCapable = isReasoningCapable,
-                        created = 0L, // Not available from LM Studio API
+                        created = System.currentTimeMillis() / 1000,
                         isFree = true, // Local models are always free
                         isLANModel = true
                     )
@@ -1528,22 +1541,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val isImageGenerationCapable = false // Ollama doesn't typically do image generation
                 val isReasoningCapable = false
 
-                // Parse modified_at to timestamp (Ollama format: "2025-10-12T03:25:16.957624109-04:00")
-                val created = try {
-                    if (!modifiedAtStr.isNullOrEmpty()) {
-                        java.time.ZonedDateTime.parse(modifiedAtStr).toInstant().toEpochMilli()
-                    } else 0L
-                } catch (e: Exception) {
-                    0L
-                }
-
                 LlmModel(
                     displayName = name,
                     apiIdentifier = name,
                     isVisionCapable = isVisionCapable,
                     isImageGenerationCapable = isImageGenerationCapable,
                     isReasoningCapable = isReasoningCapable,
-                    created = created,
+                    created = System.currentTimeMillis() / 1000,
                     isFree = true, // Local models are always free
                     isLANModel = true // All models from LAN endpoint are LAN models
                 )
@@ -1583,7 +1587,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         isVisionCapable = false,
                         isImageGenerationCapable = false, // llama.cpp doesn't typically do image generation
                         isReasoningCapable = false,
-                        created = 0L, // Not available from llama.cpp API
+                        created = System.currentTimeMillis() / 1000,
                         isFree = true, // Local models are always free
                         isLANModel = true
                     )

@@ -1,6 +1,5 @@
 package io.github.stardomains3.oxproxion
 
-
 import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.PorterDuff
@@ -50,13 +49,19 @@ class EditModelDialogFragment : DialogFragment() {
         existingModel = arguments?.let { args ->
             val dn = args.getString("displayName")
             val id = args.getString("apiIdentifier")
+            val created = args.getLong("created", 0L)  // Restore existing created timestamp
+            val isFree = args.getBoolean("isFree", false)  // IMPROVED: Restore from args, default true
+            val isImageGen = args.getBoolean("isImageGenerationCapable", false)
             if (!dn.isNullOrBlank() && !id.isNullOrBlank()) {
                 LlmModel(
                     displayName  = dn,
                     apiIdentifier = id,
                     isVisionCapable = args.getBoolean("isVisionCapable", false),
                     isReasoningCapable = args.getBoolean("isReasoningCapable", false),
-                    isLANModel = args.getBoolean("isLANModel", false)
+                    isImageGenerationCapable = isImageGen,
+                    created = created,
+                    isLANModel = args.getBoolean("isLANModel", false),
+                    isFree = isFree  // Use the restored value
                 )
             } else null
         }
@@ -67,6 +72,7 @@ class EditModelDialogFragment : DialogFragment() {
             switchVision.isChecked = m.isVisionCapable
             switchReason.isChecked = m.isReasoningCapable
             builder.setTitle("Edit Model")
+
         } ?: builder.setTitle("Add Model")
 
         /* ----------  watch the api-id field  ---------- */
@@ -75,7 +81,7 @@ class EditModelDialogFragment : DialogFragment() {
             val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
                     id.endsWith(":online", ignoreCase = true) ||
                     id.endsWith(":nitro",  ignoreCase = true) ||
-                    id.endsWith(":floor",  ignoreCase = true) ||
+                    id.endsWith(":floor",  ignoreCase = true)||
                     existingModel?.isLANModel == true
 
             switchVision.visibility  = if (isSpecial) View.VISIBLE else View.GONE
@@ -84,6 +90,7 @@ class EditModelDialogFragment : DialogFragment() {
         editApiId.doAfterTextChanged { updateSwitchesVisibility() }
         updateSwitchesVisibility()   // initial call
 
+        /* ----------  buttons  ---------- */
         /* ----------  buttons  ---------- */
         builder.setView(view)
             .setPositiveButton("Save") { _, _ ->
@@ -101,20 +108,25 @@ class EditModelDialogFragment : DialogFragment() {
                 val vision    = if (isSpecial) switchVision.isChecked  else false
                 val reasoning = if (isSpecial) switchReason.isChecked else false
 
-
+                val createdTimestamp = existingModel?.created ?: (System.currentTimeMillis() / 1000)
+                val isFreeValue = existingModel?.isFree ?: id.endsWith(":free")
 
                 val newModel = LlmModel(
                     displayName  = name,
                     apiIdentifier= id,
                     isVisionCapable     = vision,
+                    isImageGenerationCapable = existingModel?.isImageGenerationCapable ?: false,
                     isReasoningCapable  = reasoning,
-                    isLANModel         = existingModel?.isLANModel ?: false
+                    created = createdTimestamp,
+                    isLANModel         = existingModel?.isLANModel ?: false,
+                    isFree = isFreeValue  // Use the preserved/default value
                 )
 
                 existingModel?.let { old -> onModelUpdated?.invoke(old, newModel) }
                     ?: onModelAdded?.invoke(newModel)
             }
             .setNegativeButton("Cancel", null)
+
 
         return builder.create()
     }
