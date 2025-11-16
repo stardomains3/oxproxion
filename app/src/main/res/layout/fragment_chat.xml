@@ -226,7 +226,7 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/setMaxTokensButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_maxtoken"
+                            app:icon="@drawable/ic_ruler"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"

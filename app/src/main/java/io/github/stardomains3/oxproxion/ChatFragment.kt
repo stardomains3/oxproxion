@@ -90,6 +90,7 @@ import kotlinx.serialization.json.buildJsonArray
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -612,6 +613,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             val materialButton = sendChatButton
             if (isAwaiting) {
+                chatRecyclerView.post {
+                    val lastPosition = chatAdapter.itemCount - 1
+                    if (lastPosition >= 0) {
+                        layoutManager.scrollToPosition(lastPosition)
+                    }
+                }
                 materialButton.setIconResource(R.drawable.ic_stop)
             }
             else{
@@ -685,7 +692,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
             }
         }
-        viewModel.scrollToBottomEvent.observe(viewLifecycleOwner) { event ->
+        /*viewModel.scrollToBottomEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
                 if (chatAdapter.itemCount > 0) {
                     chatRecyclerView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
@@ -696,6 +703,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             return true
                         }
                     })
+                }
+            }
+        }*/
+        viewModel.scrollToBottomEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                chatRecyclerView.post {
+                    val position = chatAdapter.itemCount - 1
+                    if (position >= 0) {
+                        layoutManager.scrollToPositionWithOffset(position, -12)
+                    }
                 }
             }
         }
@@ -1028,31 +1045,6 @@ $cleanContent
                     attachmentPreviewContainer.visibility = View.GONE
                     pendingFiles.clear()
                     updateAttachmentButton()
-                   /* if (chatAdapter.itemCount > 0) {
-                        chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
-                    }*/
-                  /*  if (chatAdapter.itemCount > 0) {
-                        // Post with a tiny delay to ensure the adapter has added the new item
-                        chatRecyclerView.postDelayed({
-                            val newPosition = chatAdapter.itemCount - 1
-
-                            // Scroll to the new message with 0 offset to pin its top edge to the top of the visible area
-                            layoutManager.scrollToPositionWithOffset(newPosition, 0)
-                        }, 50) // 50ms delay - test and increase to 100 if still off on slower devices
-                    }*/
-                    if (chatAdapter.itemCount > 0) {
-                        chatRecyclerView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
-                            override fun onPreDraw(): Boolean {
-                                chatRecyclerView.viewTreeObserver.removeOnPreDrawListener(this)
-                                val newPosition = chatAdapter.itemCount - 1
-                                if (newPosition >= 0) {
-                                    layoutManager.scrollToPositionWithOffset(newPosition, 0)
-                                }
-                                return true
-                            }
-                        })
-                    }
-
                 }
             }
         }
@@ -1592,6 +1584,7 @@ $cleanContent
             val newState = !currentState
             sharedPreferencesHelper.saveExtPreference2(newState)
             extBG.visibility = if (newState) View.VISIBLE else View.GONE
+            presetsButton.visibility = if (extBG.visibility == View.VISIBLE) View.GONE else View.VISIBLE
             true
         }
         extendButton.setOnClickListener {
@@ -1722,6 +1715,7 @@ $cleanContent
         val isExtended = sharedPreferencesHelper.getExtPreference()
         if (sharedPreferencesHelper.getExtPreference2()){
             extBG.visibility = View.VISIBLE
+            presetsButton.visibility = View.GONE
         }
         val hasText = !chatEditText.text.isNullOrEmpty()
         convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()

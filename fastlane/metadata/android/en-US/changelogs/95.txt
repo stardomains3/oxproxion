@@ -1,0 +1,3 @@
+- If you do the Preset button above Send button. The one in menu will be gone.
+- Fix for occasional non-scroll when sending prompt.
+- Changed max token button icon.
