@@ -61,7 +61,7 @@ class LanModelsFragment : Fragment() {
                         "ollama" -> "Ollama"
                         else -> "LAN"
                     }
-                    Toast.makeText(requireContext(), "Refreshing $providerName models…", Toast.LENGTH_SHORT).show()
+                 //   Toast.makeText(requireContext(), "Refreshing $providerName models…", Toast.LENGTH_SHORT).show()
                     fetchLanModels()
                     true
                 }
@@ -97,8 +97,8 @@ class LanModelsFragment : Fragment() {
                     }
                     Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_LONG).show()
                 } else {
-                    val successMessage = "Found ${models.size} ${provider} model${if (models.size != 1) "s" else ""}"
-                    Toast.makeText(requireContext(), successMessage, Toast.LENGTH_SHORT).show()
+                  //  val successMessage = "Found ${models.size} ${provider} model${if (models.size != 1) "s" else ""}"
+                   // Toast.makeText(requireContext(), successMessage, Toast.LENGTH_SHORT).show()
                 }
 
                 allModels = models.sortedBy { it.displayName.lowercase() }

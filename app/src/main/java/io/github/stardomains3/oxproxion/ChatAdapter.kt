@@ -37,6 +37,7 @@ class ChatAdapter(
     private val markwon: Markwon,
     private val viewModel: ChatViewModel,
     private val onSpeakText: (String, Int) -> Unit,
+    private val onSynthesizeToWavFile: (String, Int) -> Unit,
     private val ttsAvailable: Boolean,
     private val onEditMessage: (Int, String) -> Unit,
     private val onRedoMessage: (Int, JsonElement) -> Unit,
@@ -128,7 +129,7 @@ class ChatAdapter(
             }
             else -> { // Both AI and Thinking use the same base layout
                 val view = inflater.inflate(R.layout.item_message_ai, parent, false)
-                AssistantViewHolder(view, markwon, onSpeakText)
+                AssistantViewHolder(view, markwon, onSpeakText, onSynthesizeToWavFile)
             }
         }
     }
@@ -242,7 +243,8 @@ class ChatAdapter(
     inner class AssistantViewHolder(
         itemView: View,
         private val markwon: Markwon,
-        private val onSpeakText: (String, Int) -> Unit
+        private val onSpeakText: (String, Int) -> Unit,
+        private val onSynthesizeToWavFile: (String, Int) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
@@ -368,6 +370,15 @@ class ChatAdapter(
                 } else {
                     Toast.makeText(itemView.context, "No text to speak", Toast.LENGTH_SHORT).show()
                 }
+            }
+            ttsButton.setOnLongClickListener {
+                val textToSpeak = messageTextView.text.toString()
+                if (textToSpeak.isNotEmpty()) {
+                    onSynthesizeToWavFile(textToSpeak, position)
+                } else {
+                    Toast.makeText(itemView.context, "No text to save", Toast.LENGTH_SHORT).show()
+                }
+                true // Consume the long click
             }
             // Long-press to copy raw markdown
             aipdfButton.setOnClickListener {

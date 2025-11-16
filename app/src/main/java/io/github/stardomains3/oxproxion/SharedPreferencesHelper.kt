@@ -50,6 +50,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_OPEN_ROUTER_MODELS = "open_router_models"
         private const val KEY_NOTI_ENABLED = "noti_enabled"
         private const val KEY_EXT_ENABLED = "ext_enabled"
+        private const val KEY_EXT_ENABLED2 = "ext_enabled2"
         private const val KEY_REASONING_ENABLED = "reasoning_enabled"
         private const val KEY_INFO_BAR_DISMISSED = "info_bar_dismissed"
         private const val KEY_SORT_ORDER = "sort_order"
@@ -245,6 +246,14 @@ class SharedPreferencesHelper(context: Context) {
         mainPrefs.edit {
             putBoolean(KEY_EXT_ENABLED, isEnabled)
         }
+    }
+    fun saveExtPreference2(isEnabled: Boolean) {
+        mainPrefs.edit {
+            putBoolean(KEY_EXT_ENABLED2, isEnabled)
+        }
+    }
+    fun getExtPreference2(): Boolean {
+        return mainPrefs.getBoolean(KEY_EXT_ENABLED2, false)
     }
     fun saveBotModelPickerSortOrder(sortOrder: BotModelPickerFragment.SortOrder) {
         val value = when (sortOrder) {

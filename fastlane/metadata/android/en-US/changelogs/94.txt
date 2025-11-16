@@ -1,0 +1,4 @@
+- A couple additions for enthusiasts:
+
+1. Long press the Extend Dock button to show/hide a Presets button above the Send button in the main chat screen for quick/easy access to Presets.
+2. Long press the TTS button of an AI response bubble to save an audio wav file of it to your downloads folder. (Generation usually done in seconds.)

@@ -18,6 +18,7 @@ import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.pdf.PdfRenderer
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -31,7 +32,6 @@ import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
-import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -53,6 +53,7 @@ import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.doOnPreDraw
@@ -89,7 +90,6 @@ import kotlinx.serialization.json.buildJsonArray
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import androidx.core.graphics.createBitmap
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -103,6 +103,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var currentSpeakingPosition = -1
     private lateinit var helpButton: MaterialButton
     private lateinit var presetsButton: MaterialButton
+    private lateinit var presetsButton2: MaterialButton
     private lateinit var attachmentButton: MaterialButton
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
@@ -114,6 +115,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var modelNameTextView: TextView
     private lateinit var chatRecyclerView: RecyclerView
     private lateinit var chatEditText: EditText
+    private lateinit var extBG: LinearLayout
     private lateinit var sendChatButton: MaterialButton
     private lateinit var resetChatButton: MaterialButton
     private lateinit var utilityButton: MaterialButton
@@ -329,6 +331,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
+        extBG = view.findViewById(R.id.extBG)
         originalSendIcon = sendChatButton.icon
         resetChatButton = view.findViewById(R.id.resetChatButton)
         saveChatButton = view.findViewById(R.id.saveChatButton)
@@ -349,6 +352,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         headerContainer = view.findViewById(R.id.headerContainer)
         helpButton = view.findViewById(R.id.helpButton)
         presetsButton = view.findViewById(R.id.presetsButton)
+        presetsButton2 = view.findViewById(R.id.presetsButton2)
         arguments?.getString("shared_text")?.let { sharedText ->
             setSharedText(sharedText)
             arguments?.remove("shared_text") // To prevent re-processing
@@ -358,12 +362,87 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 textToSpeech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}
                     override fun onDone(utteranceId: String?) {
-                        requireActivity().runOnUiThread { onSpeechFinished() }  // Run on main thread
+                        if (utteranceId?.startsWith("TTS_SAVE_") == true) {
+                            val parts = utteranceId.split("_")
+                            if (parts.size == 4 && parts[0] == "TTS" && parts[1] == "SAVE") {
+                                val timestamp = parts[2].toLongOrNull() ?: return
+                                val position = parts[3].toIntOrNull() ?: return
+                                val context = requireContext()
+                                val tempFile = File(context.cacheDir, "temp_tts_${timestamp}.wav")
+                                val fileName = "TTS_${timestamp}_msg${position}.wav"
+
+                                // 🎯 COROUTINES: IO → Main (Structured, Cancellable, No Thread Leaks!)
+                                lifecycleScope.launch(Dispatchers.IO) {  // 🔧 BACKGROUND I/O
+                                    var success = false
+                                    try {
+                                        // 🔍 File ready (onDone guarantees!)
+                                        if (!tempFile.exists() || tempFile.length() == 0L) {
+                                            throw Exception("TTS file empty (0 bytes)")
+                                        }
+
+                                        // 🎯 MediaStore Downloads (NO PERMISSIONS)
+                                        val contentValues = ContentValues().apply {
+                                            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                                            put(MediaStore.MediaColumns.MIME_TYPE, "audio/wav")
+                                            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                                            put(MediaStore.MediaColumns.IS_PENDING, 1)
+                                        }
+
+                                        val resolver = context.contentResolver
+                                        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                                            ?: throw Exception("Failed to create MediaStore URI")
+
+                                        resolver.openOutputStream(uri)?.use { outputStream ->
+                                            tempFile.inputStream().use { inputStream ->
+                                                inputStream.copyTo(outputStream)
+                                            }
+                                        } ?: throw Exception("Failed to open OutputStream")
+
+                                        // ✅ Complete
+                                        contentValues.clear()
+                                        contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                                        resolver.update(uri, contentValues, null, null)
+
+                                        success = true
+                                        //   Log.d("TTS", "✅ Coroutines MediaStore save: $fileName (${tempFile.length()} bytes)")
+
+                                    } catch (e: Exception) {
+                                        //    Log.e("TTS", "Coroutines save failed", e)
+                                    } finally {
+                                        // 🧹 Cleanup
+                                        tempFile.delete()
+                                    }
+
+                                    // 🎯 MAIN THREAD TOAST (Auto-switched!)
+                                    withContext(Dispatchers.Main) {
+                                        val message = if (success) {
+                                            "✅ Saved to Downloads: $fileName"
+                                        } else {
+                                            "❌ Save failed"
+                                        }
+                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            requireActivity().runOnUiThread { onSpeechFinished() }  // Run on main thread
+                        }
                     }
                     override fun onError(utteranceId: String?) {
-                        requireActivity().runOnUiThread {
-                            Toast.makeText(requireContext(), "TTS error: Check TTS settings or engine", Toast.LENGTH_SHORT).show()
-                            onSpeechFinished()
+                        if (utteranceId?.startsWith("TTS_SAVE_") == true) {
+                            Toast.makeText(requireContext(), "❌ TTS synthesis error", Toast.LENGTH_SHORT).show()
+                            //Log.e("TTS", "TTS error for: $utteranceId")
+                        }
+                        else {
+                            requireActivity().runOnUiThread {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "TTS error: Check TTS settings or engine",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                onSpeechFinished()
+                            }
                         }
                     }
                 })
@@ -711,6 +790,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             markwon,
             viewModel,
             { text, position -> speakText(text, position) },
+            { text, position -> synthesizeToWavFile(text, position) },
             ttsAvailable,
             onEditMessage = { position, text ->
                 // Existing edit confirmation dialog (unchanged from previous)
@@ -1289,6 +1369,15 @@ $cleanContent
                 .addToBackStack(null)
                 .commit()
         }
+        presetsButton2.setOnClickListener {
+            chatEditText.hideKeyboard()
+            hideMenu()
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, PresetsListFragment())
+                .addToBackStack(null)
+                .commit()
+        }
         reasoningButton.setOnLongClickListener {
             if(reasoningButton.isSelected)
             {
@@ -1498,6 +1587,13 @@ $cleanContent
             sharedPreferencesHelper.saveConversationModeEnabled(newState)
             convoButton.isSelected = newState
         }
+        extendButton.setOnLongClickListener {
+            val currentState = sharedPreferencesHelper.getExtPreference2()
+            val newState = !currentState
+            sharedPreferencesHelper.saveExtPreference2(newState)
+            extBG.visibility = if (newState) View.VISIBLE else View.GONE
+            true
+        }
         extendButton.setOnClickListener {
 
             val currentState = sharedPreferencesHelper.getExtPreference()
@@ -1624,6 +1720,9 @@ $cleanContent
     }
     private fun updateInitialUI() {
         val isExtended = sharedPreferencesHelper.getExtPreference()
+        if (sharedPreferencesHelper.getExtPreference2()){
+            extBG.visibility = View.VISIBLE
+        }
         val hasText = !chatEditText.text.isNullOrEmpty()
         convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         biometricButton.isSelected = sharedPreferencesHelper.getBiometricEnabled()
@@ -1643,6 +1742,50 @@ $cleanContent
             speechButton.visibility = View.GONE
         }
     }
+
+    // 🚀 synthesizeToWavFile (MINIMAL CHANGE - still queues with utteranceId)
+    private fun synthesizeToWavFile(text: String, position: Int) {
+        val safeText = text.take(3900)
+        val context = requireContext()
+
+        if (safeText.length < text.length) {
+            Toast.makeText(context, "Text truncated for TTS (too long)", Toast.LENGTH_SHORT).show()
+        }
+
+        try {
+            val timestamp = System.currentTimeMillis()
+            val utteranceId = "TTS_SAVE_${timestamp}_${position}"
+            val tempFile = File(context.cacheDir, "temp_tts_${timestamp}.wav")
+            // val fileName = "TTS_${timestamp}_msg${position}.wav"  // For Toast tracking
+
+            val params = Bundle().apply {
+                putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
+            }
+
+            val result = textToSpeech.synthesizeToFile(
+                safeText,
+                params,
+                tempFile,
+                utteranceId
+            )
+
+            when (result) {
+                TextToSpeech.SUCCESS -> {
+                    Toast.makeText(context, "Audio generating...", Toast.LENGTH_SHORT).show()
+                    //  Log.d("TTS", "✅ Queued TTS: $utteranceId → ${tempFile.absolutePath}")
+                }
+                else -> {
+                    Toast.makeText(context, "❌ TTS wav failed (code: $result)", Toast.LENGTH_SHORT).show()
+                    //   Log.e("TTS", "synthesizeToFile failed: $result")
+                }
+            }
+
+        } catch (e: Exception) {
+            //  Log.e("TTS", "Queue error", e)
+            Toast.makeText(context, "Error queuing TTS: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun speakText(text: String, position: Int) {
         if (isSpeaking) {
             if (position == currentSpeakingPosition) {
