@@ -25,6 +25,7 @@
         android:layout_marginTop="16dp"
         android:text="Clear Chat"
         android:textColor="#CCCCCC"
+        style="@style/Widget.App.CheckBox"
         android:textSize="16sp" />
 
 </LinearLayout>

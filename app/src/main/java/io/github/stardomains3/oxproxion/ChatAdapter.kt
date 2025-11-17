@@ -162,8 +162,18 @@ class ChatAdapter(
 
             // UPDATED: Render with Markwon for Markdown support (code blocks, bold, etc.)
             val userContent = getMessageText(message.content)
-            markwon.setMarkdown(messageTextView, userContent)
-            messageTextView.movementMethod = LinkMovementMethod.getInstance()
+            try {
+                markwon.setMarkdown(messageTextView, userContent)
+                messageTextView.movementMethod = LinkMovementMethod.getInstance()
+            } catch (e: RuntimeException) {
+                // NEW: Catch Prism4j-specific errors to prevent crash; fallback to plain text
+                if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
+                    Toast.makeText(itemView.context, "Prism4j failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    messageTextView.text = userContent  // Plain text, no Markdown
+                } else {
+                    throw e  // Re-throw non-Prism4j errors
+                }
+            }
             val imageUriStr = message.imageUri
             if (!imageUriStr.isNullOrEmpty()) {
                 try {
@@ -262,8 +272,18 @@ class ChatAdapter(
             val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
             val fullText = reasoningText + text  // Prepend reasoning for display
 
-            markwon.setMarkdown(messageTextView, fullText)
-            messageTextView.movementMethod = LinkMovementMethod.getInstance()
+            try {
+                markwon.setMarkdown(messageTextView, fullText)
+                messageTextView.movementMethod = LinkMovementMethod.getInstance()
+            } catch (e: RuntimeException) {
+                // Catch Prism4j-specific errors to prevent crash; fallback to plain text
+                if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
+                    Toast.makeText(itemView.context, "Assistant Prism4j failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    messageTextView.text = fullText  // Plain text, no Markdown
+                } else {
+                    throw e  // Re-throw non-Prism4j errors
+                }
+            }
             ttsButton.visibility = if (ttsAvailable) View.VISIBLE else View.GONE
 
             val isError = message.role == "assistant" && text.startsWith("**Error:**")  // Use original text

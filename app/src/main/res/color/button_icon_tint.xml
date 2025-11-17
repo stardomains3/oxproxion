@@ -1,0 +1,5 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:color="@color/black" app:state_indeterminate="true"/>
+    <item android:color="@color/black" android:state_checked="true"/>
+    <item android:color="@color/your_orange_color" android:state_checked="false"/>
+</selector>

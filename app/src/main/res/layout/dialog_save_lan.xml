@@ -75,7 +75,8 @@
                 android:layout_height="wrap_content"
                 android:text="Ollama"
                 android:textColor="#FFFFFF"
-                android:buttonTint="#a0610a"
+                style="@style/Widget.App.CheckBox"
+
                 android:layout_marginBottom="8dp" />
 
             <CheckBox
@@ -84,15 +85,18 @@
                 android:layout_height="wrap_content"
                 android:text="LM Studio"
                 android:textColor="#FFFFFF"
-                android:buttonTint="#a0610a" />
+                style="@style/Widget.App.CheckBox"
+               />
             <CheckBox
                 android:id="@+id/checkbox_llama_cpp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="llama.cpp"
                 android:textColor="#FFFFFF"
-                android:buttonTint="#a0610a"
-                android:layout_marginTop="8dp" />
+                style="@style/Widget.App.CheckBox"
+                android:layout_marginTop="8dp"
+
+                />
         </LinearLayout>
 
         <!-- Buttons -->

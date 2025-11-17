@@ -1,0 +1,2 @@
+- Fixed some styling issues.
+- Added guard to handle certain markdown that would cause a crash.
