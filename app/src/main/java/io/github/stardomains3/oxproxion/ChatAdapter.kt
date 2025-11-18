@@ -75,7 +75,7 @@ class ChatAdapter(
     private val messages = mutableListOf<FlexibleMessage>()
 
     // Define constants for the view types
-    private companion object {
+    companion object {
         const val VIEW_TYPE_USER = 1
         const val VIEW_TYPE_ASSISTANT = 2
         const val VIEW_TYPE_THINKING = 3 // For the "working..." message

@@ -36,7 +36,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -90,7 +89,6 @@ import kotlinx.serialization.json.buildJsonArray
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -167,6 +165,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private val pendingFiles = mutableListOf<AttachedFile>()
     private val MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB total
     private val MAX_SINGLE_FILE_SIZE = 1024 * 1024 // 1MB per file
+    private var adapterObserver: RecyclerView.AdapterDataObserver? = null
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -613,12 +612,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             val materialButton = sendChatButton
             if (isAwaiting) {
-                chatRecyclerView.post {
-                    val lastPosition = chatAdapter.itemCount - 1
-                    if (lastPosition >= 0) {
-                        layoutManager.scrollToPosition(lastPosition)
-                    }
-                }
                 materialButton.setIconResource(R.drawable.ic_stop)
             }
             else{
@@ -768,6 +761,29 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 notificationManager.deleteNotificationChannel("SilentUpdatesChannel")
             }
         }
+        adapterObserver = object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                super.onItemRangeInserted(positionStart, itemCount)
+                checkAndScrollForThinking(positionStart + itemCount - 1)
+            }
+
+            override fun onChanged() {
+                super.onChanged()
+                val lastPos = chatAdapter.itemCount - 1
+                if (lastPos >= 0) checkAndScrollForThinking(lastPos)
+            }
+
+            private fun checkAndScrollForThinking(position: Int) {
+                val lastPos = chatAdapter.itemCount - 1
+                if (position == lastPos && chatAdapter.getItemViewType(lastPos) == ChatAdapter.VIEW_TYPE_THINKING) {
+                    // ✅ "working..." detected → Scroll!
+                    chatRecyclerView.post {
+                        layoutManager.scrollToPosition(lastPos)
+                    }
+                }
+            }
+        }
+        chatAdapter.registerAdapterDataObserver(adapterObserver!!)
             // end onviewcreated
     }
 
@@ -932,6 +948,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         if (!isFontUpdate) {  // Only stop the service if not a font update (i.e., actual app closure)
             stopForegroundService()
         }
+        adapterObserver?.let {
+            chatAdapter.unregisterAdapterDataObserver(it)
+        }
+        adapterObserver = null
     }
     @SuppressLint("ClickableViewAccessibility")
     private fun setupClickListeners() {
