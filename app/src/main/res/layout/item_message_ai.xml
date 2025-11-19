@@ -53,6 +53,7 @@
                 android:textColorLink="@android:color/holo_blue_dark"
                 android:textIsSelectable="true"
                 android:textSize="16sp"
+                android:linksClickable="true"
                 app:layout_constrainedWidth="true"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
