@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
-import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -164,7 +163,6 @@ class ChatAdapter(
             val userContent = getMessageText(message.content)
             try {
                 markwon.setMarkdown(messageTextView, userContent)
-                messageTextView.movementMethod = LinkMovementMethod.getInstance()
             } catch (e: RuntimeException) {
                 // NEW: Catch Prism4j-specific errors to prevent crash; fallback to plain text
                 if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
@@ -274,7 +272,7 @@ class ChatAdapter(
 
             try {
                 markwon.setMarkdown(messageTextView, fullText)
-                messageTextView.movementMethod = LinkMovementMethod.getInstance()
+
             } catch (e: RuntimeException) {
                 // Catch Prism4j-specific errors to prevent crash; fallback to plain text
                 if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {

@@ -3,7 +3,7 @@
     <style name="Base.Theme.Oxproxion" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">#C2C2C2</item>
         <item name="colorOnPrimary">@color/black</item>
-        <item name="android:textColorHighlight">@color/your_orange_color</item>
+        <item name="android:textColorHighlight">#007541</item>
         <item name="materialAlertDialogTheme">@style/CustomMaterialAlertDialogTheme</item>
         <item name="colorControlNormal">#C2C2C2</item>
         <item name="android:colorControlNormal">#C2C2C2</item>

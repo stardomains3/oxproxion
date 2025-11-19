@@ -593,7 +593,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         annotations.forEachIndexed { i, ann ->
             if (ann.type == "url_citation" && ann.url_citation != null) {
                 val cit = ann.url_citation
-                sb.append("[${i+1}] [${cit.title}](${cit.url})\n\n")
+                val number = "[${i + 1}]"
+                val titlePart = if (cit.title.isNullOrBlank()) "" else " ${cit.title}"
+                val urlPart = if (cit.url.isNullOrBlank()) "" else " ${cit.url}"
+                sb.append("$number$titlePart$urlPart\n\n")
             }
         }
         return sb.toString()

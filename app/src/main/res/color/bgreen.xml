@@ -14,8 +14,8 @@
     <item android:state_selected="true" android:state_enabled="true" android:color="#6D2E0F" />
 
     <!-- Default state (enabled but none of the above) -->
-    <item android:state_enabled="true" android:color="#36454F"/>
+    <item android:state_enabled="true" android:color="#313f48"/>
 
     <!-- Fallback default (shouldn't normally be needed) -->
-    <item android:color="#36454F"/>
+    <item android:color="#313f48"/>
 </selector>

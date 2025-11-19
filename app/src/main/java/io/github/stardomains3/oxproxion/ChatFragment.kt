@@ -460,16 +460,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             .usePlugin(HtmlPlugin.create())
             .usePlugin(LinkifyPlugin.create())
             .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(TablePlugin.create(requireContext()))
+            .usePlugin(TaskListPlugin.create(requireContext()))
             .usePlugin(syntaxHighlightPlugin)
-            .usePlugin(TablePlugin.create(requireContext()))      // <-- Add Tables plugin
-            .usePlugin(TaskListPlugin.create(requireContext()))    // <-- Add Task List plugin
             .usePlugin(CoilImagesPlugin.create(requireContext()))
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder
                         .codeTextColor(Color.LTGRAY)
-                        .codeBackgroundColor(Color.BLACK)
-                        .codeBlockBackgroundColor(Color.BLACK)
+                        .codeBackgroundColor(Color.argb(128, 0, 0, 0))
+                        .codeBlockBackgroundColor(Color.argb(128, 0, 0, 0))
                         .blockQuoteColor(Color.BLACK)
                         .isLinkUnderlined(true)
                 }
@@ -764,27 +764,40 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         adapterObserver = object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                 super.onItemRangeInserted(positionStart, itemCount)
-                checkAndScrollForThinking(positionStart + itemCount - 1)
+                checkAndScrollForThinkingOrError(positionStart + itemCount - 1)
             }
 
             override fun onChanged() {
                 super.onChanged()
                 val lastPos = chatAdapter.itemCount - 1
-                if (lastPos >= 0) checkAndScrollForThinking(lastPos)
+                if (lastPos >= 0) checkAndScrollForThinkingOrError(lastPos)
             }
 
-            private fun checkAndScrollForThinking(position: Int) {
+            private fun checkAndScrollForThinkingOrError(position: Int) {
                 val lastPos = chatAdapter.itemCount - 1
-                if (position == lastPos && chatAdapter.getItemViewType(lastPos) == ChatAdapter.VIEW_TYPE_THINKING) {
-                    // ✅ "working..." detected → Scroll!
-                    chatRecyclerView.post {
-                        layoutManager.scrollToPosition(lastPos)
+                if (position == lastPos) {
+                    // ✅ Via LiveData (your exact setup: chatMessages → setMessages → notify)
+                    val messages = viewModel.chatMessages.value ?: return
+                    val lastMessage = messages.lastOrNull() ?: return
+
+                    // ✅ Matches adapter's getMessageText + your error format (JsonPrimitive only)
+                    val contentStr = when {
+                        lastMessage.content is JsonPrimitive -> lastMessage.content.content
+                        else -> return // Images/tools/etc. → skip (your "others" offset)
+                    }
+
+                    if (contentStr == "working..." || contentStr.startsWith("**Error:**")) {
+                        // ✅ Thinking OR Error → Scroll bottom!
+                        chatRecyclerView.post {
+                            layoutManager.scrollToPosition(lastPos)
+                        }
                     }
                 }
             }
         }
         chatAdapter.registerAdapterDataObserver(adapterObserver!!)
-            // end onviewcreated
+
+        // end onviewcreated
     }
 
     private fun updateSystemMessageButtonState() {

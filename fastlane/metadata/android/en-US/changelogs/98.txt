@@ -1,0 +1,3 @@
+- Citations now show title and url.
+- Better scroll on new prompt send.
+- Much better text selection in AI bubble. User can now see highlight in code blocks. Link menu pops up on long-press.
