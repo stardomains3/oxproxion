@@ -1,5 +1,5 @@
 [versions]
-activityKtx = "1.11.0"
+activityKtx = "1.12.0"
 agp = "8.11.1"
 fragmentKtx = "1.8.9"
 gson = "2.13.2"
@@ -14,7 +14,7 @@ appcompat = "1.7.1"
 kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerializationJson = "1.9.0"
 ktorClientAndroid = "3.3.2"
-lifecycleViewmodelKtx = "2.9.4"
+lifecycleViewmodelKtx = "2.10.0"
 material = "1.13.0"
 constraintlayout = "2.2.1"
 navigationFragmentKtx = "2.9.6"
@@ -22,11 +22,12 @@ navigationUiKtx = "2.9.6"
 kotlinSerializationPlugin = "2.2.21"
 kspPlugin = "2.2.20-2.0.3"
 okhttp = "5.3.1"
-roomRuntime = "2.8.3"
+roomRuntime = "2.8.4"
 coil = "2.7.0"
 prism4j = "2.0.0"
 biometric = "1.1.0"
 [libraries]
+markwon-simple = { module = "io.noties.markwon:simple-ext", version.ref = "markwon"}
 biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 markwon-syntax-highlight = { module = "io.noties.markwon:syntax-highlight", version.ref = "markwon"}
 prism4j-core    = { module = "io.noties:prism4j", version.ref = "prism4j" }

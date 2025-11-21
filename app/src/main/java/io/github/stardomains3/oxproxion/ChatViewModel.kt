@@ -163,6 +163,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
+    private val _toolUiEvent = MutableLiveData<Event<String>>()
+    val toolUiEvent: LiveData<Event<String>> = _toolUiEvent
     private val _isChatLoading = MutableLiveData(false)
     val isChatLoading: LiveData<Boolean> = _isChatLoading
     private var networkJob: Job? = null
@@ -1214,7 +1216,35 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun hasGeneratedImagesInChat(): Boolean = _chatMessages.value?.any {
         it.role == "assistant" && !it.imageUri.isNullOrEmpty()
     } ?: false
+    private fun saveFileToDownloads(filename: String, content: String, mimeType: String) {
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
 
+        val uri = getApplication<Application>().contentResolver
+            .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw Exception("MediaStore insert failed")
+
+        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+            out.write(content.toByteArray())
+        } ?: throw Exception("Cannot open output stream")
+    }
+    fun saveMarkdownToDownloads(rawMarkdown: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                saveFileToDownloads(
+                    filename = "chat-${System.currentTimeMillis()}.md",
+                    content = rawMarkdown,
+                    mimeType = "text/markdown"
+                )
+                _toolUiEvent.postValue(Event("✅ Markdown saved to Downloads!"))  // ✅ postValue
+            } catch (e: Exception) {
+                _toolUiEvent.postValue(Event("❌ Save failed: ${e.message}"))     // ✅ postValue
+            }
+        }
+    }
     suspend fun correctText(input: String): String? {
         if (input.isBlank()) return null
 

@@ -89,7 +89,19 @@
             app:tint="#454545"
             app:layout_constraintStart_toEndOf="@id/copyButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
-
+        <ImageButton
+            android:id="@+id/markdownButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Make MD"
+            android:padding="4dp"
+            android:src="@drawable/ic_markdown"
+            app:tint="#454545"
+            app:layout_constraintStart_toEndOf="@id/aipdfButton"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
         <!-- shareButton -->
         <ImageButton
             android:id="@+id/shareButton"
@@ -102,7 +114,7 @@
             android:padding="4dp"
             android:src="@drawable/ic_share"
             app:tint="#454545"
-            app:layout_constraintStart_toEndOf="@id/aipdfButton"
+            app:layout_constraintStart_toEndOf="@id/markdownButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
 
         <!-- ttsButton -->

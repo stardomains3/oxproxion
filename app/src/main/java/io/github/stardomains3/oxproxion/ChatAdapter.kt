@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
-import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,7 +40,8 @@ class ChatAdapter(
     private val ttsAvailable: Boolean,
     private val onEditMessage: (Int, String) -> Unit,
     private val onRedoMessage: (Int, JsonElement) -> Unit,
-    private val onDeleteMessage: (Int) -> Unit
+    private val onDeleteMessage: (Int) -> Unit,
+    private val onSaveMarkdown: (Int, String) -> Unit
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
@@ -164,7 +164,7 @@ class ChatAdapter(
             val userContent = getMessageText(message.content)
             try {
                 markwon.setMarkdown(messageTextView, userContent)
-                messageTextView.movementMethod = LinkMovementMethod.getInstance()
+              //  messageTextView.movementMethod = LinkMovementMethod.getInstance()
             } catch (e: RuntimeException) {
                 // NEW: Catch Prism4j-specific errors to prevent crash; fallback to plain text
                 if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
@@ -261,6 +261,7 @@ class ChatAdapter(
         private val copyButton: ImageButton = itemView.findViewById(R.id.copyButton)
         private val aipdfButton: ImageButton = itemView.findViewById(R.id.aipdfButton)
         private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
+        private val markdownButton: ImageButton = itemView.findViewById(R.id.markdownButton)
         val ttsButton: ImageButton = itemView.findViewById(R.id.ttsButton)
         private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
@@ -274,7 +275,7 @@ class ChatAdapter(
 
             try {
                 markwon.setMarkdown(messageTextView, fullText)
-                messageTextView.movementMethod = LinkMovementMethod.getInstance()
+               // messageTextView.movementMethod = LinkMovementMethod.getInstance()
             } catch (e: RuntimeException) {
                 // Catch Prism4j-specific errors to prevent crash; fallback to plain text
                 if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
@@ -429,7 +430,9 @@ class ChatAdapter(
                 }
             }
 
-
+            markdownButton.setOnClickListener {
+                onSaveMarkdown(bindingAdapterPosition, rawMarkdown)  // rawMarkdown already exists!
+            }
             /*copyButton.setOnLongClickListener {
                 // Launch on main thread (UI), but do the work on IO
                 CoroutineScope(Dispatchers.Main).launch {

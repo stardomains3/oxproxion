@@ -31,7 +31,10 @@ import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.text.style.BackgroundColorSpan
+import android.text.util.Linkify
 import android.util.Base64
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -68,7 +71,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.noties.markwon.AbstractMarkwonPlugin
+import io.noties.markwon.LinkResolverDef
 import io.noties.markwon.Markwon
+import io.noties.markwon.MarkwonConfiguration
+import io.noties.markwon.SpanFactory
 import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
@@ -76,6 +82,7 @@ import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.image.coil.CoilImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
+import io.noties.markwon.movement.MovementMethodPlugin
 import io.noties.markwon.syntax.Prism4jThemeDarkula
 import io.noties.markwon.syntax.SyntaxHighlightPlugin
 import io.noties.prism4j.Prism4j
@@ -89,6 +96,7 @@ import kotlinx.serialization.json.buildJsonArray
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import io.noties.markwon.simple.ext.SimpleExtPlugin
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -453,17 +461,42 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
         val prism4j = Prism4j(ExampleGrammarLocator())
-        // val theme = Prism4jThemeDefault.create()
         val theme = Prism4jThemeDarkula.create()
         val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
         markwon = Markwon.builder(requireContext())
             .usePlugin(HtmlPlugin.create())
-            .usePlugin(LinkifyPlugin.create())
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
             .usePlugin(StrikethroughPlugin.create())
             .usePlugin(TablePlugin.create(requireContext()))
-            .usePlugin(TaskListPlugin.create(requireContext()))
+            .usePlugin(MovementMethodPlugin.create())
+            .usePlugin(TaskListPlugin.create(
+                "#007541".toColorInt(),
+                "#007541".toColorInt(),
+                "#F8F8F8".toColorInt()
+            ))
             .usePlugin(syntaxHighlightPlugin)
             .usePlugin(CoilImagesPlugin.create(requireContext()))
+            .usePlugin(object : AbstractMarkwonPlugin() {
+                override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
+                    builder.linkResolver(LinkResolverDef())
+                }
+            })
+            .usePlugin(SimpleExtPlugin.create { plugin: SimpleExtPlugin -> plugin.addExtension(
+                /* length = */ 2,
+                /* character = */  '=',
+                /* spanFactory = */
+                SpanFactory { _, _ ->
+                    val typedValue = TypedValue()
+                    requireContext().theme.resolveAttribute(
+                        android.R.attr.textColorHighlight,
+                        typedValue,
+                        true
+                    )  // Change to your attr, e.g. R.attr.colorHighlight
+                    return@SpanFactory BackgroundColorSpan(typedValue.data)
+                }
+            )
+
+            })
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder
@@ -679,6 +712,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 stopForegroundService()
             }*/
         }
+        viewModel.toolUiEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+            }
+        }
         viewModel.presetAppliedEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
                 updateSystemMessageButtonState()
@@ -724,6 +762,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             when (selectedFontName) {
                 "system_default" -> Typeface.DEFAULT
                 "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
+                "notoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notoserif_regular)
                 "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
                 "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
                 "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
@@ -922,6 +961,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     }
                     .setCancelable(true)
                     .show()
+            },
+
+            onSaveMarkdown = { position, rawMarkdown ->
+                viewModel.saveMarkdownToDownloads(rawMarkdown)  // Your ViewModel method
             }
 
         )
@@ -1478,6 +1521,7 @@ $cleanContent
                 Triple("M Plus 2 Regular", R.font.mplus2_regular, R.style.Font_MPlus2Regular),
                 Triple("Nokora Regular", R.font.nokora_regular, R.style.Font_NokoraRegular),
                 Triple("Noto Sans Regular", R.font.notosans_regular, R.style.Font_NotoSansRegular),
+                Triple("Noto Serif", R.font.notoserif_regular, R.style.Font_NotoSerifRegular),
                 Triple("Open Sans Regular", R.font.opensans_regular, R.style.Font_OpenSansRegular),
                 Triple("Outfit Regular", R.font.outfit_regular, R.style.Font_OutfitRegular),
                 Triple("Poppins Regular", R.font.poppins_regular, R.style.Font_PoppinsRegular),
@@ -1495,6 +1539,7 @@ $cleanContent
                 null -> "system_default"
                 R.font.alansans_regular -> "alansans_regular"
                 R.font.alexandria_regular -> "alexandria_regular"
+                R.font.notoserif_regular -> "notoserif_regular"
                 R.font.aronesans_regular -> "aronesans_regular"
                 R.font.funneldisplay_regular -> "funneldisplay_regular"
                 R.font.geologica_light -> "geologica_light"

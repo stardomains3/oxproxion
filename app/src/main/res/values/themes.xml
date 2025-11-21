@@ -110,6 +110,9 @@
     <style name="Font.NotoSansRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/notosans_regular</item>
     </style>
+    <style name="Font.NotoSerifRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/notoserif_regular</item>
+    </style>
     <style name="Font.OpenSansRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/opensans_regular</item>
     </style>

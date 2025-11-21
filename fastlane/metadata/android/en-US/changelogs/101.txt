@@ -1,0 +1,4 @@
+- Added Noto Serif font.
+- Optimized Markdown rendering and text selection in the AI response bubble.
+- Added a Save to Markdown file button for the AI response. It saved the response as an .md file to the users download folder.
+- Updated dependencies.
