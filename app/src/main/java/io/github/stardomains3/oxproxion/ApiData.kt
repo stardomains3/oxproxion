@@ -26,7 +26,8 @@ data class ChatRequest(
     val modalities: List<String>? = null,
     val logprobs: Boolean? = null,
     @SerialName("image_config")  // NEW: Optional for Gemini
-    val imageConfig: ImageConfig? = null  // Only added for specific model
+    val imageConfig: ImageConfig? = null,
+    val plugins: List<Plugin>? = null
 )
 
 @Serializable
@@ -58,7 +59,12 @@ data class FlexibleMessage(
     val imageUri: String? = null  // For user/generated images (original Uri.toString())
 )
 
-
+@Serializable
+data class Plugin(
+    val id: String,
+    val engine: String? = null
+    // Add other plugin fields as needed based on OpenRouter docs
+)
 @Serializable
 data class UsageRequest(
     val include: Boolean

@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
+import android.text.util.Linkify
 import android.view.View
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
@@ -24,8 +25,6 @@ import io.noties.prism4j.Prism4j
 
 class HelpFragment : Fragment(R.layout.fragment_help) {
 
-    private lateinit var markwon: Markwon
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -41,6 +40,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             when (selectedFontName) {
                 "system_default" -> Typeface.DEFAULT
                 "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
+                "notoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notoserif_regular)
                 "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
                 "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
                 "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
@@ -68,29 +68,23 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             Typeface.DEFAULT  // Fallback
         }
         helpContentTextView.typeface = typeface
-        val prism4j = Prism4j(ExampleGrammarLocator())
-        val theme = Prism4jThemeDarkula.create()
-        val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
-
-        markwon = Markwon.builder(requireContext())
+        val markwon = Markwon.builder(requireContext())
             .usePlugin(HtmlPlugin.create())
-            .usePlugin(LinkifyPlugin.create())
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
             .usePlugin(StrikethroughPlugin.create())
-            .usePlugin(syntaxHighlightPlugin)
             .usePlugin(TablePlugin.create(requireContext()))
-            .usePlugin(TaskListPlugin.create(requireContext()))
-            .usePlugin(CoilImagesPlugin.create(requireContext()))
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder
                         .codeTextColor(Color.LTGRAY)
-                        .codeBackgroundColor(Color.DKGRAY)
-                        .codeBlockBackgroundColor(Color.DKGRAY)
+                        .codeBackgroundColor(Color.argb(128, 0, 0, 0))
+                        .codeBlockBackgroundColor(Color.argb(128, 0, 0, 0))
                         .blockQuoteColor(Color.BLACK)
                         .isLinkUnderlined(true)
                 }
             })
             .build()
+
 
         val markdownContent = """
             # oxproxion Help Guide
@@ -136,7 +130,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ### Interacting with Messages
             *   **Copy AI Response**: Tap the **robot icon** to copy the AI's message. Long Press to copy Markdown RAW.
             *   **Copy User Message**: Tap the **user icon** to copy your message.
-            *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps.
+            *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps. Long-press to share the raw markdown of the response.
             *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.) Will not display if your device's text-to-speech engine isn't available. Long-press to save an audio wav file of the AI's response to your downloads folder. (Made on device using Android tools. Generation usually done in seconds.)
             *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder.
             *   **Create Markdown File of Response**: Tap the **Markdown icon** to save just that response as a .md file in your device's Downloads folder.
@@ -175,6 +169,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **API Key Button**: Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
             *   **Notification Button**: Receive notifications when the app is backgrounded and you receive a response.
             *   **Extended Dock Button**: Toggles extended dock on or off. If on, an extra row is added to the bottom dock. Long-Press to show a Presets button above the Send button for quick access to presets. Long-press again to hide.
+            *   **Web Search Button**: Enables web search(model gets web search information) for **one response only** (auto-off, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!
             *   **Paste Button**: Pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. (This button only appears when extended dock is on.)
             *   **Speech-to-Text Button**: Appears when the prompt box is empty, or a Clear Prompt button when the prompt box has some text. (This button only appears when extended dock is on.)
             *   **Conversation Button**: Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.

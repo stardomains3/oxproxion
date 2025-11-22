@@ -1,0 +1,2 @@
+- Added a long-press to the Share button on AI response: share raw markdown.
+- Added Web Search button. *   **Web Search Button**: Enables web search(model gets web search information) for **one response only** (auto-off, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!

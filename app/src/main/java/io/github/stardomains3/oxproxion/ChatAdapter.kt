@@ -374,6 +374,17 @@ class ChatAdapter(
                 }
                 itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
             }
+            shareButton.setOnLongClickListener {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, rawMarkdown)  // Share raw markdown
+                    putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Raw Markdown")
+                }
+                itemView.context.startActivity(Intent.createChooser(shareIntent, "Share raw markdown via"))
+                Toast.makeText(itemView.context, "Sharing raw markdown", Toast.LENGTH_SHORT).show()
+                true  // Consume the long click
+            }
+
             // android.util.Log.d("TTS_DEBUG", "Binding position $position, isSpeaking: $isSpeaking, currentPosition: $currentPosition")
             // Update TTS button icon based on state
             val iconRes = if (isSpeaking && position == currentPosition) {

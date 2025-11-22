@@ -118,6 +118,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var genButton: MaterialButton
     private lateinit var biometricButton: MaterialButton
     private var originalSendIcon: Drawable? = null
+    private lateinit var webSearchButton: MaterialButton
     private val viewModel: ChatViewModel by activityViewModels()
     private lateinit var modelNameTextView: TextView
     private lateinit var chatRecyclerView: RecyclerView
@@ -144,6 +145,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var ttsAvailable = true
     private lateinit var setMaxTokensButton: MaterialButton
     private lateinit var notiButton: MaterialButton
+
     private lateinit var fontsButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
@@ -330,6 +332,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         streamButton = view.findViewById(R.id.streamButton)
         reasoningButton = view.findViewById(R.id.reasoningButton)
         notiButton = view.findViewById(R.id.notiButton)
+        webSearchButton = view.findViewById(R.id.webSearchButton)
         fontsButton = view.findViewById(R.id.fontsButton)
         extendButton = view.findViewById(R.id.extendButton)
         convoButton  = view.findViewById(R.id.convoButton)
@@ -578,7 +581,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     attachmentPreviewContainer.visibility = View.GONE
                     Toast.makeText(requireContext(), "Image removed: selected model doesn't support images.", Toast.LENGTH_SHORT).show()
                 }
-                // BUG FIX END
+                val isLanModel = viewModel.activeModelIsLan()
+                if (isLanModel && viewModel.isWebSearchEnabled.value == true) {
+                    // Auto-disable if it was ON (prevents sending invalid requests)
+                    viewModel.toggleWebSearch()
+                }
+
+                webSearchButton.visibility = if (isLanModel) View.GONE else View.VISIBLE
+
             }
         }
 
@@ -650,6 +660,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             else{
                 materialButton.icon = originalSendIcon
             }
+            if (!isAwaiting && viewModel.shouldAutoOffWebSearch()) {
+                viewModel.resetWebSearchAutoOff()
+                if (viewModel.isWebSearchEnabled.value == true) {
+                    viewModel.toggleWebSearch()  // Turn it off
+                    Toast.makeText(requireContext(), "Web search auto-disabled (one-time use)", Toast.LENGTH_SHORT).show()
+                }
+            }
            /* if (isAwaiting) {
                 if (areAnimationsEnabled(requireContext())) {
                     // Stop any existing animation first
@@ -693,6 +710,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         viewModel.isStreamingEnabled.observe(viewLifecycleOwner) { isEnabled ->
             streamButton.isSelected = isEnabled
+        }
+        viewModel.isWebSearchEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            webSearchButton.isSelected = isEnabled
         }
 
         viewModel.isReasoningEnabled.observe(viewLifecycleOwner) { isEnabled ->
@@ -1020,6 +1040,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             currentTempImageFile?.delete()
             currentTempImageFile = null
             Toast.makeText(requireContext(), "Attachment removed", Toast.LENGTH_SHORT).show()
+        }
+        webSearchButton.setOnClickListener {
+            //  hideMenu()
+            viewModel.toggleWebSearch()
+            // NEW: Set flag to auto-disable after next response
+            viewModel.setWebSearchAutoOff(true)
+        }
+        webSearchButton.setOnLongClickListener {
+            showWebSearchEngineDialog()
+            true
         }
         sendChatButton.setOnClickListener {
             if (viewModel.isAwaitingResponse.value == true) {
@@ -2474,6 +2504,38 @@ $cleanContent
         dialog.window?.setDimAmount(0.8f)
     }
 
+    private fun showWebSearchEngineDialog() {
+        val engines = listOf(
+            "default" to "Default (Native if available, fallback Exa)",
+            "native" to "Native (Provider's built-in search)",
+            "exa" to "Exa (Always use Exa search)"
+        )
+
+        val currentEngine = sharedPreferencesHelper.getWebSearchEngine()
+        var selectedEngine = currentEngine  // Track selection locally
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Web Search Engine")
+            .setSingleChoiceItems(
+                engines.map { it.second }.toTypedArray(),
+                engines.indexOfFirst { it.first == currentEngine }
+            ) { _, which ->
+                selectedEngine = engines[which].first  // Update local selection only
+            }
+            .setPositiveButton("Save") { _, _ ->
+                // Save only when Save is pressed
+                sharedPreferencesHelper.saveWebSearchEngine(selectedEngine)
+                Toast.makeText(
+                    requireContext(),
+                    "Web search engine: ${engines.find { it.first == selectedEngine }?.second}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 
     private fun formatFileSize(bytes: Long): String {
         return when {

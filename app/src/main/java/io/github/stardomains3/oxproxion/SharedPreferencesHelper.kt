@@ -30,6 +30,8 @@ class SharedPreferencesHelper(context: Context) {
         const val LAN_PROVIDER_KEY = "lan_provider"
         const val LAN_PROVIDER_LLAMA_CPP = "llama_cpp"
         const val LAN_PROVIDER_OLLAMA = "ollama"
+        private const val KEY_WEB_SEARCH_ENGINE = "web_search_engine"
+        private const val KEY_WEB_SEARCH_ENABLED = "web_search_enabled"
         const val LAN_PROVIDER_LM_STUDIO = "lm_studio"
         private const val KEY_LAN_ENDPOINT = "lan_endpoint"
         private const val KEY_PRESETS = "user_presets"
@@ -225,7 +227,16 @@ class SharedPreferencesHelper(context: Context) {
     fun saveSelectedFont(fontName: String) {
         mainPrefs.edit { putString(KEY_SELECTED_FONT, fontName) }
     }
+    fun getWebSearchBoolean(): Boolean {
+        return mainPrefs.getBoolean(KEY_WEB_SEARCH_ENABLED, false)
+    }
 
+    fun saveWebSearchEnabled(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_WEB_SEARCH_ENABLED, enabled) }
+    }
+    fun getWebSearchEngine(): String = mainPrefs.getString(KEY_WEB_SEARCH_ENGINE, "default") ?: "default"
+
+    fun saveWebSearchEngine(engine: String) = mainPrefs.edit().putString(KEY_WEB_SEARCH_ENGINE, engine).apply()
     fun getSelectedFont(): String {
         return mainPrefs.getString(KEY_SELECTED_FONT, "geologica_light") ?: "geologica_light"
     }

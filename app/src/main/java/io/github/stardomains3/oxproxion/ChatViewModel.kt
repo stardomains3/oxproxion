@@ -89,7 +89,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val json = Json { ignoreUnknownKeys = true }
     private val _sharedText = MutableStateFlow<String?>(null)
     val sharedText: StateFlow<String?> = _sharedText
-
+    private var shouldAutoOffWebSearch = false
+    private fun getWebSearchEngine(): String = sharedPreferencesHelper.getWebSearchEngine()
     private var allOpenRouterModels: List<LlmModel> = emptyList()
     private val _openRouterModels = MutableLiveData<List<LlmModel>>()
     val openRouterModels: LiveData<List<LlmModel>> = _openRouterModels
@@ -161,6 +162,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isAdvancedReasoningOn: LiveData<Boolean> = _isAdvancedReasoningOn
     val _isNotiEnabled = MutableLiveData<Boolean>(false)
     val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
+    val _isWebSearchEnabled = MutableLiveData<Boolean>(false)
+    val isWebSearchEnabled: LiveData<Boolean> = _isWebSearchEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private val _toolUiEvent = MutableLiveData<Event<String>>()
@@ -188,6 +191,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val newNotiState = !(_isNotiEnabled.value ?: true)
         _isNotiEnabled.value = newNotiState
         sharedPreferencesHelper.saveNotiPreference(newNotiState)
+
+    }
+    fun toggleWebSearch() {
+        val newNotiState = !(_isWebSearchEnabled.value ?: true)
+        _isWebSearchEnabled.value = newNotiState
+        sharedPreferencesHelper.saveWebSearchEnabled(newNotiState)
 
     }
     fun toggleReasoning() {
@@ -643,6 +652,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     null
                 },
+                plugins = buildWebSearchPlugin(),
                 modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
                 imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image")) {
                     val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
@@ -884,6 +894,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         null
                     },
+                    plugins = buildWebSearchPlugin(),
                     modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
                     imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image")) {
                         val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
@@ -1636,7 +1647,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()
 
+    private fun buildWebSearchPlugin(): List<Plugin>? {
+        if (!sharedPreferencesHelper.getWebSearchBoolean()) return null
 
+        val engine = getWebSearchEngine()
+        val plugin = if (engine != "default") {
+            Plugin(id = "web", engine = engine)
+        } else {
+            Plugin(id = "web")
+        }
+        return listOf(plugin)
+    }
+    fun setWebSearchAutoOff(autoOff: Boolean) { shouldAutoOffWebSearch = autoOff }
+    fun shouldAutoOffWebSearch() = shouldAutoOffWebSearch
+    fun resetWebSearchAutoOff() { shouldAutoOffWebSearch = false }
     fun getCurrentLanProvider(): String = sharedPreferencesHelper.getLanProvider()
     fun setUserScrolledDuringStream(value: Boolean) {
         _userScrolledDuringStream.value = value
