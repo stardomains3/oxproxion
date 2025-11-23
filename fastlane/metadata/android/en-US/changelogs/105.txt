@@ -1,0 +1,2 @@
+- You can choose the aspect ratio of the generated image now also with google/gemini-3-pro-image-preview model
+- Further optimization of guard against tables not rendering properly if nested in a list.

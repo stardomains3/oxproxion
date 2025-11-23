@@ -8,7 +8,6 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -661,10 +660,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 },
                 plugins = buildWebSearchPlugin(),
                 modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
-                imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image")) {
+                imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image") ||
+                    modelForRequest.startsWith("google/gemini-3-pro-image-preview")) {
                     val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
                     ImageConfig(aspectRatio = aspectRatio)
                 } else null
+
             )
 
             try {
@@ -903,7 +904,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     },
                     plugins = buildWebSearchPlugin(),
                     modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
-                    imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image")) {
+                    imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image") ||
+                        modelForRequest.startsWith("google/gemini-3-pro-image-preview")) {
                         val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
                         ImageConfig(aspectRatio = aspectRatio)
                     } else null
@@ -1787,8 +1789,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         """.trimIndent())
 
             messages.forEachIndexed { index, message ->
-                val contentText = getMessageText(message.content).trim()
-                val contentHtml = markdownToHtmlFragment(contentText)  // ✅ Full MD (tables/links/citations)
+                val rawText = getMessageText(message.content).trim()
+
+                // ✅ 1. Apply the fix to the raw Markdown first
+                val fixedText = ensureTableSpacing(rawText)
+
+                // ✅ 2. Then convert that fixed Markdown to HTML
+                val contentHtml = markdownToHtmlFragment(fixedText)
 
                 when (message.role) {
                     "user" -> {
@@ -1803,7 +1810,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     """.trimIndent())
                     }
                     "assistant" -> {
-                        val textDiv = if (contentText.isNotBlank()) {
+                        val textDiv = if (rawText.isNotBlank()) {
                             """
                             <div style="background: #f6f8fa; padding: 1em; border-radius: 6px; border-left: 4px solid #28a745;">
                                 $contentHtml
@@ -1864,13 +1871,37 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     private fun ensureTableSpacing(markdown: String): String {
-        // Matches:
-        // 1. Any char that isn't a newline
-        // 2. A single newline
-        // 3. A Table Header Row (ends with newline)
-        // 4. A Table Separator Row (starts with pipe, contains dashes/colons)
-        val pattern = Regex("([^\\n])\\n(\\s*\\|.*\\|\\n)(\\s*\\|[ :-\\|]+\\|)")
+        // Split into mutable list of lines to manipulate them
+        val lines = markdown.lines().toMutableList()
 
-        return markdown.replace(pattern, "$1\n\n$2$3")
+        var i = 0
+        // We loop until size - 1 because we need to peek at the NEXT line (i+1)
+        while (i < lines.size - 1) {
+            val currentLine = lines[i].trim()
+            val nextLine = lines[i+1].trim()
+
+            // 1. Identify a Table Start
+            // A header starts with '|', contains another '|'
+            // A separator starts with '|', contains '---'
+            val isHeader = currentLine.startsWith("|") && currentLine.contains("|")
+            val isSeparator = nextLine.startsWith("|") && nextLine.contains("---")
+
+            if (isHeader && isSeparator) {
+                // We found a table at index 'i'.
+                // 2. Check if the PREVIOUS line (i-1) exists and has text
+                if (i > 0 && lines[i-1].isNotBlank()) {
+                    // 3. INSERT A BLANK LINE
+                    lines.add(i, "")
+
+                    // Skip the line we just added and the header we just processed
+                    i += 2
+                    continue
+                }
+            }
+            i++
+        }
+
+        // Reassemble the string
+        return lines.joinToString("\n")
     }
 }

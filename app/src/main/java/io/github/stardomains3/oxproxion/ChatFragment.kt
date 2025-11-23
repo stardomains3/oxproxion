@@ -1181,7 +1181,7 @@ $cleanContent
         }
         genButton.setOnClickListener {
             val model = viewModel.activeChatModel.value
-            if (model !in listOf("google/gemini-2.5-flash-image", "google/gemini-2.5-flash-image-preview")) {
+            if (model !in listOf("google/gemini-2.5-flash-image", "google/gemini-2.5-flash-image-preview","google/gemini-3-pro-image-preview")) {
                 Toast.makeText(requireContext(), "Image generation parameters not supported for this model", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
