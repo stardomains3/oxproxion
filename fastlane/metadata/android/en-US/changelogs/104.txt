@@ -1,0 +1,4 @@
+- Added a button to save whole chat as a .md markdown file in user's downloads folder.
+- Added a Print button to print the whole chat in letter-size or whatever page size user wants. Brings up Android print screen. Can print to PDf or printer.
+- Added a guard to prevent tables not rendering when included in a markdown list.
+- Further markdown optimizations.
