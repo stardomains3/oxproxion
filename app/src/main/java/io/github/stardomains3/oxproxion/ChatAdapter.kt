@@ -159,9 +159,8 @@ class ChatAdapter(
 
         fun bind(message: FlexibleMessage) {
             messageTextView.typeface = currentTypeface
-
-            // UPDATED: Render with Markwon for Markdown support (code blocks, bold, etc.)
-            val userContent = getMessageText(message.content)
+            val rawUserContent = getMessageText(message.content)
+            val userContent = ensureTableSpacing(rawUserContent)
             try {
                 markwon.setMarkdown(messageTextView, userContent)
               //  messageTextView.movementMethod = LinkMovementMethod.getInstance()
@@ -271,7 +270,8 @@ class ChatAdapter(
             val text = getMessageText(message.content)
 
             val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
-            val fullText = reasoningText + text  // Prepend reasoning for display
+            val rawText = reasoningText + text
+            val fullText = ensureTableSpacing(rawText)
 
             try {
                 markwon.setMarkdown(messageTextView, fullText)
@@ -483,6 +483,21 @@ class ChatAdapter(
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
         if (holder is AssistantViewHolder) holder.stopPulse()
+    }
+    private fun ensureTableSpacing(markdown: String): String {
+        // Group 1: ([^\n])       -> The last character of the previous paragraph/list item.
+        //          \n            -> The single newline we want to fix.
+        // Group 2: (\s*\|.*\|\n) -> The Header Row (starts with pipe, ends with pipe + newline).
+        // Group 3: (\s*\|[\s:-]+\|) -> The Separator Row (starts with pipe, contains dashes/colons).
+
+        // This ensures we ONLY target the specific gap between "Text" and "Header".
+        // It will NOT match "Header" -> "Separator" (because Header doesn't end in text char)
+        // It will NOT match "Separator" -> "Data" (because Data isn't a separator)
+
+        val pattern = Regex("([^\\n])\\n(\\s*\\|.*\\|\\n)(\\s*\\|[\\s:-]+\\|)")
+
+        // We replace the single \n with \n\n, then put the Header (2) and Separator (3) back.
+        return markdown.replace(pattern, "$1\n\n$2$3")
     }
 
 }

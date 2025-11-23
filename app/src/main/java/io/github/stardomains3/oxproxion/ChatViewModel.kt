@@ -1,7 +1,11 @@
 package io.github.stardomains3.oxproxion
 
 import android.app.Application
+import android.content.ContentResolver
 import android.content.ContentValues
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
@@ -52,8 +56,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.putJsonArray
+import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.HtmlRenderer
 import org.commonmark.renderer.text.TextContentRenderer
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.Base64
@@ -146,7 +153,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     // State Management
     private val _chatMessages = MutableLiveData<List<FlexibleMessage>>(emptyList())
     val chatMessages: LiveData<List<FlexibleMessage>> = _chatMessages
-    private val _activeChatModel = MutableLiveData<String>()
+    val _activeChatModel = MutableLiveData<String>()
     val activeChatModel: LiveData<String> = _activeChatModel
     private val _isAwaitingResponse = MutableLiveData<Boolean>(false)
     val isAwaitingResponse: LiveData<Boolean> = _isAwaitingResponse
@@ -1697,5 +1704,173 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             "Unknown error format: ${responseText.take(200)}"
         }
+    }
+    private fun markdownToHtmlFragment(markdown: String): String {
+        // ✅ Core + TABLES EXTENSION (renders | Col | perfectly)
+        val parser = Parser.builder()
+            .extensions(listOf(TablesExtension.create()))  // ✅ Tables magic
+            .build()
+
+        val renderer = HtmlRenderer.builder()
+            .extensions(listOf(TablesExtension.create()))  // ✅ Renderer too
+            .build()
+
+        val document = parser.parse(markdown)
+        var html = renderer.render(document)
+
+        // ✅ AUTO-LINK BARE URLs: "https://example.com" → <a>https://...</a>
+        // Handles "[26] https://...", inline URLs, citations perfectly.
+        // Skips already-linked <a>, code blocks, etc.
+        html = html.replace(Regex("""(?<!["'=/])(?<!href=["'])https?://[^\s<>"'()]+(?<!["'=/])""")) { match ->
+            "<a href=\"${match.value}\" target=\"_blank\">${match.value}</a>"
+        }
+
+        return html
+    }
+
+// ✅ Fragment printButton.setOnClickListener() & getFormattedChatHistoryHtmlWithImages() UNCHANGED.
+// Now image chats get: Full MD parsing (tables/lists/bold) + regex citations `[26] https://...` → clickable + embedded imgs!
+
+
+    private fun extractAndEmbedUserImages(content: JsonElement, resolver: ContentResolver): String {
+        if (content !is JsonArray) return ""
+        val imagesHtml = content.mapNotNull { item ->
+            val imgObj = item as? JsonObject ?: return@mapNotNull null
+            val type = imgObj["type"]?.jsonPrimitive?.content
+            if (type != "image_url") return@mapNotNull null
+            val urlObj = imgObj["image_url"]?.jsonObject ?: return@mapNotNull null
+            val dataUrl = urlObj["url"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            if (!dataUrl.startsWith("data:image/")) return@mapNotNull null
+            "<br><img src='$dataUrl' style='max-width: 100%; height: auto; border-radius: 6px; margin-top: 1em;'>"
+        }.joinToString("")
+        return imagesHtml
+    }
+
+    private fun embedGeneratedImage(imageUriStr: String, resolver: ContentResolver): String? {
+        return try {
+            val uri = Uri.parse(imageUriStr)
+            resolver.openInputStream(uri)?.use { input ->
+                val bitmap = BitmapFactory.decodeStream(input)
+                bitmap?.let {
+                    val baos = ByteArrayOutputStream()
+                    it.compress(Bitmap.CompressFormat.PNG, 90, baos)
+                    val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
+                    "<br><img src='data:image/png;base64,$base64' style='max-width: 100%; height: auto; border-radius: 6px; margin-top: 1em;'>"
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+    suspend fun getFormattedChatHistoryStyledHtml(): String = withContext(Dispatchers.IO) {
+        val messages = _chatMessages.value?.filter { message ->
+            val contentText = getMessageText(message.content).trim()
+            val hasText = contentText.isNotEmpty() && contentText != "working..."
+            val hasImage = when (message.role) {
+                "user" -> (message.content as? JsonArray)?.any {
+                    it.jsonObject["type"]?.jsonPrimitive?.content == "image_url"
+                } == true
+                "assistant" -> !message.imageUri.isNullOrEmpty()
+                else -> false
+            }
+            hasText || hasImage  // ✅ Text OR image messages
+        } ?: return@withContext ""
+
+        val currentModel = _activeChatModel.value ?: "Unknown"
+        val appContext = getApplication<Application>().applicationContext
+        val resolver: ContentResolver = appContext.contentResolver
+
+        buildString {
+            append("""
+            <h1 style="color: #24292f; font-size: 2em; font-weight: 600; border-bottom: 1px solid #eaecef; padding-bottom: .3em; margin: 0 0 1em 0;">Chat with $currentModel</h1>
+            <div style="margin-top: 2em;"></div>
+        """.trimIndent())
+
+            messages.forEachIndexed { index, message ->
+                val contentText = getMessageText(message.content).trim()
+                val contentHtml = markdownToHtmlFragment(contentText)  // ✅ Full MD (tables/links/citations)
+
+                when (message.role) {
+                    "user" -> {
+                        append("""
+                        <div style="margin-bottom: 2em;">
+                            <h3 style="color: #0366d6; margin-bottom: 0.5em;">👤 User</h3>
+                            <div style="background: #f6f8fa; padding: 1em; border-radius: 6px; border-left: 4px solid #0366d6;">
+                                $contentHtml
+                            </div>
+                            ${extractAndEmbedUserImages(message.content, resolver)}
+                        </div>
+                    """.trimIndent())
+                    }
+                    "assistant" -> {
+                        val textDiv = if (contentText.isNotBlank()) {
+                            """
+                            <div style="background: #f6f8fa; padding: 1em; border-radius: 6px; border-left: 4px solid #28a745;">
+                                $contentHtml
+                            </div>
+                        """.trimIndent()
+                        } else ""
+                        append("""
+                        <div style="margin-bottom: 2em;">
+                            <h3 style="color: #28a745; margin-bottom: 0.5em;">🤖 Assistant</h3>
+                            $textDiv
+                            ${message.imageUri?.let { embedGeneratedImage(it, resolver) } ?: ""}
+                        </div>
+                    """.trimIndent())
+                    }
+                }
+
+                if (index < messages.size - 1) {
+                    append("<hr style='border: none; border-top: 1px solid #eaecef; margin: 2em 0;'>")
+                }
+            }
+        }
+    }
+    fun getFormattedChatHistoryMarkdownandPrint(): String {
+        val messages = _chatMessages.value?.filter { message ->
+            val contentText = getMessageText(message.content).trim()
+            contentText.isNotEmpty() && contentText != "working..."
+        } ?: return ""
+
+        val currentModel = _activeChatModel.value ?: "Unknown"
+
+        return buildString {
+            append("# Chat with $currentModel")
+            append("\n\n")
+
+            messages.forEachIndexed { index, message ->
+                // 1. Get the raw text
+                val rawText = getMessageText(message.content).trim()
+
+                // 2. ✅ APPLY THE FIX HERE
+                // This ensures the table inside this specific message gets its newline
+                val contentText = ensureTableSpacing(rawText)
+
+                when (message.role) {
+                    "user" -> {
+                        append("**👤 User:**\n\n")
+                        append(contentText)
+                    }
+                    "assistant" -> {
+                        append("**🤖 Assistant:**\n\n")
+                        append(contentText)
+                    }
+                }
+
+                if (index < messages.size - 1) {
+                    append("\n\n---\n\n")
+                }
+            }
+        }
+    }
+    private fun ensureTableSpacing(markdown: String): String {
+        // Matches:
+        // 1. Any char that isn't a newline
+        // 2. A single newline
+        // 3. A Table Header Row (ends with newline)
+        // 4. A Table Separator Row (starts with pipe, contains dashes/colons)
+        val pattern = Regex("([^\\n])\\n(\\s*\\|.*\\|\\n)(\\s*\\|[ :-\\|]+\\|)")
+
+        return markdown.replace(pattern, "$1\n\n$2$3")
     }
 }

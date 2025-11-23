@@ -26,6 +26,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.print.PrintManager
 import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognizerIntent
@@ -40,6 +41,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -78,6 +81,7 @@ import io.noties.markwon.SpanFactory
 import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tables.TableTheme
 import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.image.coil.CoilImagesPlugin
@@ -97,6 +101,9 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import io.noties.markwon.simple.ext.SimpleExtPlugin
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -116,6 +123,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
     private lateinit var genButton: MaterialButton
+    private lateinit var saveMarkdownFileButton: MaterialButton
+    private lateinit var printButton: MaterialButton
     private lateinit var biometricButton: MaterialButton
     private var originalSendIcon: Drawable? = null
     private lateinit var webSearchButton: MaterialButton
@@ -348,6 +357,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         saveChatButton = view.findViewById(R.id.saveChatButton)
         openSavedChatsButton = view.findViewById(R.id.openSavedChatsButton)
         copyChatButton = view.findViewById(R.id.copyChatButton)
+        saveMarkdownFileButton  = view.findViewById(R.id.saveMarkdownFileButton)
+        printButton =   view.findViewById(R.id.printButton)
         buttonsRow2 = view.findViewById(R.id.buttonsRow2)
         menuButton = view.findViewById(R.id.menuButton)
         chatFrameView = view.findViewById(R.id.chatFrameView)
@@ -466,39 +477,53 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val prism4j = Prism4j(ExampleGrammarLocator())
         val theme = Prism4jThemeDarkula.create()
         val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
+
+// ✅ CRITICAL: Custom table theme FIRST
+        val customTableTheme = TableTheme.buildWithDefaults(requireContext())
+            .tableBorderColor(Color.LTGRAY)
+            .tableBorderWidth(2)
+            .tableCellPadding(8)  // Increased for better readability
+            .tableHeaderRowBackgroundColor("#121314".toColorInt())
+            .build()
+
         markwon = Markwon.builder(requireContext())
+            // ✅ TablePlugin EARLY with custom theme
+            .usePlugin(TablePlugin.create(customTableTheme))
+
+            // Core plugins next
             .usePlugin(HtmlPlugin.create())
             .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
             .usePlugin(StrikethroughPlugin.create())
-            .usePlugin(TablePlugin.create(requireContext()))
-            .usePlugin(MovementMethodPlugin.create())
+
+            // ✅ TaskList before syntax/images
             .usePlugin(TaskListPlugin.create(
                 "#007541".toColorInt(),
                 "#007541".toColorInt(),
                 "#F8F8F8".toColorInt()
             ))
+
             .usePlugin(syntaxHighlightPlugin)
+
+            // ✅ Images AFTER table/syntax
             .usePlugin(CoilImagesPlugin.create(requireContext()))
+
+            // Movement method LAST (after table/images)
+            .usePlugin(MovementMethodPlugin.create())
+
+            // Custom plugins
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
                     builder.linkResolver(LinkResolverDef())
                 }
             })
-            .usePlugin(SimpleExtPlugin.create { plugin: SimpleExtPlugin -> plugin.addExtension(
-                /* length = */ 2,
-                /* character = */  '=',
-                /* spanFactory = */
-                SpanFactory { _, _ ->
+            .usePlugin(SimpleExtPlugin.create { plugin ->
+                plugin.addExtension(2, '=', SpanFactory { _, _ ->
                     val typedValue = TypedValue()
                     requireContext().theme.resolveAttribute(
-                        android.R.attr.textColorHighlight,
-                        typedValue,
-                        true
-                    )  // Change to your attr, e.g. R.attr.colorHighlight
-                    return@SpanFactory BackgroundColorSpan(typedValue.data)
-                }
-            )
-
+                        android.R.attr.textColorHighlight, typedValue, true
+                    )
+                    BackgroundColorSpan(typedValue.data)
+                })
             })
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
@@ -1410,6 +1435,28 @@ $cleanContent
                 Toast.makeText(requireContext(), "Chat Copied!", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
+            }
+        }
+        printButton.setOnClickListener {
+            hideMenu()
+            lifecycleScope.launch {
+                val chatHtml = viewModel.getFormattedChatHistoryStyledHtml()
+                if (chatHtml.isNotBlank()) {
+                    printChatHtml(chatHtml)
+                } else {
+                    Toast.makeText(requireContext(), "Nothing to print", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        saveMarkdownFileButton.setOnClickListener {
+            hideMenu()
+            val chatText = viewModel.getFormattedChatHistoryMarkdownandPrint()
+            if (chatText.isNotBlank()) {
+                viewModel.saveMarkdownToDownloads(chatText)
+                // No need for local Toast - ViewModel handles UI event via _toolUiEvent
+            } else {
+                Toast.makeText(requireContext(), "Nothing to save", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -2544,5 +2591,93 @@ $cleanContent
             else -> String.format("%.1fMB", bytes / 1024f / 1024f)
         }
     }
+    private fun printChatHtml(htmlContent: String) {
+        val printManager = requireContext().getSystemService(Context.PRINT_SERVICE) as PrintManager
+        val currentModel = viewModel._activeChatModel.value ?: "Unknown"
+        val sdf = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
+        val dateTime = sdf.format(Date())
+        val adapterTitle = "${currentModel.replace("/", "-")}_$dateTime"  // ✅ "x-ai-grok-4.1-fast_2024-10-05_14-30.pdf"
+        val jobName = "Chat History"
 
+        val webView = WebView(requireContext()).apply {
+            settings.apply {
+                javaScriptEnabled = true
+                loadWithOverviewMode = true
+                useWideViewPort = true
+                defaultTextEncodingName = "utf-8"
+            }
+
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    view?.createPrintDocumentAdapter(adapterTitle)?.let { adapter ->
+                        printManager.print(jobName, adapter, null)
+                    }
+                }
+            }
+
+            // ✅ FIXED CSS: Smaller sides (20px), top/bottom margins (40px), print-optimized
+            val fullHtml = """
+            <!DOCTYPE html>
+            <html><head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Chat History</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body { 
+                        margin: 40px 20px;  /* ✅ Top/bottom: 40px, sides: 20px (smaller) */
+                        padding: 0;         /* No extra padding */
+                        max-width: 100%;    /* Full width for print */
+                        font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+                        font-size: 16px; line-height: 1.6; color: #24292f; background: white;
+                    }
+                    .markdown-body { font-size: 16px; }
+                    h1 { 
+                        color: #24292f; font-size: 2em; font-weight: 600; 
+                        border-bottom: 1px solid #eaecef; padding-bottom: .3em; margin: 0 0 1em 0; 
+                    }
+                    /* ✅ LINKS: Blue, underlined on hover/print, FULLY CLICKABLE in PDF */
+                    a { 
+                        color: #0366d6; text-decoration: none; 
+                    }
+                    a:hover, a:focus { text-decoration: underline; }
+                    /* Print: Force underline for visibility */
+                    @media print {
+                        a { text-decoration: underline !important; color: #0366d6 !important; }
+                    }
+                    strong { font-weight: 600; }
+                    pre, code { font-family: 'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size: 14px; }
+                    code { background: #f6f8fa; border-radius: 6px; padding: .2em .4em; }
+                    pre { background: #f6f8fa; border-radius: 6px; padding: 16px; overflow: auto; margin: 1em 0; }
+                    blockquote { border-left: 4px solid #dfe2e5; color: #6a737d; padding-left: 1em; margin: 1em 0; }
+                    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+                    th, td { border: 1px solid #d0d7de; padding: .75em; text-align: left; }
+                    th { background: #f6f8fa; font-weight: 600; }
+                    hr { border: none; border-top: 1px solid #eaecef; height: 0; margin: 2em 0; }
+                    ul, ol { padding-left: 2em; margin: 1em 0; }
+                    img { max-width: 100%; height: auto; }
+                    del { color: #bd2c00; }
+                    input[type="checkbox"] { margin: 0 .25em 0 0; vertical-align: middle; }
+                    
+                    /* ✅ PRINT PERFECT: Standard margins, no overflow, crisp */
+                    @media print {
+                        body { 
+                            margin: 0.5in 0.25in !important;  /* ✅ Print std: ~0.5" top/bot, 0.25" sides */
+                            padding: 0 !important;
+                            max-width: none !important;
+                            font-size: 12pt !important;  /* Print-friendly size */
+                        }
+                        h1 { page-break-after: avoid; }
+                        pre { white-space: pre-wrap; }
+                        @page { margin: 0.5in; }
+                    }
+                </style>
+            </head><body>
+                <div class="markdown-body">$htmlContent</div>
+            </body></html>
+        """.trimIndent()
+
+            loadDataWithBaseURL(null, fullHtml, "text/html", "UTF-8", null)
+        }
+    }
 }
