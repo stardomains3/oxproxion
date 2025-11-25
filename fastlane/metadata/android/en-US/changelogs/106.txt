@@ -1,0 +1,5 @@
+- Changed cloud icon on button that opens OpenRouter models screen.
+- Changed Connectivity Service priority to high to guard against system shutting it down.
+- Some theme elements.
+- Updated a couple dependencies.
+

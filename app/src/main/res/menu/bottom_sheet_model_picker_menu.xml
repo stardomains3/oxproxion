@@ -10,7 +10,7 @@
     <item
         android:id="@+id/action_open_router_models"
         android:title="OpenRouter Models"
-        android:icon="@drawable/ic_cloud"
+        android:icon="@drawable/ic_cloudnew"
         app:showAsAction="always" />
 
     <!-- New search item -->

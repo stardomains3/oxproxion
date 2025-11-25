@@ -77,7 +77,7 @@ class ForegroundService : Service() {
         val foregroundChannel = NotificationChannel(
             FOREGROUND_CHANNEL_ID,
             "Connectivity Service Channel",
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Notification for the running foreground service"
         }
