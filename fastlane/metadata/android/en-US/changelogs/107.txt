@@ -1,0 +1,2 @@
+- Added a save to HTML file button for the whole chat.
+- Style change on Print look.

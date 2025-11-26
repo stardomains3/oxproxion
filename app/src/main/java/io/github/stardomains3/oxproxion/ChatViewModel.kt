@@ -62,7 +62,10 @@ import org.commonmark.renderer.text.TextContentRenderer
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.text.SimpleDateFormat
 import java.util.Base64
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 @Serializable
@@ -1265,6 +1268,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    fun saveHtmlToDownloads(innerHtml: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val currentModel = _activeChatModel.value ?: "Unknown"
+                val sdf = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
+                val dateTime = sdf.format(Date())
+                val filename = "${currentModel.replace("/", "-")}_$dateTime.html"  // ✅ Matches print: "x-ai-grok-4.1-fast_2024-10-05_14-30.html"
+
+                val fullHtml = buildFullPrintStyledHtml(innerHtml)
+
+                saveFileToDownloads(filename, fullHtml, "text/html")
+                _toolUiEvent.postValue(Event("✅ HTML saved to Downloads!"))
+            } catch (e: Exception) {
+                _toolUiEvent.postValue(Event("❌ Save failed: ${e.message}"))
+            }
+        }
+    }
     suspend fun correctText(input: String): String? {
         if (input.isBlank()) return null
 
@@ -1802,7 +1822,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         append("""
                         <div style="margin-bottom: 2em;">
                             <h3 style="color: #0366d6; margin-bottom: 0.5em;">👤 User</h3>
-                            <div style="background: #f6f8fa; padding: 1em; border-radius: 6px; border-left: 4px solid #0366d6;">
+                            <div style="background: #f6f8fa; padding: 0.05em 0.5em; border-radius: 6px; border-left: 4px solid #0366d6;">
                                 $contentHtml
                             </div>
                             ${extractAndEmbedUserImages(message.content, resolver)}
@@ -1904,4 +1924,108 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Reassemble the string
         return lines.joinToString("\n")
     }
+
+    // ✅ ViewModel: Update ONLY `buildFullPrintStyledHtml()` (add link wrapping – rest unchanged)
+    private fun buildFullPrintStyledHtml(innerHtml: String): String {
+        return """
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chat History</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            margin: 40px 20px;  
+            padding: 0;         
+            max-width: 100%;    
+            font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+            font-size: 16px; line-height: 1.5; color: #24292f; background: white;
+        }
+        .markdown-body { font-size: 16px; line-height: 1.5; }
+        
+        /* ✅ TITLE: Underline only, no border (always) */
+        h1 { 
+            color: #24292f !important; font-size: 2em !important; font-weight: 600 !important; 
+            text-decoration: underline !important;
+            border-bottom: none !important;
+            padding-bottom: .3em !important; margin: 0 0 1em 0 !important; 
+        }
+        
+        /* ✅ LINKS: Blue. WRAP LONG URLs (break-all for citations/URLs on mobile/narrow screens) */
+        a { 
+            color: #0366d6; 
+            text-decoration: none; 
+            word-break: break-all !important;     /* ✅ Breaks long URLs at chars */
+            overflow-wrap: break-word !important; /* ✅ Fallback for older browsers */
+            hyphens: none !important;      
+        }
+        a:hover, a:focus { text-decoration: underline; }
+        
+        strong { font-weight: 600; }
+        pre, code { font-family: 'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size: 14px; }
+        code { background: #f6f8fa; border-radius: 6px; padding: .2em .4em; }
+        pre { background: #f6f8fa; border-radius: 6px; padding: 16px; overflow: auto; margin: 1em 0; }
+        blockquote { border-left: 4px solid #dfe2e5; color: #6a737d; padding-left: 1em; margin: 1em 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+        th, td { border: 1px solid #d0d7de; padding: .75em; text-align: left; }
+        th { background: #f6f8fa; font-weight: 600; }
+        ul, ol { padding-left: 2em; margin: 1em 0; }
+        img { max-width: 100%; height: auto; }
+        del { color: #bd2c00; }
+        input[type="checkbox"] { margin: 0 .25em 0 0; vertical-align: middle; }
+        
+        /* ✅ CHAT: Print look BAKED IN (always: no HR, spacers only after assistant, assistant plain text) */
+        hr { display: none !important; }  /* ✅ No lines ever */
+        
+        /* Spacers: Tiny after user, 2em only after assistant */
+        div[style*="margin-bottom: 2em"]:has(h3[style*="0366d6"]) {
+            margin-bottom: 0.25em !important;  /* User → assistant: tight */
+        }
+        div[style*="margin-bottom: 2em"]:has(h3[style*="28a745"]) {
+            margin-bottom: 2em !important;  /* Assistant → next: spacer only */
+        }
+        
+        /* Assistant: Plain text (no bg/border/padding minimal) */
+        h3[style*="28a745"] + div[style*="background: #f6f8fa"],
+        h3[style*="28a745"] + div {
+            background: none !important;
+            background-color: transparent !important;
+            border: none !important;
+            border-left: none !important;
+            border-left-color: transparent !important;
+            padding: 0.25em 0.5em !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+        }
+        
+        /* User: Unchanged (keeps bg/border) – no overrides */
+        h3[style*="0366d6"] + div[style*="background: #f6f8fa"] { /* Keeps inline */ }
+        
+        /* ✅ PRINT: Just page tweaks (look is already print-perfect). Links wrap too */
+        @media print {
+            body { 
+                margin: 0.5in 0.25in !important;  
+                padding: 0 !important;
+                max-width: none !important;
+                font-size: 12pt !important; line-height: 1.5 !important;
+            }
+            h1 { page-break-after: avoid; }
+            a { 
+                text-decoration: underline !important; 
+                color: #0366d6 !important; 
+                word-break: break-all !important; 
+                overflow-wrap: break-word !important; 
+            }
+            pre { white-space: pre-wrap; }
+            @page { margin: 0.5in; }
+        }
+    </style>
+</head><body>
+    <div class="markdown-body">$innerHtml</div>
+</body></html>
+    """.trimIndent()
+    }
+
+
 }

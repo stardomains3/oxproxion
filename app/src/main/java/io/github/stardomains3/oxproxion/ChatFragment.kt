@@ -124,6 +124,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var plusButton: MaterialButton
     private lateinit var genButton: MaterialButton
     private lateinit var saveMarkdownFileButton: MaterialButton
+    private lateinit var saveHtmlButton: MaterialButton
     private lateinit var printButton: MaterialButton
     private lateinit var biometricButton: MaterialButton
     private var originalSendIcon: Drawable? = null
@@ -358,6 +359,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         openSavedChatsButton = view.findViewById(R.id.openSavedChatsButton)
         copyChatButton = view.findViewById(R.id.copyChatButton)
         saveMarkdownFileButton  = view.findViewById(R.id.saveMarkdownFileButton)
+        saveHtmlButton  = view.findViewById(R.id.saveHtmlButton)
         printButton =   view.findViewById(R.id.printButton)
         buttonsRow2 = view.findViewById(R.id.buttonsRow2)
         menuButton = view.findViewById(R.id.menuButton)
@@ -1457,6 +1459,18 @@ $cleanContent
                 // No need for local Toast - ViewModel handles UI event via _toolUiEvent
             } else {
                 Toast.makeText(requireContext(), "Nothing to save", Toast.LENGTH_SHORT).show()
+            }
+        }
+        saveHtmlButton.setOnClickListener {
+            hideMenu()
+            lifecycleScope.launch {
+                val innerHtml = viewModel.getFormattedChatHistoryStyledHtml()
+                if (innerHtml.isNotBlank()) {
+                    viewModel.saveHtmlToDownloads(innerHtml)
+                    // VM handles success Toast via _toolUiEvent
+                } else {
+                    Toast.makeText(requireContext(), "Nothing to save", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -2615,66 +2629,104 @@ $cleanContent
                 }
             }
 
-            // ✅ FIXED CSS: Smaller sides (20px), top/bottom margins (40px), print-optimized
+            // ✅ FIXED: HR lines HIDDEN in print (no sep after user OR assistant). Spacers ONLY via margins: tiny after user (flush to assistant), 2em ONLY after assistant. Clean flow!
             val fullHtml = """
-            <!DOCTYPE html>
-            <html><head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>Chat History</title>
-                <style>
-                    * { box-sizing: border-box; }
+        <!DOCTYPE html>
+        <html><head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Chat History</title>
+            <style>
+                * { box-sizing: border-box; }
+                body { 
+                    margin: 40px 20px;  
+                    padding: 0;         
+                    max-width: 100%;    
+                    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+                    font-size: 16px; line-height: 1.5; color: #24292f; background: white;
+                }
+                .markdown-body { font-size: 16px; line-height: 1.5; }
+                h1 { 
+                    color: #24292f !important; font-size: 2em !important; font-weight: 600 !important; 
+                    text-decoration: underline !important;
+                    border-bottom: none !important;
+                    padding-bottom: .3em !important; margin: 0 0 1em 0 !important; 
+                }
+                a { color: #0366d6; text-decoration: none; }
+                a:hover, a:focus { text-decoration: underline; }
+                @media print { a { text-decoration: underline !important; color: #0366d6 !important; } }
+                strong { font-weight: 600; }
+                pre, code { font-family: 'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size: 14px; }
+                code { background: #f6f8fa; border-radius: 6px; padding: .2em .4em; }
+                pre { background: #f6f8fa; border-radius: 6px; padding: 16px; overflow: auto; margin: 1em 0; }
+                blockquote { border-left: 4px solid #dfe2e5; color: #6a737d; padding-left: 1em; margin: 1em 0; }
+                table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+                th, td { border: 1px solid #d0d7de; padding: .75em; text-align: left; }
+                th { background: #f6f8fa; font-weight: 600; }
+                hr { border: none; border-top: 1px solid #eaecef; height: 0; margin: 1.5em 0; }
+                ul, ol { padding-left: 2em; margin: 1em 0; }
+                img { max-width: 100%; height: auto; }
+                del { color: #bd2c00; }
+                input[type="checkbox"] { margin: 0 .25em 0 0; vertical-align: middle; }
+                
+                /* Screen tweaks */
+                h3[style*="28a745"] + div[style*="background"] {
+                    background: #f8f9fa; border-left-color: #28a745;
+                }
+                
+                /* ✅ PRINT: NO HR LINES. Margins ONLY for spacers */
+                @media print {
                     body { 
-                        margin: 40px 20px;  /* ✅ Top/bottom: 40px, sides: 20px (smaller) */
-                        padding: 0;         /* No extra padding */
-                        max-width: 100%;    /* Full width for print */
-                        font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
-                        font-size: 16px; line-height: 1.6; color: #24292f; background: white;
+                        margin: 0.5in 0.25in !important;  
+                        padding: 0 !important;
+                        max-width: none !important;
+                        font-size: 12pt !important; line-height: 1.5 !important;
                     }
-                    .markdown-body { font-size: 16px; }
                     h1 { 
-                        color: #24292f; font-size: 2em; font-weight: 600; 
-                        border-bottom: 1px solid #eaecef; padding-bottom: .3em; margin: 0 0 1em 0; 
+                        page-break-after: avoid; 
+                        text-decoration: underline !important; 
+                        border-bottom: none !important; 
                     }
-                    /* ✅ LINKS: Blue, underlined on hover/print, FULLY CLICKABLE in PDF */
-                    a { 
-                        color: #0366d6; text-decoration: none; 
-                    }
-                    a:hover, a:focus { text-decoration: underline; }
-                    /* Print: Force underline for visibility */
-                    @media print {
-                        a { text-decoration: underline !important; color: #0366d6 !important; }
-                    }
-                    strong { font-weight: 600; }
-                    pre, code { font-family: 'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size: 14px; }
-                    code { background: #f6f8fa; border-radius: 6px; padding: .2em .4em; }
-                    pre { background: #f6f8fa; border-radius: 6px; padding: 16px; overflow: auto; margin: 1em 0; }
-                    blockquote { border-left: 4px solid #dfe2e5; color: #6a737d; padding-left: 1em; margin: 1em 0; }
-                    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-                    th, td { border: 1px solid #d0d7de; padding: .75em; text-align: left; }
-                    th { background: #f6f8fa; font-weight: 600; }
-                    hr { border: none; border-top: 1px solid #eaecef; height: 0; margin: 2em 0; }
-                    ul, ol { padding-left: 2em; margin: 1em 0; }
-                    img { max-width: 100%; height: auto; }
-                    del { color: #bd2c00; }
-                    input[type="checkbox"] { margin: 0 .25em 0 0; vertical-align: middle; }
                     
-                    /* ✅ PRINT PERFECT: Standard margins, no overflow, crisp */
-                    @media print {
-                        body { 
-                            margin: 0.5in 0.25in !important;  /* ✅ Print std: ~0.5" top/bot, 0.25" sides */
-                            padding: 0 !important;
-                            max-width: none !important;
-                            font-size: 12pt !important;  /* Print-friendly size */
-                        }
-                        h1 { page-break-after: avoid; }
-                        pre { white-space: pre-wrap; }
-                        @page { margin: 0.5in; }
+                    /* ✅ NO SEPARATOR LINES: Hide all HR */
+                    hr { 
+                        display: none !important;  /* ✅ GONE – no lines after user OR assistant */
                     }
-                </style>
-            </head><body>
-                <div class="markdown-body">$htmlContent</div>
-            </body></html>
+                    
+                    /* ✅ SPACERS VIA MARGINS ONLY: Tiny after USER (flush to assistant). 2em ONLY after ASSISTANT */
+                    div[style*="margin-bottom: 2em"]:has(h3[style*="0366d6"]) {
+                        margin-bottom: 0.25em !important;  /* ✅ User → assistant: tight */
+                    }
+                    div[style*="margin-bottom: 2em"]:has(h3[style*="28a745"]) {
+                        margin-bottom: 2em !important;  /* ✅ Assistant → next user: spacer ONLY here */
+                    }
+                    
+                    /* ✅ ASSISTANT: Plain text (no bg/border) */
+                    h3[style*="28a745"] + div[style*="background: #f6f8fa"],
+                    h3[style*="28a745"] + div {
+                        background: none !important;
+                        background-color: transparent !important;
+                        border: none !important;
+                        border-left: none !important;
+                        border-left-color: transparent !important;
+                        padding: 0.25em 0.5em !important;
+                        border-radius: 0 !important;
+                        margin: 0 !important;
+                    }
+                    
+                    /* USER: Keep bg/border */
+                    h3[style*="0366d6"] + div[style*="background: #f6f8fa"] {
+    padding: 0.05em 0.5em !important;  /* ✅ Tight user bg in print */
+}
+
+                    
+                    pre { white-space: pre-wrap; }
+                    @page { margin: 0.5in; }
+                }
+            </style>
+        </head><body>
+            <div class="markdown-body">$htmlContent</div>
+        </body></html>
         """.trimIndent()
 
             loadDataWithBaseURL(null, fullHtml, "text/html", "UTF-8", null)
