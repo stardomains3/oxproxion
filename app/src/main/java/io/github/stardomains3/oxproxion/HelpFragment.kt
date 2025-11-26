@@ -139,7 +139,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Sending Prompts
             *   **Text Box**: Enter your prompt.
-            *   **Send Button**: Send your prompt to the LLM. **Long-press** it to open the Presets screen.
+            *   **Send Button**: Send your prompt to the LLM. **Long-press** toggles scroll arrows preference.
             *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
             *   **Attach Document(s) Button**: Click icon to attach **text-based only** files to send with your prompt. Long-press to see what's attached and/or detach them.
             *   **Image Button**: Enabled for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. 
@@ -159,9 +159,12 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "qwen/qwen3-30b-a3b-instruct-2507" to fix it and it will automatically correct the prompt in the prompt box.
 
             ### Contextual Buttons (Enabled during a chat)
-            *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.
             *   **Copy Chat**: Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.
-
+            *   **Save to Markdown**: Saves the full conversation to a markdown file in your downloads folder.
+            *   **Save to HTML**: Saves the full conversation to an HTML file in your downloads folder.
+            *   **Print Chat**: Prints the full conversation. You can save as PDF here too. You can select page size too.
+            *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.
+            
             ### Standard Buttons (Always in the menu)
             *   **Stream Button**: Toggles streaming responses on or off.
             *   **Reasoning Button**: Appears only for models that support reasoning. Toggles reasoning on or off. When enabled, the model uses deeper thinking for more thoughtful responses. When disabled, it explicitly instructs the model not to use reasoning. Reasoning traces are not returned in the response. Defaults to medium effort. If you long-press on the button if it is selected, you can enable Advanced Reasoning settings(see below). 

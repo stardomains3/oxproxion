@@ -25,6 +25,7 @@ class SharedPreferencesHelper(context: Context) {
     private val gson = Gson() // Kept temporarily for migration only
 
     companion object {
+        private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
         private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
         const val LAN_PROVIDER_KEY = "lan_provider"
@@ -378,7 +379,14 @@ class SharedPreferencesHelper(context: Context) {
     fun getPreferenceModelnew(): String {
         return mainPrefs.getString(KEY_MODEL_NEW_CHAT, "meta-llama/llama-4-maverick").toString()
     }
-
+    fun getScrollersPreference(): Boolean {
+        return mainPrefs.getBoolean(KEY_SCROLLERS_ENABLED, false)
+    }
+    fun saveScrollersPreference(isEnabled: Boolean) {
+        mainPrefs.edit {
+            putBoolean(KEY_SCROLLERS_ENABLED, isEnabled)
+        }
+    }
     fun getPreferenceModel(): String? {
         return mainPrefs.getString(KEY_MODEL_VALE, "mistralai/mistral-medium-3")
     }

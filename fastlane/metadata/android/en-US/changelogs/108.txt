@@ -1,0 +1,2 @@
+- Added an option to have scroll arrows to take you to the top or bottom of the chat. Arrows appear above the send button. You can quick toggle this pref by long pressing the send button.
+- Bug fixes and optimizations.

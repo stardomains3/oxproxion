@@ -115,6 +115,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var chatFrameView: FrameLayout
     private var dimOverlay: View? = null
     private var currentSpeakingPosition = -1
+    private lateinit var scrollersButton: MaterialButton
     private lateinit var helpButton: MaterialButton
     private lateinit var presetsButton: MaterialButton
     private lateinit var presetsButton2: MaterialButton
@@ -139,6 +140,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var utilityButton: MaterialButton
     private lateinit var clearButton: MaterialButton
     private lateinit var speechButton: MaterialButton
+    private lateinit var scrollToTopButton: MaterialButton
+    private lateinit var scrollToBottomButton: MaterialButton
     private lateinit var extendButton: MaterialButton
     private lateinit var convoButton: MaterialButton
     private lateinit var saveChatButton: MaterialButton
@@ -345,6 +348,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         webSearchButton = view.findViewById(R.id.webSearchButton)
         fontsButton = view.findViewById(R.id.fontsButton)
         extendButton = view.findViewById(R.id.extendButton)
+        scrollToBottomButton = view.findViewById(R.id.scrollToBottomButton)
+        scrollToTopButton = view.findViewById(R.id.scrollToTopButton)
+        scrollersButton = view.findViewById(R.id.scrollersButton)
         convoButton  = view.findViewById(R.id.convoButton)
         clearButton = view.findViewById(R.id.clearButton)
         utilityButton = view.findViewById(R.id.utilityButton)
@@ -622,16 +628,22 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.sharedText.filterNotNull().collect { text ->
-                    // do whatever you need
                     setSharedText(text)
                     viewModel.textConsumed()
                 }
             }
         }
-        // --- Observe LiveData ---
+
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
-            //  chatRecyclerView.post { updateScrollButtons() }
+            if(sharedPreferencesHelper.getScrollersPreference()){
+                chatRecyclerView.post {
+                    val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+                    val canScrollDown = chatRecyclerView.canScrollVertically(1)
+                    scrollToTopButton.visibility = if (canScrollUp) View.VISIBLE else View.INVISIBLE
+                    scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
+                }
+            }
             val hasMessages = messages.isNotEmpty()
             if(hasMessages){
                 resetChatButton.icon.alpha = 255
@@ -738,14 +750,32 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.isStreamingEnabled.observe(viewLifecycleOwner) { isEnabled ->
             streamButton.isSelected = isEnabled
         }
+
         viewModel.isWebSearchEnabled.observe(viewLifecycleOwner) { isEnabled ->
             webSearchButton.isSelected = isEnabled
+        }
+
+        viewModel.isScrollersEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            scrollersButton.isSelected = isEnabled
+            if(isEnabled) {
+                chatRecyclerView.post {
+                    val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+                    val canScrollDown = chatRecyclerView.canScrollVertically(1)
+                    scrollToTopButton.visibility = if (canScrollUp) View.VISIBLE else View.INVISIBLE
+                    scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
+                }
+            }
+            else{
+                scrollToTopButton.visibility = View.INVISIBLE
+                scrollToBottomButton.visibility = View.INVISIBLE
+            }
         }
 
         viewModel.isReasoningEnabled.observe(viewLifecycleOwner) { isEnabled ->
             reasoningButton.isSelected = isEnabled
             updateReasoningButtonAppearance()
         }
+
         viewModel.isAdvancedReasoningOn.observe(viewLifecycleOwner) { isAdvanced ->
             updateReasoningButtonAppearance() // Call helper
         }
@@ -861,22 +891,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             private fun checkAndScrollForThinkingOrError(position: Int) {
                 val lastPos = chatAdapter.itemCount - 1
-                if (position == lastPos) {
-                    // ✅ Via LiveData (your exact setup: chatMessages → setMessages → notify)
-                    val messages = viewModel.chatMessages.value ?: return
-                    val lastMessage = messages.lastOrNull() ?: return
+                if (position != lastPos || !chatRecyclerView.canScrollVertically(1)) return
 
-                    // ✅ Matches adapter's getMessageText + your error format (JsonPrimitive only)
-                    val contentStr = when {
-                        lastMessage.content is JsonPrimitive -> lastMessage.content.content
-                        else -> return // Images/tools/etc. → skip (your "others" offset)
-                    }
+                val messages = viewModel.chatMessages.value ?: return
+                val lastMessage = messages.lastOrNull() ?: return
+                val contentStr = when {
+                    lastMessage.content is JsonPrimitive -> lastMessage.content.content
+                    else -> return
+                }
 
-                    if (contentStr == "working..." || contentStr.startsWith("**Error:**")) {
-                        // ✅ Thinking OR Error → Scroll bottom!
-                        chatRecyclerView.post {
-                            layoutManager.scrollToPosition(lastPos)
-                        }
+                if (contentStr == "working..." || contentStr.startsWith("**Error:**")) {
+                    chatRecyclerView.post {
+                        layoutManager.scrollToPositionWithOffset(lastPos, -1000000)
                     }
                 }
             }
@@ -1024,6 +1050,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING && viewModel.isAwaitingResponse.value == true) {
                     viewModel.setUserScrolledDuringStream(true)
                 }
+            }
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if(sharedPreferencesHelper.getScrollersPreference())
+                    chatRecyclerView.post {  // Keep post for layout safety
+                        val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+                        val canScrollDown = chatRecyclerView.canScrollVertically(1)
+                        scrollToTopButton.visibility = if (canScrollUp) View.VISIBLE else View.INVISIBLE
+                        scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
+                    }
             }
         })
     }
@@ -1752,8 +1788,9 @@ $cleanContent
             val currentState = sharedPreferencesHelper.getExtPreference2()
             val newState = !currentState
             sharedPreferencesHelper.saveExtPreference2(newState)
-            extBG.visibility = if (newState) View.VISIBLE else View.GONE
-            presetsButton.visibility = if (extBG.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+           // extBG.visibility = if (newState) View.VISIBLE else View.GONE
+            presetsButton2.visibility = if (newState) View.VISIBLE else View.GONE
+            presetsButton.visibility = if (presetsButton2.isVisible) View.GONE else View.VISIBLE
             true
         }
         extendButton.setOnClickListener {
@@ -1788,22 +1825,31 @@ $cleanContent
             // Toast.makeText(requireContext(), "System message reset to default", Toast.LENGTH_SHORT).show()
             true
         }
-        sendChatButton.setOnLongClickListener {
-           /* if (!chatEditText.text.isBlank()) {
-                chatEditText.text.clear()
-            }*/
-           // chatEditText.setText("")
-            //chatEditText.text.clear()
-            chatEditText.hideKeyboard()
-            hideMenu()
-            parentFragmentManager.beginTransaction()
-                .hide(this)
-                .add(R.id.fragment_container, PresetsListFragment())
-                .addToBackStack(null)
-                .commit()
 
+        scrollersButton.setOnClickListener {
+            viewModel.toggleScrollers()
+        }
+        sendChatButton.setOnLongClickListener {
+            viewModel.toggleScrollers()
             true
         }
+
+        scrollToTopButton.setOnClickListener {
+            chatRecyclerView.post {
+                chatRecyclerView.scrollToPosition(0)
+                scrollToTopButton.visibility =  View.INVISIBLE
+            }
+        }
+
+        scrollToBottomButton.setOnClickListener {
+            chatRecyclerView.post {
+                val layoutManager = chatRecyclerView.layoutManager as LinearLayoutManager
+                val lastIndex = chatRecyclerView.adapter?.itemCount?.minus(1) ?: 0
+                layoutManager.scrollToPositionWithOffset(lastIndex, -1000000)
+                scrollToBottomButton.visibility =  View.INVISIBLE
+            }
+        }
+
         utilityButton.setOnClickListener {
             val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = clipboard.primaryClip
@@ -1883,7 +1929,8 @@ $cleanContent
     private fun updateInitialUI() {
         val isExtended = sharedPreferencesHelper.getExtPreference()
         if (sharedPreferencesHelper.getExtPreference2()){
-            extBG.visibility = View.VISIBLE
+           // extBG.visibility = View.VISIBLE
+            presetsButton2.visibility = View.VISIBLE
             presetsButton.visibility = View.GONE
         }
         val hasText = !chatEditText.text.isNullOrEmpty()

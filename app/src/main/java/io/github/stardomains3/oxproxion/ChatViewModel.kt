@@ -173,6 +173,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
     val _isWebSearchEnabled = MutableLiveData<Boolean>(false)
     val isWebSearchEnabled: LiveData<Boolean> = _isWebSearchEnabled
+    val _isScrollersEnabled = MutableLiveData<Boolean>(false)
+    val isScrollersEnabled: LiveData<Boolean> = _isScrollersEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private val _toolUiEvent = MutableLiveData<Event<String>>()
@@ -203,10 +205,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     }
     fun toggleWebSearch() {
-        val newNotiState = !(_isWebSearchEnabled.value ?: true)
+        val newNotiState = !(_isWebSearchEnabled.value ?: false)
         _isWebSearchEnabled.value = newNotiState
         sharedPreferencesHelper.saveWebSearchEnabled(newNotiState)
 
+    }
+    fun toggleScrollers(){
+        val newValue = !(_isScrollersEnabled.value ?: false)
+        _isScrollersEnabled.value = newValue
+        sharedPreferencesHelper.saveScrollersPreference(newValue)
     }
     fun toggleReasoning() {
         val newValue = !(_isReasoningEnabled.value ?: false)
@@ -253,6 +260,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isReasoningEnabled.value = sharedPreferencesHelper.getReasoningPreference()
         _isAdvancedReasoningOn.value = sharedPreferencesHelper.getAdvancedReasoningEnabled()
         _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
+        _isScrollersEnabled.value = sharedPreferencesHelper.getScrollersPreference()
+        _isWebSearchEnabled.value = sharedPreferencesHelper.getWebSearchBoolean()
         sharedPreferencesHelper.mainPrefs.registerOnSharedPreferenceChangeListener { _, key ->
             if (key == "noti_enabled") {  // Use the actual key from your companion object
                 _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
