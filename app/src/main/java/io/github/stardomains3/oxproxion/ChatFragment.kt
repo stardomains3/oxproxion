@@ -891,18 +891,23 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             private fun checkAndScrollForThinkingOrError(position: Int) {
                 val lastPos = chatAdapter.itemCount - 1
-                if (position != lastPos || !chatRecyclerView.canScrollVertically(1)) return
+                if (position == lastPos) {
+                    // ✅ Via LiveData (your exact setup: chatMessages → setMessages → notify)
+                    val messages = viewModel.chatMessages.value ?: return
+                    val lastMessage = messages.lastOrNull() ?: return
 
-                val messages = viewModel.chatMessages.value ?: return
-                val lastMessage = messages.lastOrNull() ?: return
-                val contentStr = when {
-                    lastMessage.content is JsonPrimitive -> lastMessage.content.content
-                    else -> return
-                }
+                    // ✅ Matches adapter's getMessageText + your error format (JsonPrimitive only)
+                    val contentStr = when {
+                        lastMessage.content is JsonPrimitive -> lastMessage.content.content
+                        else -> return // Images/tools/etc. → skip (your "others" offset)
+                    }
 
-                if (contentStr == "working..." || contentStr.startsWith("**Error:**")) {
-                    chatRecyclerView.post {
-                        layoutManager.scrollToPositionWithOffset(lastPos, -1000000)
+                    if (contentStr == "working..." || contentStr.startsWith("**Error:**")) {
+                        // ✅ Thinking OR Error → Scroll bottom!
+                        chatRecyclerView.post {
+                            //  layoutManager.scrollToPosition(lastPos)
+                            layoutManager.scrollToPositionWithOffset(lastPos, -1000000)
+                        }
                     }
                 }
             }
