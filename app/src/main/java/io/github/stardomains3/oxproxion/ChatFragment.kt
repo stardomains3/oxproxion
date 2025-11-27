@@ -188,7 +188,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private val pendingFiles = mutableListOf<AttachedFile>()
     private val MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB total
     private val MAX_SINGLE_FILE_SIZE = 1024 * 1024 // 1MB per file
-    private var adapterObserver: RecyclerView.AdapterDataObserver? = null
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -636,6 +635,37 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
+
+            val hasMessages = messages.isNotEmpty()
+            if(hasMessages){
+                resetChatButton.icon.alpha = 255
+                saveChatButton.icon.alpha = 255
+                val lastMessage = messages.last()
+                if (lastMessage.content is JsonPrimitive) {
+                    val contentStr = lastMessage.content.content
+                    if (contentStr == "working...") {
+                        chatRecyclerView.post {
+                            chatRecyclerView.post {
+                                val lastPos = chatAdapter.itemCount - 1
+                                val lastVh = chatRecyclerView.findViewHolderForAdapterPosition(lastPos)
+                                if (lastVh != null) {
+                                    // Exact: Bottom-align (RV height - item height)
+                                    val offset = -(chatRecyclerView.height - lastVh.itemView.height)
+                                    layoutManager.scrollToPositionWithOffset(lastPos, offset)
+                                } else {
+                                    // Fallback: smooth scroll
+                                    layoutManager.scrollToPositionWithOffset(lastPos, -1000000)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                resetChatButton.icon.alpha = 102
+                saveChatButton.icon.alpha = 102
+            }
             if(sharedPreferencesHelper.getScrollersPreference()){
                 chatRecyclerView.post {
                     val canScrollUp = chatRecyclerView.canScrollVertically(-1)
@@ -644,26 +674,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
                 }
             }
-            val hasMessages = messages.isNotEmpty()
-            if(hasMessages){
-                resetChatButton.icon.alpha = 255
-                saveChatButton.icon.alpha = 255
-            }
-            else
-            {
-                resetChatButton.icon.alpha = 102
-                saveChatButton.icon.alpha = 102
-            }
-
             saveChatButton.isEnabled = hasMessages
             resetChatButton.isEnabled = hasMessages
            // pdfChatButton.isVisible = hasMessages
             //copyChatButton.isVisible = hasMessages
             buttonsRow2.isVisible = hasMessages
-
-
         }
-
 
         fun areAnimationsEnabled(context: Context): Boolean {
             val resolver = context.contentResolver
@@ -820,6 +836,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     val position = chatAdapter.itemCount - 1
                     if (position >= 0) {
                         layoutManager.scrollToPositionWithOffset(position, -12)
+                        chatRecyclerView.post {
+                            if (sharedPreferencesHelper.getScrollersPreference()) {
+                                val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+                                val canScrollDown = chatRecyclerView.canScrollVertically(1)
+                                scrollToTopButton.visibility =
+                                    if (canScrollUp) View.VISIBLE else View.INVISIBLE
+                                scrollToBottomButton.visibility =
+                                    if (canScrollDown) View.VISIBLE else View.INVISIBLE
+                            }
+                        }
                     }
                 }
             }
@@ -877,42 +903,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 notificationManager.deleteNotificationChannel("SilentUpdatesChannel")
             }
         }
-        adapterObserver = object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                super.onItemRangeInserted(positionStart, itemCount)
-                checkAndScrollForThinkingOrError(positionStart + itemCount - 1)
-            }
 
-            override fun onChanged() {
-                super.onChanged()
-                val lastPos = chatAdapter.itemCount - 1
-                if (lastPos >= 0) checkAndScrollForThinkingOrError(lastPos)
-            }
-
-            private fun checkAndScrollForThinkingOrError(position: Int) {
-                val lastPos = chatAdapter.itemCount - 1
-                if (position == lastPos) {
-                    // ✅ Via LiveData (your exact setup: chatMessages → setMessages → notify)
-                    val messages = viewModel.chatMessages.value ?: return
-                    val lastMessage = messages.lastOrNull() ?: return
-
-                    // ✅ Matches adapter's getMessageText + your error format (JsonPrimitive only)
-                    val contentStr = when {
-                        lastMessage.content is JsonPrimitive -> lastMessage.content.content
-                        else -> return // Images/tools/etc. → skip (your "others" offset)
-                    }
-
-                    if (contentStr == "working..." || contentStr.startsWith("**Error:**")) {
-                        // ✅ Thinking OR Error → Scroll bottom!
-                        chatRecyclerView.post {
-                            //  layoutManager.scrollToPosition(lastPos)
-                            layoutManager.scrollToPositionWithOffset(lastPos, -1000000)
-                        }
-                    }
-                }
-            }
-        }
-        chatAdapter.registerAdapterDataObserver(adapterObserver!!)
 
         // end onviewcreated
     }
@@ -1092,10 +1083,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         if (!isFontUpdate) {  // Only stop the service if not a font update (i.e., actual app closure)
             stopForegroundService()
         }
-        adapterObserver?.let {
-            chatAdapter.unregisterAdapterDataObserver(it)
-        }
-        adapterObserver = null
+
     }
     @SuppressLint("ClickableViewAccessibility")
     private fun setupClickListeners() {
@@ -1177,6 +1165,7 @@ $cleanContent
                         val displayName = viewModel.getModelDisplayName(apiIdentifier)
                         ForegroundService.updateNotificationStatusSilently(displayName, "Prompt sent. Awaiting Response.")
                     }*/
+
                     chatEditText.setText("")
                     chatEditText.text.clear()
                     chatEditText.hideKeyboard()

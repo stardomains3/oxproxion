@@ -81,7 +81,19 @@ class ChatAdapter(
         const val VIEW_TYPE_THINKING = 3 // For the "working..." message
     }
 
+    /* OLD CLEARS ALL BOO fun setMessages(newMessages: List<FlexibleMessage>) {
+        messages.clear()
+        messages.addAll(newMessages)
+        notifyDataSetChanged()
+    }*/
     fun setMessages(newMessages: List<FlexibleMessage>) {
+        // PERFECT CASE: Only 1 new message added
+        if (messages.size == newMessages.size - 1 &&
+            messages == newMessages.dropLast(1)) {
+            addMessage(newMessages.last())  // ← Incremental! No blink!
+            return
+        }
+        // Fallback: Full refresh
         messages.clear()
         messages.addAll(newMessages)
         notifyDataSetChanged()

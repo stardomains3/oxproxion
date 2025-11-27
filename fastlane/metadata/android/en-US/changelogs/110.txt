@@ -1,0 +1,2 @@
+- Spread the scroll to top/bottom buttons out a little, and other scroll fixes.
+- Chat messages list ought to be smoother.
