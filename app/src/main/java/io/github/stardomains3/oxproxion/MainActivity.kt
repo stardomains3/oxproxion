@@ -173,7 +173,7 @@ class MainActivity : AppCompatActivity() {
         }
         // on 31/32 the permission doesn’t exist, notifications are enabled by default
     }
-    private fun startForegroundService() {
+    /*private fun startForegroundService() {
         if (ForegroundService.isRunningForeground) return  // Guard to prevent restarts
         try {
             val serviceIntent = Intent(this, ForegroundService::class.java)
@@ -185,7 +185,17 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
            // Log.e("MainActivity", "Failed to start foreground service", e)
         }
+    }*/
+    private fun startForegroundService() {
+        if (ForegroundService.isRunningForeground) return
+        try {
+            val serviceIntent = Intent(this, ForegroundService::class.java)
+            ContextCompat.startForegroundService(this, serviceIntent)  // ← From startService()
+        } catch (e: Exception) {
+         //   Log.e("MainActivity", "Failed to start foreground service", e)
+        }
     }
+
     /*private fun startForegroundService() {
         try {
             val serviceIntent = Intent(this, ForegroundService::class.java)

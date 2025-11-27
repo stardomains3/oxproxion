@@ -1,0 +1,1 @@
+- Made some Manifest changes and foreground service start code so as to hopefully make app work with Android 13.
