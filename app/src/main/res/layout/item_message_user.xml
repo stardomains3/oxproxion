@@ -79,8 +79,8 @@
                 android:padding="4dp"
                 android:src="@drawable/ic_redo"
                 android:visibility="visible"
-                app:tint="#222f3d" />
-            <!-- New delete button (after resend) -->
+                app:tint="#777777" />
+            <!-- New delete button (after resend) old color #222f3d-->
             <ImageButton
                 android:id="@+id/deleteButton"
                 android:layout_width="32dp"
@@ -91,7 +91,7 @@
                 android:padding="4dp"
                 android:src="@drawable/ic_trash"
                 android:visibility="visible"
-                app:tint="#222f3d" />
+                app:tint="#777777" />
 
 
             <!-- Edit button (middle) -->
@@ -105,7 +105,7 @@
                 android:padding="4dp"
                 android:src="@drawable/ic_edit"
                 android:visibility="visible"
-                app:tint="#222f3d" />
+                app:tint="#777777" />
 
             <!-- Existing copy button (far right) -->
             <ImageButton
@@ -116,7 +116,7 @@
                 android:contentDescription="Copy text"
                 android:padding="4dp"
                 android:src="@drawable/ic_person"
-                app:tint="#222f3d" />
+                app:tint="#777777" />
 
         </LinearLayout>
 

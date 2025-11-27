@@ -72,7 +72,7 @@
             android:contentDescription="Copy text"
             android:padding="4dp"
             android:src="@drawable/ic_tune"
-            app:tint="#454545"
+            app:tint="#777777"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
 
@@ -86,7 +86,7 @@
             android:contentDescription="Make PDF"
             android:padding="4dp"
             android:src="@drawable/ic_pdfnew"
-            app:tint="#454545"
+            app:tint="#777777"
             app:layout_constraintStart_toEndOf="@id/copyButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
         <ImageButton
@@ -99,7 +99,7 @@
             android:contentDescription="Make MD"
             android:padding="4dp"
             android:src="@drawable/ic_markdown"
-            app:tint="#454545"
+            app:tint="#777777"
             app:layout_constraintStart_toEndOf="@id/aipdfButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
         <!-- shareButton -->
@@ -113,7 +113,7 @@
             android:contentDescription="Share text"
             android:padding="4dp"
             android:src="@drawable/ic_share"
-            app:tint="#454545"
+            app:tint="#777777"
             app:layout_constraintStart_toEndOf="@id/markdownButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
 
@@ -128,7 +128,7 @@
             android:contentDescription="Speak text"
             android:padding="4dp"
             android:src="@drawable/ic_volume_up"
-            app:tint="#454545"
+            app:tint="#777777"
             app:layout_constraintStart_toEndOf="@id/shareButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
 
