@@ -33,8 +33,8 @@
                 app:cornerRadius="24dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:insetLeft="0dp"
-                android:insetRight="0dp"
+                android:insetLeft="1dp"
+                android:insetRight="1dp"
                 app:iconTint="#A8A8A8"
                 app:backgroundTint="@color/button_background_col" />
             <com.google.android.material.button.MaterialButton

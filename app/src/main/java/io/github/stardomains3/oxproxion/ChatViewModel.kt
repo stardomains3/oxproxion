@@ -55,11 +55,15 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.putJsonArray
+import okhttp3.Cache
+import okhttp3.CompressionInterceptor
+import okhttp3.Gzip
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
 import org.commonmark.renderer.text.TextContentRenderer
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.text.SimpleDateFormat
@@ -131,7 +135,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             .find { it.apiIdentifier == modelIdentifier }
         return fromOr?.isReasoningCapable ?: false
     }
+    private fun createHttpClient(): HttpClient {
+        val appContext = getApplication<Application>().applicationContext
+        val cacheDir = File(appContext.cacheDir, "http-cache").apply {
+            if (!exists()) mkdirs()
+        }
 
+        return HttpClient(OkHttp) {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            engine {
+                config {
+                    addInterceptor(CompressionInterceptor( Gzip))
+                    cache(Cache(cacheDir, 50 * 1024 * 1024))
+                    connectTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    readTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    writeTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    callTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                }
+            }
+        }
+    }
     fun hasImagesInChat(): Boolean = _chatMessages.value?.any { isImageMessage(it) } ?: false
 
     private fun isImageMessage(message: FlexibleMessage): Boolean =
@@ -243,7 +266,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // soundManager = SoundManager(application)
         val chatDao = AppDatabase.getDatabase(application).chatDao()
         repository = ChatRepository(chatDao)
-        httpClient = HttpClient(OkHttp) {
+        httpClient = createHttpClient()
+        /*httpClient = HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             engine {
                 config {
@@ -252,7 +276,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     writeTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 }
             }
-        }
+        }*/
         migrateOpenRouterModels()
         allOpenRouterModels = sharedPreferencesHelper.getOpenRouterModels()
         _activeChatModel.value = sharedPreferencesHelper.getPreferenceModelnew()
