@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +16,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.recyclerview.widget.RecyclerView
 import coil.ImageLoader
@@ -34,7 +36,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class ChatAdapter(
     private val markwon: Markwon,
-    private val viewModel: ChatViewModel,
+   // private val viewModel: ChatViewModel,
     private val onSpeakText: (String, Int) -> Unit,
     private val onSynthesizeToWavFile: (String, Int) -> Unit,
     private val ttsAvailable: Boolean,
@@ -46,7 +48,7 @@ class ChatAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
     var currentSpeakingPosition = -1
-    var currentHolder: AssistantViewHolder? = null
+    //var currentHolder: AssistantViewHolder? = null
 
     private fun getMessageText(content: JsonElement): String {
         if (content is JsonPrimitive) return content.content
@@ -277,6 +279,8 @@ class ChatAdapter(
         private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
         private var pulseAnimator: ObjectAnimator? = null
+        private var bgColorAnimator: ObjectAnimator? = null
+
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
             messageTextView.typeface = currentTypeface
             val text = getMessageText(message.content)
@@ -309,13 +313,42 @@ class ChatAdapter(
             pulseAnimator?.cancel()          // 2. always stop old one
             pulseAnimator = null
 
-            if (isThinking) {                // 3. start only when needed
-                pulseAnimator = ObjectAnimator.ofFloat(messageContainer, "alpha", 0.2f, 1f).apply {
-                    duration = 800
+            if (isThinking) {
+                // CLONE your original drawable for animation (preserves corners!)
+                val originalDrawable = ContextCompat.getDrawable(itemView.context, R.drawable.bg_ai_message) as GradientDrawable
+                val animatedDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(0xFF2C2C2C.toInt())  // Match your original color
+                    cornerRadius = 16f * itemView.resources.displayMetrics.density  // 16dp → pixels
+                }
+
+                messageContainer.background = animatedDrawable  // Use animated clone
+
+                // 1. Gentle alpha breath
+                val alphaAnimator = ObjectAnimator.ofFloat(messageContainer, "alpha", 0.2f, 1f).apply {
+                    duration = 4000
                     repeatCount = ObjectAnimator.INFINITE
                     repeatMode = ObjectAnimator.REVERSE
-                    start()
                 }
+
+                // 2. Subtle color pulse ON THE DRAWABLE (corners preserved!)
+                val colorAnimator = ObjectAnimator.ofArgb(
+                    animatedDrawable,  // Animate the clone directly!
+                    "color",           // GradientDrawable's color property
+                    0xFF313f48.toInt(),  // Dark pastel blue
+                    0xFF2C2C2C.toInt()   // Back to original
+                ).apply {
+                    duration = 2000
+                    repeatCount = ObjectAnimator.INFINITE
+                    repeatMode = ObjectAnimator.REVERSE
+                }
+
+                alphaAnimator.start()
+                colorAnimator.start()
+
+                pulseAnimator = alphaAnimator
+                bgColorAnimator = colorAnimator
+
             } else {
                 messageContainer.alpha = 1f
             }
@@ -478,12 +511,15 @@ class ChatAdapter(
                 true // Consume the long click
             }*/
         }
-        internal fun stopPulse() {          // <-- only visible inside the adapter
+        internal fun stopPulse() {
             pulseAnimator?.cancel()
+            bgColorAnimator?.cancel()
             pulseAnimator = null
+            bgColorAnimator = null
             messageContainer.alpha = 1f
             messageContainer.clearAnimation()
-            messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
+            // PERFECT RESET: Always restore ORIGINAL drawable
+            messageContainer.background = ContextCompat.getDrawable(itemView.context, R.drawable.bg_ai_message)
         }
     }
     private var currentTypeface: Typeface = Typeface.DEFAULT

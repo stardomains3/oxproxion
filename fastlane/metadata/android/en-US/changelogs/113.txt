@@ -1,0 +1,2 @@
+- You can long-press a scroll arrow and it will take you one screen length in the respective direction.
+- Mellowed out the "working..." animation.

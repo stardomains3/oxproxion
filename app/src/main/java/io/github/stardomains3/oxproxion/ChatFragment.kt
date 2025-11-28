@@ -942,7 +942,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         chatAdapter = ChatAdapter(
             markwon,
-            viewModel,
+           // viewModel,
             { text, position -> speakText(text, position) },
             { text, position -> synthesizeToWavFile(text, position) },
             ttsAvailable,
@@ -1828,21 +1828,36 @@ $cleanContent
             true
         }
 
+        // ✅ SHORT PRESS: Full jump to top/bottom (unchanged behavior)
         scrollToTopButton.setOnClickListener {
             chatRecyclerView.post {
                 chatRecyclerView.scrollToPosition(0)
-                scrollToTopButton.visibility =  View.INVISIBLE
+                updateScrollButtonsVisibility()
             }
         }
 
         scrollToBottomButton.setOnClickListener {
             chatRecyclerView.post {
                 val layoutManager = chatRecyclerView.layoutManager as LinearLayoutManager
-                val lastIndex = chatRecyclerView.adapter?.itemCount?.minus(1) ?: 0
-                layoutManager.scrollToPositionWithOffset(lastIndex, -1000000)
-                scrollToBottomButton.visibility =  View.INVISIBLE
+                val lastIndex = chatAdapter.itemCount - 1
+                if (lastIndex >= 0) {
+                    layoutManager.scrollToPositionWithOffset(lastIndex, -1000000)  // Bottom-align
+                }
+                updateScrollButtonsVisibility()
             }
         }
+
+// ✅ LONG PRESS: One screenful scroll (NEW: Smooth, predictable, handles partial/edges perfectly)
+        scrollToTopButton.setOnLongClickListener {
+            scrollToPreviousScreen()
+            true  // Consume long press
+        }
+
+        scrollToBottomButton.setOnLongClickListener {
+            scrollToNextScreen()
+            true  // Consume long press
+        }
+
 
         utilityButton.setOnClickListener {
             val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -2080,7 +2095,34 @@ $cleanContent
         headerContainer.visibility = View.GONE
         overlayView?.visibility = View.GONE
     }
+    private fun scrollToPreviousScreen() {
+        chatRecyclerView.post {
+            val height = chatRecyclerView.height
+            chatRecyclerView.smoothScrollBy(0, -height)
+            updateScrollButtonsVisibility()
+            //Toast.makeText(requireContext(), "Scrolled up one screen", Toast.LENGTH_SHORT).show()
+        }
+    }
 
+    private fun scrollToNextScreen() {
+        chatRecyclerView.post {
+            val height = chatRecyclerView.height
+            chatRecyclerView.smoothScrollBy(0, height)
+            updateScrollButtonsVisibility()
+            // Toast.makeText(requireContext(), "Scrolled down one screen", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Keep the existing updateScrollButtonsVisibility() unchanged
+    private fun updateScrollButtonsVisibility() {
+        if (!sharedPreferencesHelper.getScrollersPreference()) return
+        chatRecyclerView.post {
+            val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+            val canScrollDown = chatRecyclerView.canScrollVertically(1)
+            scrollToTopButton.visibility = if (canScrollUp) View.VISIBLE else View.INVISIBLE
+            scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
+        }
+    }
     private fun showSaveChatDialogWithResultApi() {
         val dialog = SaveChatDialogFragment()
         childFragmentManager.setFragmentResultListener(SaveChatDialogFragment.REQUEST_KEY, viewLifecycleOwner) { key, bundle ->
