@@ -335,7 +335,7 @@ class ChatAdapter(
                 val colorAnimator = ObjectAnimator.ofArgb(
                     animatedDrawable,  // Animate the clone directly!
                     "color",           // GradientDrawable's color property
-                    0xFF313f48.toInt(),  // Dark pastel blue
+                    0xFF222f3d.toInt(),  // Dark pastel blue
                     0xFF2C2C2C.toInt()   // Back to original
                 ).apply {
                     duration = 2000

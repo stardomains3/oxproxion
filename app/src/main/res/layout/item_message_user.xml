@@ -80,7 +80,6 @@
                 android:src="@drawable/ic_redo"
                 android:visibility="visible"
                 app:tint="#777777" />
-            <!-- New delete button (after resend) old color #222f3d-->
             <ImageButton
                 android:id="@+id/deleteButton"
                 android:layout_width="32dp"

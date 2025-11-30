@@ -1,6 +1,7 @@
 package io.github.stardomains3.oxproxion
 
 import android.Manifest
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.NotificationManager
@@ -183,7 +184,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val content: String,
         val size: Long
     )
-
+    private var lastContentLength = 0
+    private var hasScrolled = false
     private lateinit var textFilePicker: ActivityResultLauncher<String>
     private val pendingFiles = mutableListOf<AttachedFile>()
     private val MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB total
@@ -635,15 +637,31 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
-
             val hasMessages = messages.isNotEmpty()
             if(hasMessages){
                 resetChatButton.icon.alpha = 255
                 saveChatButton.icon.alpha = 255
+                resetChatButton.isVisible = true
                 val lastMessage = messages.last()
-                if (lastMessage.content is JsonPrimitive) {
+                if (lastMessage.role == "assistant" && lastMessage.content is JsonPrimitive) {
                     val contentStr = lastMessage.content.content
+                    val currentLen = contentStr.length
                     if (contentStr == "working...") {
+                        lastContentLength = 0
+                        /*huh? chatRecyclerView.post {
+                             chatRecyclerView.post {
+                                 chatRecyclerView.post {
+                                     val lastPos = chatAdapter.itemCount - 1
+                                     val lastVh = chatRecyclerView.findViewHolderForAdapterPosition(lastPos)
+                                     if (lastVh != null) {
+                                         // Start with good position: leave some margin at top (-12px)
+                                         layoutManager.scrollToPositionWithOffset(lastPos, -12)
+                                     } else {
+                                         layoutManager.scrollToPositionWithOffset(lastPos, -1000000)
+                                     }
+                                 }
+                             }
+                         }*/
                         chatRecyclerView.post {
                             chatRecyclerView.post {
                                 val lastPos = chatAdapter.itemCount - 1
@@ -658,6 +676,38 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                                 }
                             }
                         }
+                    }  else if (currentLen > lastContentLength && !hasScrolled) {
+                        lastContentLength = currentLen
+                        chatRecyclerView.post {
+                            chatRecyclerView.post {
+                                chatRecyclerView.post {  // Triple post handles layout/draw timing
+                                    val lastPos = chatAdapter.itemCount - 1
+                                    val lastVh = chatRecyclerView.findViewHolderForAdapterPosition(lastPos)
+
+                                    if (lastVh != null) {
+                                        val bubbleTop = lastVh.itemView.top
+
+                                        // Fix the jitter: use more conservative threshold
+                                        // Only stop when we're really getting close to going off-screen
+                                        if (bubbleTop >= -8) {
+                                            // Still OK → keep auto-scrolling with fixed offset
+                                            layoutManager.scrollToPositionWithOffset(lastPos, -12)
+                                        } else {
+                                            // Too high! Stop here and lock position
+                                            hasScrolled = true
+                                            viewModel.setUserScrolledDuringStream(true)
+                                            layoutManager.scrollToPositionWithOffset(lastPos, -12)
+                                        }
+
+                                    } else {
+                                        // Fallback until view is ready
+                                        chatRecyclerView.smoothScrollToPosition(lastPos)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        lastContentLength = currentLen
                     }
                 }
             }
@@ -707,14 +757,26 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
             sendChatButton.isEnabled = true
-
             val materialButton = sendChatButton
             if (isAwaiting) {
                 materialButton.setIconResource(R.drawable.ic_stop)
-            }
-            else{
+            } else {
                 materialButton.icon = originalSendIcon
+                val messages = viewModel.chatMessages.value
+                if (messages?.isNotEmpty() == true) {
+                    val lastMessage = messages.last()
+                    if (lastMessage.role == "assistant") {
+                        val originalColor = modelNameTextView.currentTextColor
+                        val isError = lastMessage.content
+                            .let { it as? JsonPrimitive }?.content?.startsWith("**Error:**") == true
+                        val targetColor = if (isError) "#8c1911".toColorInt()
+                        else          "#222f3d".toColorInt()
+                        modelNameTextView.animateColor(originalColor, targetColor,   1000)
+                        modelNameTextView.animateColor(targetColor,   originalColor, 3000)
+                    }
+                }
             }
+
             if (!isAwaiting && viewModel.shouldAutoOffWebSearch()) {
                 viewModel.resetWebSearchAutoOff()
                 if (viewModel.isWebSearchEnabled.value == true) {
@@ -835,6 +897,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 chatRecyclerView.post {
                     val position = chatAdapter.itemCount - 1
                     if (position >= 0) {
+                        hasScrolled = false
                         layoutManager.scrollToPositionWithOffset(position, -12)
                         chatRecyclerView.post {
                             if (sharedPreferencesHelper.getScrollersPreference()) {
@@ -1043,7 +1106,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         chatRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                if (newState == RecyclerView.SCROLL_STATE_DRAGGING && viewModel.isAwaitingResponse.value == true) {
+                if ((newState == RecyclerView.SCROLL_STATE_DRAGGING&&!hasScrolled) && viewModel.isAwaitingResponse.value == true) {
+                    hasScrolled = true
                     viewModel.setUserScrolledDuringStream(true)
                 }
             }
@@ -1058,6 +1122,17 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     }
             }
         })
+        chatRecyclerView.setOnTouchListener { _, event ->
+            if (viewModel.isAwaitingResponse.value == true &&
+                (event.actionMasked == MotionEvent.ACTION_DOWN&&!hasScrolled)) {  // ACTION_DOWN catches tap/scroll start reliably
+                hasScrolled = true
+                viewModel.setUserScrolledDuringStream(true)
+
+                // If you use this flag locally too!
+            }
+
+            false  // Pass through touch so RecyclerView still works normally
+        }
     }
 
     fun View.showKeyboard() {
@@ -1109,6 +1184,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         sendChatButton.setOnClickListener {
             if (viewModel.isAwaitingResponse.value == true) {
+                hasScrolled = false
                 viewModel.cancelCurrentRequest()
                 //   viewModel.playCancelTone()
             } else {
@@ -1129,7 +1205,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         return@setOnClickListener
                     }
                 }
-
+                hasScrolled = false
                 var prompt = chatEditText.text.toString().trim()
                 if (pendingFiles.isNotEmpty()) {
                     val fileSections = pendingFiles.mapIndexed { index, file ->  // Explicit -> String
@@ -2688,6 +2764,12 @@ $cleanContent
             else -> String.format("%.1fMB", bytes / 1024f / 1024f)
         }
     }
+    fun TextView.animateColor(from: Int, to: Int, dur: Long): ValueAnimator? =
+        ValueAnimator.ofArgb(from, to).apply {
+            duration = dur
+            addUpdateListener { setTextColor(it.animatedValue as Int) }
+            start()
+        }
     private fun printChatHtml(htmlContent: String) {
         val printManager = requireContext().getSystemService(Context.PRINT_SERVICE) as PrintManager
         val currentModel = viewModel._activeChatModel.value ?: "Unknown"

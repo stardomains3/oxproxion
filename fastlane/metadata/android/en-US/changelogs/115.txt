@@ -1,0 +1,4 @@
+- When the response comes in a short-duration color animation on the modal name plays to inform the user the AI has finished its response.
+- Styling change.
+- Scroll behavior change: If you scroll or touch the chat area after you send the prompt, but before the AI is done, it will not auto scroll to the new response, thus respecting that you want to look at another area of the chat. If you do not touch/scroll during this period, it will auto scroll to the new response once it comes in fully.
+- Scroll behavior change: If you have streaming enabled, the screen will auto-scroll until it is about to go off screen, then it will stop. If you touch or scroll manually during the incoming stream, auto-scrolling stops.

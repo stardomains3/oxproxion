@@ -567,9 +567,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 if (_userScrolledDuringStream.value != true) {
                     _scrollToBottomEvent.postValue(Event(Unit))
                 }
-                if (_isStreamingEnabled.value != true) {
-                    _scrollToBottomEvent.postValue(Event(Unit))
-                }
+                /* if you want scroll for nonstreaming back uncomment this  if (_isStreamingEnabled.value != true) {
+                     _scrollToBottomEvent.postValue(Event(Unit))
+                 }*/
                 networkJob = null
             }
         }
@@ -631,7 +631,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 handleError(e, THINKING_MESSAGE)
             } finally {
                 _isAwaitingResponse.postValue(false)
-                if (_userScrolledDuringStream.value != true || _isStreamingEnabled.value != true) {
+                /*if (_userScrolledDuringStream.value != true || _isStreamingEnabled.value != true) {
+                    _scrollToBottomEvent.postValue(Event(Unit))
+                }*/
+                if (_userScrolledDuringStream.value != true) {
                     _scrollToBottomEvent.postValue(Event(Unit))
                 }
                 networkJob = null
