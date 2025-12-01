@@ -756,6 +756,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     }
                 }
             }
+            if (!isAwaiting && sharedPreferencesHelper.getStreamingPreference()) {
+                chatAdapter.finalizeStreaming()
+            }
             sendChatButton.isEnabled = true
             val materialButton = sendChatButton
             if (isAwaiting) {
@@ -1004,6 +1007,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             stackFromEnd = false
         }
         chatAdapter = ChatAdapter(
+            viewLifecycleOwner.lifecycleScope,
             markwon,
            // viewModel,
             { text, position -> speakText(text, position) },

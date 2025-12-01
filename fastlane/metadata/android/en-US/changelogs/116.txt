@@ -1,0 +1,1 @@
+- Optimized streaming quite a bit. If streaming is on, Markdown rendering takes place once the stream is finished, in order to minimize unnecessary processor work.

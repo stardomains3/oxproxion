@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +25,8 @@ import coil.request.ImageRequest
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
@@ -35,8 +38,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class ChatAdapter(
+    private val scope: CoroutineScope, // <--- 1. REQUIRED: Pass viewLifecycleOwner.lifecycleScope
     private val markwon: Markwon,
-   // private val viewModel: ChatViewModel,
+    // private val viewModel: ChatViewModel,
     private val onSpeakText: (String, Int) -> Unit,
     private val onSynthesizeToWavFile: (String, Int) -> Unit,
     private val ttsAvailable: Boolean,
@@ -48,7 +52,26 @@ class ChatAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
     var currentSpeakingPosition = -1
-    //var currentHolder: AssistantViewHolder? = null
+
+    // 2. OPTIMIZATION: Conflated Channel for throttling updates
+    private val updateChannel = Channel<FlexibleMessage>(Channel.CONFLATED)
+
+    private val messages = mutableListOf<FlexibleMessage>()
+
+    init {
+        // 3. OPTIMIZATION: Consumer loop
+        scope.launch(Dispatchers.Main) {
+            for (newMessage in updateChannel) {
+                if (messages.isNotEmpty()) {
+                    messages[messages.size - 1] = newMessage
+                    // Send "STREAMING" payload to update ONLY text (avoids full re-bind)
+                    notifyItemChanged(messages.size - 1, "STREAMING")
+                }
+                // Throttle updates to ~20fps (50ms) to save CPU/GPU
+                delay(50)
+            }
+        }
+    }
 
     private fun getMessageText(content: JsonElement): String {
         if (content is JsonPrimitive) return content.content
@@ -74,8 +97,6 @@ class ChatAdapter(
         currentSpeakingPosition = position
     }
 
-    private val messages = mutableListOf<FlexibleMessage>()
-
     // Define constants for the view types
     companion object {
         const val VIEW_TYPE_USER = 1
@@ -83,22 +104,33 @@ class ChatAdapter(
         const val VIEW_TYPE_THINKING = 3 // For the "working..." message
     }
 
-    /* OLD CLEARS ALL BOO fun setMessages(newMessages: List<FlexibleMessage>) {
-        messages.clear()
-        messages.addAll(newMessages)
-        notifyDataSetChanged()
-    }*/
     fun setMessages(newMessages: List<FlexibleMessage>) {
+        if (newMessages.isEmpty()) {
+            messages.clear()
+            notifyDataSetChanged()
+            return
+        }
+
         // PERFECT CASE: Only 1 new message added
         if (messages.size == newMessages.size - 1 &&
             messages == newMessages.dropLast(1)) {
             addMessage(newMessages.last())  // ← Incremental! No blink!
+            Log.d("ADAPTER", "→ HIT STREAMING (notifyItemChanged)")
             return
         }
+
+        // STREAMING CASE: Same size, only last message content changed
+        if (messages.size == newMessages.size &&
+            messages.dropLast(1) == newMessages.dropLast(1)) {
+            updateLastMessage(newMessages.last())
+            return
+        }
+
         // Fallback: Full refresh
         messages.clear()
         messages.addAll(newMessages)
         notifyDataSetChanged()
+        Log.d("ADAPTER", "→ fallback")
     }
 
     fun addMessage(message: FlexibleMessage) {
@@ -114,11 +146,9 @@ class ChatAdapter(
         }
     }
 
+    // 4. OPTIMIZATION: Send to channel instead of direct UI update
     fun updateLastMessage(newMessage: FlexibleMessage) {
-        if (messages.isNotEmpty()) {
-            messages[messages.size - 1] = newMessage
-            notifyItemChanged(messages.size - 1)
-        }
+        updateChannel.trySend(newMessage)
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -148,15 +178,26 @@ class ChatAdapter(
         }
     }
 
+    // 5. OPTIMIZATION: Intercept Payloads for partial updates
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.isNotEmpty()) {
+            // If we are just streaming text, perform a lightweight update
+            if (payloads.first() == "STREAMING" && holder is AssistantViewHolder) {
+                holder.bindTextOnly(messages[position])
+                return
+            }
+        }
+        // Otherwise do the heavy lifting (images, animations, listeners)
+        super.onBindViewHolder(holder, position, payloads)
+    }
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = messages[position]
-        var contentText = getMessageText(message.content)
 
         when (holder) {
             is UserViewHolder -> holder.bind(message)
             is AssistantViewHolder -> holder.bind(message, position, isSpeaking, currentSpeakingPosition)
         }
-        // Removed the redundant if statement
     }
 
     override fun getItemCount(): Int = messages.size
@@ -177,7 +218,7 @@ class ChatAdapter(
             val userContent = ensureTableSpacing(rawUserContent)
             try {
                 markwon.setMarkdown(messageTextView, userContent)
-              //  messageTextView.movementMethod = LinkMovementMethod.getInstance()
+                //  messageTextView.movementMethod = LinkMovementMethod.getInstance()
             } catch (e: RuntimeException) {
                 // NEW: Catch Prism4j-specific errors to prevent crash; fallback to plain text
                 if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
@@ -198,7 +239,6 @@ class ChatAdapter(
                         .build()
                     ImageLoader(itemView.context).enqueue(request)
                     imageView.visibility = View.VISIBLE
-                    // Toast.makeText(itemView.context, "Flex!", Toast.LENGTH_SHORT).show()
                     // Tap: Open original
                     imageView.setOnClickListener {
                         try {
@@ -220,7 +260,6 @@ class ChatAdapter(
                         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)  // Or rotated if needed
                         imageView.setImageBitmap(bitmap)
                         imageView.visibility = View.VISIBLE
-                        // Optional: Add temp tap for base64 (as before)
                     } else {
                         imageView.visibility = View.GONE
                     }
@@ -229,15 +268,10 @@ class ChatAdapter(
                 imageView.visibility = View.GONE
             }
 
-
-
-
-
             copyButtonuser.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
                 clipboard.setPrimaryClip(clip)
-                // Toast.makeText(itemView.context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
             }
             copyButtonuser.setOnLongClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -258,7 +292,6 @@ class ChatAdapter(
             deleteButton.setOnClickListener {
                 onDeleteMessage(bindingAdapterPosition)
             }
-
         }
     }
 
@@ -281,6 +314,33 @@ class ChatAdapter(
         private var pulseAnimator: ObjectAnimator? = null
         private var bgColorAnimator: ObjectAnimator? = null
 
+        // 6. OPTIMIZATION: Lightweight bind for streaming
+        fun bindTextOnly(message: FlexibleMessage) {
+
+            val text = getMessageText(message.content)
+            val reasoning = message.reasoning
+            // Logic: Only add newlines if we actually have reasoning text
+            val displayText = if (!reasoning.isNullOrBlank()) {
+                "$reasoning\n\n$text"
+            } else {
+                text
+            }
+            messageTextView.text = displayText
+
+            /*val text = getMessageText(message.content)
+            val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
+            val rawText = reasoningText + text
+            val fullText = ensureTableSpacing(rawText)
+
+            try {
+                markwon.setMarkdown(messageTextView, fullText)
+            } catch (e: RuntimeException) {
+                if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
+                    messageTextView.text = fullText
+                }
+            }*/
+        }
+
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
             messageTextView.typeface = currentTypeface
             val text = getMessageText(message.content)
@@ -291,7 +351,7 @@ class ChatAdapter(
 
             try {
                 markwon.setMarkdown(messageTextView, fullText)
-               // messageTextView.movementMethod = LinkMovementMethod.getInstance()
+                // messageTextView.movementMethod = LinkMovementMethod.getInstance()
             } catch (e: RuntimeException) {
                 // Catch Prism4j-specific errors to prevent crash; fallback to plain text
                 if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
@@ -311,7 +371,9 @@ class ChatAdapter(
                 messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
             }
             pulseAnimator?.cancel()          // 2. always stop old one
+            bgColorAnimator?.cancel()
             pulseAnimator = null
+            bgColorAnimator = null
 
             if (isThinking) {
                 // CLONE your original drawable for animation (preserves corners!)
@@ -385,8 +447,6 @@ class ChatAdapter(
                 generatedImageView.visibility = View.GONE
             }
 
-
-
             val rawMarkdown = fullText  // Use fullText for copy/share
 
             copyButton.setOnClickListener {
@@ -401,16 +461,7 @@ class ChatAdapter(
                 Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
                 true // Consume the long click
             }
-            /*shareButton.setOnClickListener {
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, rawMarkdown) // Share the raw markdown text
-                    putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message") // Optional subject
-                }
 
-                    itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
-
-            }*/
             shareButton.setOnClickListener {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
@@ -430,7 +481,6 @@ class ChatAdapter(
                 true  // Consume the long click
             }
 
-            // android.util.Log.d("TTS_DEBUG", "Binding position $position, isSpeaking: $isSpeaking, currentPosition: $currentPosition")
             // Update TTS button icon based on state
             val iconRes = if (isSpeaking && position == currentPosition) {
                 R.drawable.ic_stop_circle  // Your stop icon
@@ -438,9 +488,8 @@ class ChatAdapter(
                 R.drawable.ic_volume_up   // Your play/speaker icon
             }
             ttsButton.setImageResource(iconRes)
-            //  android.util.Log.d("TTS_DEBUG", "Setting icon to $iconRes for position $position")
-            ttsButton.setOnClickListener {
 
+            ttsButton.setOnClickListener {
                 val textToSpeak = messageTextView.text.toString()
                 if (textToSpeak.isNotEmpty()) {
                     onSpeakText(textToSpeak, position)
@@ -457,7 +506,7 @@ class ChatAdapter(
                 }
                 true // Consume the long click
             }
-            // Long-press to copy raw markdown
+
             aipdfButton.setOnClickListener {
                 CoroutineScope(Dispatchers.Main).launch {
                     val pdfUri = withContext(Dispatchers.IO) {
@@ -473,7 +522,6 @@ class ChatAdapter(
                                 generator.generateMarkdownPdf(rawMarkdown)
                             }
                         } catch (e: Exception) {
-                            //  Log.e("ChatAdapter", "PDF generation failed", e)
                             null
                         }
                     }
@@ -487,30 +535,10 @@ class ChatAdapter(
             }
 
             markdownButton.setOnClickListener {
-                onSaveMarkdown(bindingAdapterPosition, rawMarkdown)  // rawMarkdown already exists!
+                onSaveMarkdown(bindingAdapterPosition, rawMarkdown)
             }
-            /*copyButton.setOnLongClickListener {
-                // Launch on main thread (UI), but do the work on IO
-                CoroutineScope(Dispatchers.Main).launch {
-                    val pdfUri = withContext(Dispatchers.IO) {
-                        try {
-                            val generator = PdfGenerator(itemView.context)
-                            generator.generateMarkdownPdf(rawMarkdown)
-                        } catch (e: Exception) {
-                            //Log.e("ChatAdapter", "PDF generation failed", e)
-                            null
-                        }
-                    }
-
-                    if (pdfUri != null) {
-                        Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                true // Consume the long click
-            }*/
         }
+
         internal fun stopPulse() {
             pulseAnimator?.cancel()
             bgColorAnimator?.cancel()
@@ -523,29 +551,29 @@ class ChatAdapter(
         }
     }
     private var currentTypeface: Typeface = Typeface.DEFAULT
+
     fun updateFont(newTypeface: Typeface?) {
         currentTypeface = newTypeface ?: Typeface.DEFAULT
         notifyDataSetChanged()
     }
+    fun finalizeStreaming() {
+        scope.launch(Dispatchers.Main) {
+            // Wait 100ms (longer than the 50ms streaming delay)
+            // to ensure the streaming loop has finished flushing its queue.
+            delay(100)
 
+            if (messages.isNotEmpty()) {
+                // Trigger Full Bind (Markdown + Tables)
+                notifyItemChanged(messages.size - 1)
+            }
+        }
+    }
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
         if (holder is AssistantViewHolder) holder.stopPulse()
     }
     private fun ensureTableSpacing(markdown: String): String {
-        // Group 1: ([^\n])       -> The last character of the previous paragraph/list item.
-        //          \n            -> The single newline we want to fix.
-        // Group 2: (\s*\|.*\|\n) -> The Header Row (starts with pipe, ends with pipe + newline).
-        // Group 3: (\s*\|[\s:-]+\|) -> The Separator Row (starts with pipe, contains dashes/colons).
-
-        // This ensures we ONLY target the specific gap between "Text" and "Header".
-        // It will NOT match "Header" -> "Separator" (because Header doesn't end in text char)
-        // It will NOT match "Separator" -> "Data" (because Data isn't a separator)
-
         val pattern = Regex("([^\\n])\\n(\\s*\\|.*\\|\\n)(\\s*\\|[\\s:-]+\\|)")
-
-        // We replace the single \n with \n\n, then put the Header (2) and Separator (3) back.
         return markdown.replace(pattern, "$1\n\n$2$3")
     }
-
 }
