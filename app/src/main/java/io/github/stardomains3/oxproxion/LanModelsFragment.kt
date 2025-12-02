@@ -12,9 +12,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.launch
-import kotlin.collections.sortedBy
-import kotlin.jvm.java
-import kotlin.text.lowercase
 
 class LanModelsFragment : Fragment() {
 
@@ -43,7 +40,8 @@ class LanModelsFragment : Fragment() {
         val provider = viewModel.getCurrentLanProvider()
         val title = when (provider) {
             "lm_studio" -> "LM Studio Models"
-            "llama_cpp" -> "llama.cpp Models" // NEW
+            "llama_cpp" -> "llama.cpp Models"
+            "mlx_lm" -> "MLX LM Models"  // NEW
             "ollama" -> "Ollama Models"
             else -> "LAN Models"
         }
@@ -55,20 +53,19 @@ class LanModelsFragment : Fragment() {
             when (menuItem.itemId) {
                 R.id.action_refresh_models -> {
                     val provider = viewModel.getCurrentLanProvider()
-                    val providerName = when (provider) { // UPDATED
+                    val providerName = when (provider) {  // UPDATED
                         "lm_studio" -> "LM Studio"
-                        "llama_cpp" -> "llama.cpp" // NEW
+                        "llama_cpp" -> "llama.cpp"
+                        "mlx_lm" -> "MLX LM"  // NEW
                         "ollama" -> "Ollama"
                         else -> "LAN"
                     }
-                 //   Toast.makeText(requireContext(), "Refreshing $providerName models…", Toast.LENGTH_SHORT).show()
                     fetchLanModels()
                     true
                 }
                 else -> false
             }
         }
-
 
         recyclerView = view.findViewById(R.id.recyclerViewLanModels)
         recyclerView.layoutManager = LinearLayoutManager(context)
@@ -89,25 +86,24 @@ class LanModelsFragment : Fragment() {
                 val models = viewModel.fetchLanModels()
 
                 if (models.isEmpty()) {
-                    val emptyMessage = when (provider) { // UPDATED
+                    val emptyMessage = when (provider) {  // UPDATED
                         "lm_studio" -> "No LM Studio models found.\nMake sure LM Studio is running and has models loaded."
-                        "llama_cpp" -> "No llama.cpp models found.\nMake sure llama.cpp server is running and has models loaded." // NEW
+                        "llama_cpp" -> "No llama.cpp models found.\nMake sure llama.cpp server is running and has models loaded."
+                        "mlx_lm" -> "No MLX LM models found.\nMake sure MLX LM server is running and has models loaded."  // NEW
                         "ollama" -> "No Ollama models found.\nMake sure Ollama is installed and has models pulled."
                         else -> "No models found."
                     }
                     Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_LONG).show()
-                } else {
-                  //  val successMessage = "Found ${models.size} ${provider} model${if (models.size != 1) "s" else ""}"
-                   // Toast.makeText(requireContext(), successMessage, Toast.LENGTH_SHORT).show()
                 }
 
                 allModels = models.sortedBy { it.displayName.lowercase() }
                 adapter.updateModels(allModels)
             } catch (e: Exception) {
                 val provider = viewModel.getCurrentLanProvider()
-                val errorMessage = when (provider) { // UPDATED
+                val errorMessage = when (provider) {  // UPDATED
                     "lm_studio" -> "Failed to fetch LM Studio models: ${e.message}"
-                    "llama_cpp" -> "Failed to fetch llama.cpp models: ${e.message}" // NEW
+                    "llama_cpp" -> "Failed to fetch llama.cpp models: ${e.message}"
+                    "mlx_lm" -> "Failed to fetch MLX LM models: ${e.message}"  // NEW
                     "ollama" -> "Failed to fetch Ollama models: ${e.message}"
                     else -> "Failed to fetch LAN models: ${e.message}"
                 }
@@ -115,7 +111,6 @@ class LanModelsFragment : Fragment() {
             }
         }
     }
-
 
     private fun addModel(model: LlmModel) {
         if (viewModel.modelExists(model.apiIdentifier)) {

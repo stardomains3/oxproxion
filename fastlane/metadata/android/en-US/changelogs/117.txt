@@ -1,0 +1,2 @@
+- Added Google Sans Flex Regular font.
+- Added MLX LM for LAN AI server option.

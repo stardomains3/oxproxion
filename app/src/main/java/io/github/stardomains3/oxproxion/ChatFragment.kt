@@ -936,6 +936,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
                 "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
                 "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+                "googlesansflex_regular" -> ResourcesCompat.getFont(requireContext(), R.font.googlesansflex_regular)
                 "instrumentsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.instrumentsans_regular)
                 "lexend_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lexend_regular)
                 "merriweather_24pt_regular" -> ResourcesCompat.getFont(requireContext(), R.font.merriweather_24pt_regular)
@@ -1571,6 +1572,19 @@ $cleanContent
                 Toast.makeText(requireContext(), "Nothing to save", Toast.LENGTH_SHORT).show()
             }
         }
+        saveMarkdownFileButton.setOnLongClickListener {
+            val chatText = viewModel.getFormattedChatHistory()  // Raw Markdown
+            if (chatText.isNotBlank()) {
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Chat History (Markdown)", chatText)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(requireContext(), "Chat copied as Markdown!", Toast.LENGTH_SHORT).show()
+                true  // Consume the long press
+            } else {
+                Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
+                true
+            }
+        }
         saveHtmlButton.setOnClickListener {
             hideMenu()
             lifecycleScope.launch {
@@ -1715,6 +1729,7 @@ $cleanContent
                 Triple("Arone Sans Regular", R.font.aronesans_regular, R.style.Font_AroneSansRegular),
                 Triple("Funnel Display Regular", R.font.funneldisplay_regular, R.style.Font_FunnelDisplayRegular),
                 Triple("Geologica Light", R.font.geologica_light, R.style.Font_GeologicaLight),
+                Triple("Google Sans Flex Regular", R.font.googlesansflex_regular, R.style.Font_GoogleSansFlexRegular),
                 Triple("Instrument Sans Regular", R.font.instrumentsans_regular, R.style.Font_InstrumentSansRegular),
                 Triple("Lexend Regular", R.font.lexend_regular, R.style.Font_LexendRegular),
                 Triple("Merriweather 24pt Regular", R.font.merriweather_24pt_regular, R.style.Font_Merriweather24ptRegular),
@@ -1744,6 +1759,7 @@ $cleanContent
                 R.font.aronesans_regular -> "aronesans_regular"
                 R.font.funneldisplay_regular -> "funneldisplay_regular"
                 R.font.geologica_light -> "geologica_light"
+                R.font.googlesansflex_regular -> "googlesansflex_regular"
                 R.font.instrumentsans_regular -> "instrumentsans_regular"
                 R.font.lexend_regular -> "lexend_regular"
                 R.font.merriweather_24pt_regular -> "merriweather_24pt_regular"

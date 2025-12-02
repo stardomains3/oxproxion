@@ -91,6 +91,9 @@
     <style name="Font.GeologicaLight" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/geologica_light</item>
     </style>
+    <style name="Font.GoogleSansFlexRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/googlesansflex_regular</item>
+    </style>
     <style name="Font.InstrumentSansRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/instrumentsans_regular</item>
     </style>

@@ -45,17 +45,13 @@ class LlmService(
 
         try {
             return withTimeout(SUGGESTION_TIMEOUT_MS) {
-                val authHeader = if (isLanModel) {
-                    "Bearer any-non-empty-string"
-                } else {
-                    "Bearer $apiKey"
-                }
+                val authHeader =  "Bearer $apiKey"
 
                 val chatRequest = ChatRequest(
                     model = modelId,
                     messages = messages,
                     max_tokens = 100,
-                    logprobs = false,
+                    logprobs = null,
                     temperature = 0.7,
                     stream = false
                 )

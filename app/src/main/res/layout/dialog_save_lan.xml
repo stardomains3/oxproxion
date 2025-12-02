@@ -76,7 +76,6 @@
                 android:text="Ollama"
                 android:textColor="#FFFFFF"
                 style="@style/Widget.App.CheckBox"
-
                 android:layout_marginBottom="8dp" />
 
             <CheckBox
@@ -86,7 +85,8 @@
                 android:text="LM Studio"
                 android:textColor="#FFFFFF"
                 style="@style/Widget.App.CheckBox"
-               />
+                android:layout_marginBottom="8dp" />
+
             <CheckBox
                 android:id="@+id/checkbox_llama_cpp"
                 android:layout_width="wrap_content"
@@ -94,10 +94,48 @@
                 android:text="llama.cpp"
                 android:textColor="#FFFFFF"
                 style="@style/Widget.App.CheckBox"
-                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
 
-                />
+            <!-- NEW: MLX LM Checkbox -->
+            <CheckBox
+                android:id="@+id/checkbox_mlx_lm"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MLX LM"
+                android:textColor="#FFFFFF"
+                style="@style/Widget.App.CheckBox" />
+
         </LinearLayout>
+
+        <!-- NEW: LAN API Key Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LAN API Key (optional)"
+            android:textColor="#C2C2C2"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter if required"
+            app:boxStrokeColor="#C2C2C2"
+            app:hintTextColor="#C2C2C2"
+            app:boxBackgroundMode="outline"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_lan_api_key"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:imeOptions="actionDone"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Buttons -->
         <LinearLayout

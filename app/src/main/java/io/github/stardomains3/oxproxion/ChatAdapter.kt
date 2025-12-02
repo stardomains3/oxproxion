@@ -115,7 +115,7 @@ class ChatAdapter(
         if (messages.size == newMessages.size - 1 &&
             messages == newMessages.dropLast(1)) {
             addMessage(newMessages.last())  // ← Incremental! No blink!
-            Log.d("ADAPTER", "→ HIT STREAMING (notifyItemChanged)")
+           // Log.d("ADAPTER", "→ HIT STREAMING (notifyItemChanged)")
             return
         }
 
@@ -130,7 +130,7 @@ class ChatAdapter(
         messages.clear()
         messages.addAll(newMessages)
         notifyDataSetChanged()
-        Log.d("ADAPTER", "→ fallback")
+      //  Log.d("ADAPTER", "→ fallback")
     }
 
     fun addMessage(message: FlexibleMessage) {
@@ -533,7 +533,13 @@ class ChatAdapter(
                     }
                 }
             }
-
+            markdownButton.setOnLongClickListener {
+                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Copied Markdown", rawMarkdown)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
+                true
+            }
             markdownButton.setOnClickListener {
                 onSaveMarkdown(bindingAdapterPosition, rawMarkdown)
             }

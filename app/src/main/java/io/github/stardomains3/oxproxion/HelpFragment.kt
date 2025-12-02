@@ -45,6 +45,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
                 "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
                 "funneldisplay_regular" -> ResourcesCompat.getFont(requireContext(), R.font.funneldisplay_regular)
                 "geologica_light" -> ResourcesCompat.getFont(requireContext(), R.font.geologica_light)
+                "googlesansflex_regular" -> ResourcesCompat.getFont(requireContext(), R.font.googlesansflex_regular)
                 "instrumentsans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.instrumentsans_regular)
                 "lexend_regular" -> ResourcesCompat.getFont(requireContext(), R.font.lexend_regular)
                 "merriweather_24pt_regular" -> ResourcesCompat.getFont(requireContext(), R.font.merriweather_24pt_regular)
@@ -91,7 +92,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             Welcome! This guide will help you understand how to use the **oxproxion** app.
 
-            **oxproxion** is an open-source Android app for chatting with OpenRouter LLMs, supporting both text and image inputs for compatible models. It now also allows chat with Ollama, LM Studio, or llama.cpp models served on your LAN.
+            **oxproxion** is an open-source Android app for chatting with OpenRouter LLMs, supporting both text and image inputs for compatible models. It now also allows chat with Ollama, LM Studio, llama.cpp and MLX LM models served on your LAN.
 
             ---
 
@@ -201,7 +202,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **View Model Info**: Tap the icon on the right of the model to open its info page on the OpenRouter website.
             *   **Refresh**: Tap the **refresh icon** to get the latest list of models from OpenRouter.
             
-            ### "LAN Models" Screen (Ollama, LM Studio, or llama.cpp models)
+            ### "LAN Models" Screen (Ollama, LM Studio, llama.cpp, and MLX LM served models)
             *   **Add to Your List**: Tap any model to add it to your "Select Model" screen.
             *   **Refresh**: The list will refresh when opened.
             
@@ -253,8 +254,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
             *   OpenRouter allows Presets which allow you to manage your LLM configurations—models, provider routing, and other features. You can use Presets in oxproxion by just manually adding them in your model list. [https://openrouter.ai/docs/features/presets/](https://openrouter.ai/docs/features/presets/)
             *   The app is a target for multiple text shares: "Prompt"(set the prompt to the shared text), "System Message Chooser"(set the prompt to the shared text and sets the System Message as chosen in the popup), "Auto Send"(Auto sends the prompt to current model with current settings), and "Presets"(Allows the user to apply a chosen preset and options for the shared text.)
-            *   Ollama, LM Studio, and llama.cpp endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
-            *   Ollama, LM Studio, and llama.cpp function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served on your LAN.
+            *   Ollama, LM Studio, llama.cpp and MLX LM endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
+            *   Ollama, LM Studio, llama.cpp and MLX LM function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served properly on your LAN.
             *   Notifications and Connectivity Service: The "Connectivity Service Channel" runs and you can hide that; go into your app settings in the system and go to notifications and you can toggle that notification off. ("Connectivity Service Channel") And the only notifications you will receive(if in the app you have the notification bell active) is if the app is back-grounded and there's either an error or you receive the response from the model. Notifications won't show if app is in the foreground. Notifications are auto-dismissed when returning to the app. Closing the app by swiping it away in Recents will shut down the service properly.
             *   If you make a preset titled "Digital Assistant"(case-insensitive), and have oxproxion as your system digital assistant in your Android settings(Settings->Apps->Default apps), this preset will be applied for when you use it as the system digital assistant.
             ## What You Can Do With oxproxion
