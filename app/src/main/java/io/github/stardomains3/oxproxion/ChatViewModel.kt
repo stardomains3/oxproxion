@@ -526,7 +526,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             if (lanEndpoint == null) { Toast.makeText( getApplication<Application>().applicationContext, "Please configure LAN endpoint in settings", Toast.LENGTH_SHORT ).show()
                 return }
             activeChatUrl = "$lanEndpoint/v1/chat/completions"
-            activeChatApiKey = sharedPreferencesHelper.getLanApiKey() // Ollama/LM Studio typically ignore the key
+            val lanKey = sharedPreferencesHelper.getLanApiKey()
+            activeChatApiKey = if (lanKey.isNullOrBlank()) "any-non-empty-string" else lanKey
         }
 
 
@@ -616,7 +617,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 return
             }
             activeChatUrl = "$lanEndpoint/v1/chat/completions"
-            activeChatApiKey = sharedPreferencesHelper.getLanApiKey() // Ollama/LM Studio typically ignore the key
+            val lanKey = sharedPreferencesHelper.getLanApiKey()
+            activeChatApiKey = if (lanKey.isNullOrBlank()) "any-non-empty-string" else lanKey
         }
         // Same networking as sendUserMessage (reuse handleStreamed/NonStreamed)
         networkJob = viewModelScope.launch {
@@ -1223,11 +1225,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             if (activeModel?.apiIdentifier == null || lanEndpoint.isNullOrBlank()) {
                 return null
             }
+            val lanKey = sharedPreferencesHelper.getLanApiKey()
 
             Triple(
                 activeModel.apiIdentifier,
                 "$lanEndpoint/v1/chat/completions",
-                sharedPreferencesHelper.getLanApiKey() // LAN models ignore this
+                if (lanKey.isNullOrBlank()) "any-non-empty-string" else lanKey // LAN models ignore this
             )
         } else {
             // Non-LAN model: use default model and OpenRouter endpoint
@@ -1370,7 +1373,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         // Override the global activeChatUrl for this request
                         activeChatUrl = "$lanEndpoint/v1/chat/completions"
-                        activeChatApiKey = sharedPreferencesHelper.getLanApiKey() // LAN providers typically ignore the key
+                        val lanKey = sharedPreferencesHelper.getLanApiKey()
+                        activeChatApiKey = if (lanKey.isNullOrBlank()) "any-non-empty-string" else lanKey
                     } else {
                         // Reset to OpenRouter for non-LAN models
                         activeChatUrl = "https://openrouter.ai/api/v1/chat/completions"

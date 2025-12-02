@@ -27,7 +27,6 @@ class SharedPreferencesHelper(context: Context) {
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
         const val LAN_API_KEY = "lan_api_key"  // NEW
-        private const val LAN_API_KEY_DISPLAY = "lan_api_key_display"
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
         private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
@@ -528,17 +527,9 @@ class SharedPreferencesHelper(context: Context) {
         return mainPrefs.getString(LAN_API_KEY, "any-non-empty-string") ?: "any-non-empty-string"
     }
 
-    // For dialog display - blank if only default is set
-    fun getLanApiKeyForDisplay(): String? {
-        val savedKey = mainPrefs.getString(LAN_API_KEY, null)
-        return if (savedKey == "any-non-empty-string") null else savedKey  // Show blank if default
-    }
-
     fun setLanApiKey(apiKey: String?) {
         mainPrefs.edit {
-            val actualKey = apiKey ?: "any-non-empty-string"
-            putString(LAN_API_KEY, actualKey)           // Always store non-empty for HTTP
-            putString(LAN_API_KEY_DISPLAY, apiKey)      // Store display value (nullable)
+            putString(LAN_API_KEY, apiKey ?: "any-non-empty-string")  // ALWAYS non-blank
         }
     }
     fun getLanEndpoint(): String? {

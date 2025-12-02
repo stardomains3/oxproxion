@@ -1,0 +1,1 @@
+- Squashed a bug related to the last version's new features.

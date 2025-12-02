@@ -1,6 +1,6 @@
 package io.github.stardomains3.oxproxion
+
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -29,54 +29,53 @@ class SaveLANDialogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Dialog styling – matches the API dialog
         dialog?.window?.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
         dialog?.window?.setDimAmount(0.8f)
 
         val prefs = SharedPreferencesHelper(requireContext())
         val editTextUrl = view.findViewById<TextInputEditText>(R.id.edit_text_lan_url)
-        val editTextApiKey = view.findViewById<TextInputEditText>(R.id.edit_text_lan_api_key)  // NEW
+        val editTextApiKey = view.findViewById<TextInputEditText>(R.id.edit_text_lan_api_key)
         val checkboxOllama = view.findViewById<CheckBox>(R.id.checkbox_ollama)
         val checkboxLmStudio = view.findViewById<CheckBox>(R.id.checkbox_lm_studio)
         val checkboxLlamaCpp = view.findViewById<CheckBox>(R.id.checkbox_llama_cpp)
-        val checkboxMlxLm = view.findViewById<CheckBox>(R.id.checkbox_mlx_lm)  // NEW
-        val btnSave   = view.findViewById<MaterialButton>(R.id.button_save_lan)
+        val checkboxMlxLm = view.findViewById<CheckBox>(R.id.checkbox_mlx_lm)
+        val btnSave = view.findViewById<MaterialButton>(R.id.button_save_lan)
         val btnCancel = view.findViewById<MaterialButton>(R.id.button_cancel_lan)
 
-        // Load current values
+        // Load current values - SIMPLE
         prefs.getLanEndpoint()?.let { editTextUrl.setText(it) }
-        prefs.getLanApiKeyForDisplay()?.let { editTextApiKey.setText(it) }
+        editTextApiKey.setText(prefs.getLanApiKey())  // Shows dummy or saved key
+
         val currentProvider = prefs.getLanProvider()
         when (currentProvider) {
             SharedPreferencesHelper.LAN_PROVIDER_OLLAMA -> checkboxOllama.isChecked = true
             SharedPreferencesHelper.LAN_PROVIDER_LM_STUDIO -> checkboxLmStudio.isChecked = true
             SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP -> checkboxLlamaCpp.isChecked = true
-            SharedPreferencesHelper.LAN_PROVIDER_MLX_LM -> checkboxMlxLm.isChecked = true  // NEW
+            SharedPreferencesHelper.LAN_PROVIDER_MLX_LM -> checkboxMlxLm.isChecked = true
         }
 
-        // Handle checkbox mutual exclusion
+        // Checkbox mutual exclusion
         checkboxOllama.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 checkboxLmStudio.isChecked = false
                 checkboxLlamaCpp.isChecked = false
-                checkboxMlxLm.isChecked = false  // NEW
+                checkboxMlxLm.isChecked = false
             }
         }
         checkboxLmStudio.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 checkboxOllama.isChecked = false
                 checkboxLlamaCpp.isChecked = false
-                checkboxMlxLm.isChecked = false  // NEW
+                checkboxMlxLm.isChecked = false
             }
         }
         checkboxLlamaCpp.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 checkboxOllama.isChecked = false
                 checkboxLmStudio.isChecked = false
-                checkboxMlxLm.isChecked = false  // NEW
+                checkboxMlxLm.isChecked = false
             }
         }
-        // NEW: Handle MLX LM checkbox
         checkboxMlxLm.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 checkboxOllama.isChecked = false
@@ -87,31 +86,29 @@ class SaveLANDialogFragment : DialogFragment() {
 
         btnSave.setOnClickListener {
             val raw = editTextUrl.text?.toString()?.trim().orEmpty()
-            val apiKey = editTextApiKey.text?.toString()?.trim()  // NEW
+            val apiKey = editTextApiKey.text?.toString()?.trim()
 
             when {
                 raw.isBlank() -> {
                     editTextUrl.error = "Please enter a LAN endpoint URL"
                 }
-                !checkboxOllama.isChecked && !checkboxLmStudio.isChecked && !checkboxLlamaCpp.isChecked && !checkboxMlxLm.isChecked -> {  // UPDATED
-                    Toast.makeText(requireContext(), "Please select Ollama, LM Studio, llama.cpp, or MLX LM", Toast.LENGTH_SHORT).show()  // UPDATED
+                !checkboxOllama.isChecked && !checkboxLmStudio.isChecked && !checkboxLlamaCpp.isChecked && !checkboxMlxLm.isChecked -> {
+                    Toast.makeText(requireContext(), "Please select Ollama, LM Studio, llama.cpp, or MLX LM", Toast.LENGTH_SHORT).show()
                 }
                 raw.startsWith("http://") || raw.startsWith("https://") || raw.contains("://") -> {
                     prefs.setLanEndpoint(raw)
-                    val displayApiKey = editTextApiKey.text?.toString()?.trim()
-                    prefs.setLanApiKey(displayApiKey)
+                    prefs.setLanApiKey(apiKey)  // SIMPLE - stores dummy if blank
 
-                    // Save provider preference
-                    val provider = when {  // UPDATED
+                    val provider = when {
                         checkboxOllama.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_OLLAMA
                         checkboxLmStudio.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_LM_STUDIO
                         checkboxLlamaCpp.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP
-                        checkboxMlxLm.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_MLX_LM  // NEW
+                        checkboxMlxLm.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_MLX_LM
                         else -> SharedPreferencesHelper.LAN_PROVIDER_OLLAMA
                     }
                     prefs.setLanProvider(provider)
 
-                    Toast.makeText(requireContext(), "LAN endpoint, provider, and API key saved", Toast.LENGTH_SHORT).show()  // UPDATED
+                    Toast.makeText(requireContext(), "LAN endpoint, provider, and API key saved", Toast.LENGTH_SHORT).show()
                     dismiss()
                 }
                 else -> {
@@ -127,4 +124,5 @@ class SaveLANDialogFragment : DialogFragment() {
         editTextUrl.requestFocus()
     }
 }
+
 
