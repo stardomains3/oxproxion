@@ -1,0 +1,4 @@
+- Changed Send button long-press to: if chat has messages, it will scroll to the most recent one. if no messages, show menu.
+- Made scroller buttons et al translucent.
+- Updated dependency.
+- Added a save to png button for AI response bubble.

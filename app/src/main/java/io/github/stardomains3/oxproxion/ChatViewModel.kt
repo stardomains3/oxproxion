@@ -1293,6 +1293,45 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             out.write(content.toByteArray())
         } ?: throw Exception("Cannot open output stream")
     }
+    fun saveBitmapToDownloads(bitmap: Bitmap) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val saved = saveBitmapToDownloadsnow(
+                    filename = "chat-item-${System.currentTimeMillis()}.png",
+                    bitmap = bitmap,
+                    mimeType = "image/png"
+                )
+                if (saved) {
+                    _toolUiEvent.postValue(Event("✅ PNG saved to Downloads!"))
+                } else {
+                    _toolUiEvent.postValue(Event("❌ Save failed"))
+                }
+            } catch (e: Exception) {
+                _toolUiEvent.postValue(Event("❌ Save failed: ${e.message}"))
+            }
+        }
+    }
+
+
+    // Add this to your ViewModel (or a helper in the same file)
+    private fun saveBitmapToDownloadsnow(filename: String, bitmap: Bitmap, mimeType: String): Boolean {
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val uri = getApplication<Application>().contentResolver
+            .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: return false
+
+        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            return true
+        }
+
+        return false
+    }
     fun saveMarkdownToDownloads(rawMarkdown: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

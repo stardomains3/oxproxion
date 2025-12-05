@@ -47,7 +47,8 @@ class ChatAdapter(
     private val onEditMessage: (Int, String) -> Unit,
     private val onRedoMessage: (Int, JsonElement) -> Unit,
     private val onDeleteMessage: (Int) -> Unit,
-    private val onSaveMarkdown: (Int, String) -> Unit
+    private val onSaveMarkdown: (Int, String) -> Unit,
+    private val onCaptureItemToPng: (Int) -> Unit
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
@@ -308,6 +309,7 @@ class ChatAdapter(
         private val aipdfButton: ImageButton = itemView.findViewById(R.id.aipdfButton)
         private val shareButton: ImageButton = itemView.findViewById(R.id.shareButton)
         private val markdownButton: ImageButton = itemView.findViewById(R.id.markdownButton)
+        private val pngButton: ImageButton = itemView.findViewById(R.id.pngButton)
         val ttsButton: ImageButton = itemView.findViewById(R.id.ttsButton)
         private val generatedImageView: ImageView = itemView.findViewById(R.id.generatedImageView)
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
@@ -532,6 +534,9 @@ class ChatAdapter(
                         Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
+            pngButton.setOnClickListener {
+                onCaptureItemToPng(bindingAdapterPosition)
             }
             markdownButton.setOnLongClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

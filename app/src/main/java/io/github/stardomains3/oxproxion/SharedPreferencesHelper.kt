@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.serialization.json.Json
@@ -20,7 +19,7 @@ class SharedPreferencesHelper(context: Context) {
 
     private val apiKeysPrefs: SharedPreferences =
         context.getSharedPreferences(API_KEYS_PREFS_STORE, Context.MODE_PRIVATE)
-     val mainPrefs: SharedPreferences = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
+    val mainPrefs: SharedPreferences = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
     private val gson = Gson() // Kept temporarily for migration only
 
@@ -70,26 +69,26 @@ class SharedPreferencesHelper(context: Context) {
 
     private fun migrateFromGson() {
         if (!mainPrefs.getBoolean(KEY_MIGRATION_COMPLETE, false)) {
-         //   Log.d("Migration", "Starting migration from Gson to Kotlin Serialization")
+            //   Log.d("Migration", "Starting migration from Gson to Kotlin Serialization")
 
             runCatching { migrateCustomModels() }.onFailure {
-            //    Log.e("Migration", "Failed to migrate custom models", it)
+                //    Log.e("Migration", "Failed to migrate custom models", it)
             }
             runCatching { migrateSystemMessages() }.onFailure {
-           //     Log.e("Migration", "Failed to migrate system messages", it)
+                //     Log.e("Migration", "Failed to migrate system messages", it)
             }
             runCatching { migrateOpenRouterModels() }.onFailure {
-             //   Log.e("Migration", "Failed to migrate OpenRouter models", it)
+                //   Log.e("Migration", "Failed to migrate OpenRouter models", it)
             }
             runCatching { migrateSelectedSystemMessage() }.onFailure {
-              //  Log.e("Migration", "Failed to migrate selected system message", it)
+                //  Log.e("Migration", "Failed to migrate selected system message", it)
             }
             runCatching { migrateDefaultSystemMessage() }.onFailure {
-              //  Log.e("Migration", "Failed to migrate default system message", it)
+                //  Log.e("Migration", "Failed to migrate default system message", it)
             }
 
             mainPrefs.edit { putBoolean(KEY_MIGRATION_COMPLETE, true) }
-          //  Log.d("Migration", "Migration to Kotlin Serialization complete")
+            //  Log.d("Migration", "Migration to Kotlin Serialization complete")
         }
     }
 
@@ -239,7 +238,12 @@ class SharedPreferencesHelper(context: Context) {
     }
     fun getWebSearchEngine(): String = mainPrefs.getString(KEY_WEB_SEARCH_ENGINE, "default") ?: "default"
 
-    fun saveWebSearchEngine(engine: String) = mainPrefs.edit().putString(KEY_WEB_SEARCH_ENGINE, engine).apply()
+    fun saveWebSearchEngine(engine: String) = mainPrefs.edit {
+        putString(
+            KEY_WEB_SEARCH_ENGINE,
+            engine
+        )
+    }
     fun getSelectedFont(): String {
         return mainPrefs.getString(KEY_SELECTED_FONT, "geologica_light") ?: "geologica_light"
     }
@@ -308,7 +312,7 @@ class SharedPreferencesHelper(context: Context) {
                 putString("${alias}_iv", ivString)
             }
         } catch (e: Exception) {
-          //  Log.e("API_KEY_STORAGE", "Error encrypting $alias", e)
+            //  Log.e("API_KEY_STORAGE", "Error encrypting $alias", e)
         }
     }
 
@@ -324,7 +328,7 @@ class SharedPreferencesHelper(context: Context) {
                 val iv = Base64.decode(ivString, Base64.DEFAULT)
                 decryptApiKey(alias, iv, encryptedKey)
             } catch (e: Exception) {
-            //    Log.e("API_KEY_RETRIEVAL", "Error decrypting $alias", e)
+                //    Log.e("API_KEY_RETRIEVAL", "Error decrypting $alias", e)
                 ""
             }
         }
@@ -365,7 +369,7 @@ class SharedPreferencesHelper(context: Context) {
             val decryptedData = cipher.doFinal(encryptedData)
             return String(decryptedData, Charsets.UTF_8)
         } catch (e: Exception) {
-          //  Log.e("API_KEY_DECRYPTION", "Error decrypting $alias", e)
+            //  Log.e("API_KEY_DECRYPTION", "Error decrypting $alias", e)
             return ""
         }
     }

@@ -140,7 +140,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Sending Prompts
             *   **Text Box**: Enter your prompt.
-            *   **Send Button**: Send your prompt to the LLM. **Long-press** toggles scroll arrows preference.
+            *   **Send Button**: Send your prompt to the LLM. **Long-press** will go to latest message when long pressed.
             *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
             *   **Attach Document(s) Button**: Click icon to attach **text-based only** files to send with your prompt. Long-press to see what's attached and/or detach them.
             *   **Image Button**: Enabled for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. 

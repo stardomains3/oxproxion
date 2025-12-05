@@ -5,7 +5,6 @@
     android:layout_height="wrap_content"
     android:paddingVertical="4dp">
 
-    <!-- Inner group for icon + message, pinned to left with max 95% width -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/aiGroup"
         android:layout_width="0dp"
@@ -62,7 +61,6 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Buttons moved below messageContainer, at bottom edge -->
         <ImageButton
             android:id="@+id/copyButton"
             android:layout_width="32dp"
@@ -102,6 +100,20 @@
             app:tint="#777777"
             app:layout_constraintStart_toEndOf="@id/aipdfButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+        <ImageButton
+            android:id="@+id/pngButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Make MD"
+            android:padding="4dp"
+            android:src="@drawable/ic_png"
+            app:tint="#777777"
+            app:layout_constraintStart_toEndOf="@id/markdownButton"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+
         <!-- shareButton -->
         <ImageButton
             android:id="@+id/shareButton"
@@ -114,7 +126,7 @@
             android:padding="4dp"
             android:src="@drawable/ic_share"
             app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/markdownButton"
+            app:layout_constraintStart_toEndOf="@id/pngButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
 
         <!-- ttsButton -->

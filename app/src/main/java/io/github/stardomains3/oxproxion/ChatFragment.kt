@@ -13,6 +13,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
@@ -105,6 +106,7 @@ import io.noties.markwon.simple.ext.SimpleExtPlugin
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
@@ -1102,7 +1104,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             onSaveMarkdown = { position, rawMarkdown ->
                 viewModel.saveMarkdownToDownloads(rawMarkdown)  // Your ViewModel method
-            }
+            },
+            onCaptureItemToPng = ::captureItemToPng
 
         )
         chatRecyclerView.apply {
@@ -1920,11 +1923,16 @@ $cleanContent
             viewModel.toggleScrollers()
         }
         sendChatButton.setOnLongClickListener {
-            viewModel.toggleScrollers()
+            val lastPos = chatAdapter.itemCount - 1
+            if (lastPos >= 0) {
+                layoutManager.scrollToPositionWithOffset(lastPos, -12)
+            }
+            else{
+                showMenu()
+            }
             true
         }
 
-        // ✅ SHORT PRESS: Full jump to top/bottom (unchanged behavior)
         scrollToTopButton.setOnClickListener {
             chatRecyclerView.post {
                 chatRecyclerView.scrollToPosition(0)
@@ -1943,7 +1951,6 @@ $cleanContent
             }
         }
 
-// ✅ LONG PRESS: One screenful scroll (NEW: Smooth, predictable, handles partial/edges perfectly)
         scrollToTopButton.setOnLongClickListener {
             scrollToPreviousScreen()
             true  // Consume long press
@@ -2124,11 +2131,9 @@ $cleanContent
                 textToSpeech.speak(safeText, TextToSpeech.QUEUE_FLUSH, null, "tts_utterance")
             }
         } else {
-            // Start new
             isSpeaking = true
             currentSpeakingPosition = position
             chatAdapter.updateTtsState(isSpeaking, currentSpeakingPosition)
-            // flashissue: Update icon directly if holder is attached, else notify
             updateIconDirectlyOrNotify(position, R.drawable.ic_stop_circle)
             val safeText = text.take(3900)
             if (safeText.length < text.length) {
@@ -2151,10 +2156,6 @@ $cleanContent
     private fun LinearLayoutManager.findViewByHolder(pos: Int): RecyclerView.ViewHolder? {
         return findViewByPosition(pos)?.let { chatRecyclerView.getChildViewHolder(it) }
     }
-
-
-
-
 
     private fun onSpeechFinished() {
         isSpeaking = false
@@ -2205,11 +2206,9 @@ $cleanContent
             val height = chatRecyclerView.height
             chatRecyclerView.smoothScrollBy(0, height)
             updateScrollButtonsVisibility()
-            // Toast.makeText(requireContext(), "Scrolled down one screen", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Keep the existing updateScrollButtonsVisibility() unchanged
     private fun updateScrollButtonsVisibility() {
         if (!sharedPreferencesHelper.getScrollersPreference()) return
         chatRecyclerView.post {
@@ -2230,7 +2229,7 @@ $cleanContent
                     viewModel.saveCurrentChat(title, saveAsNew)
 
                     // Optional: Feedback
-                    val sessionId = bundle.getLong("session_id", -1L)  // Still available for toasts if needed
+                   // val sessionId = bundle.getLong("session_id", -1L)  // Still available for toasts if needed
                     if (saveAsNew) {
                         // e.g., Toast.makeText(context, "Chat saved as new!", Toast.LENGTH_SHORT).show()
                     } else {
@@ -2262,7 +2261,7 @@ $cleanContent
             true
         }
     }
-    // NEW: Separate setup for plusButton listener (with dialog options)
+
     private fun setupPlusButtonListener() {
         plusButton.setOnClickListener {
             chatEditText.hideKeyboard()
@@ -2790,6 +2789,46 @@ $cleanContent
             addUpdateListener { setTextColor(it.animatedValue as Int) }
             start()
         }
+    private fun captureItemToPng(position: Int) {
+        // Get the ViewHolder for the position (if visible)
+        val viewHolder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
+        if (viewHolder != null) {
+            val bitmap = captureViewToBitmap(viewHolder.messageContainer)
+            if (bitmap != null) {
+                viewModel.saveBitmapToDownloads(bitmap)
+            } else {
+                Toast.makeText(requireContext(), "Failed to capture view", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            // If not visible, we can still try to capture by creating a temporary view.
+            // For simplicity, we’ll just toast that the item isn’t visible.
+            Toast.makeText(requireContext(), "Item not visible; cannot capture", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun captureViewToBitmap(view: View): Bitmap? {
+        // If the view is already laid out, use its current size.
+        if (view.width > 0 && view.height > 0) {
+            val bitmap = createBitmap(view.width, view.height)
+            val canvas = Canvas(bitmap)
+            view.draw(canvas)
+            return bitmap
+        }
+
+        // If not laid out, measure and layout manually.
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(view.layoutParams.width, View.MeasureSpec.EXACTLY)
+        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        view.measure(widthSpec, heightSpec)
+        val measuredHeight = view.measuredHeight
+        val heightSpecExact = View.MeasureSpec.makeMeasureSpec(measuredHeight, View.MeasureSpec.EXACTLY)
+        view.measure(widthSpec, heightSpecExact)
+
+        val bitmap = createBitmap(view.measuredWidth, view.measuredHeight)
+        val canvas = Canvas(bitmap)
+        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+        view.draw(canvas)
+        return bitmap
+    }
     private fun printChatHtml(htmlContent: String) {
         val printManager = requireContext().getSystemService(Context.PRINT_SERVICE) as PrintManager
         val currentModel = viewModel._activeChatModel.value ?: "Unknown"
