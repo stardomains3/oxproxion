@@ -1,12 +1,18 @@
 package io.github.stardomains3.oxproxion
 
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.text.Spannable
+import android.text.TextPaint
 import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.URLSpan
 import android.text.util.Linkify
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
@@ -15,13 +21,8 @@ import io.noties.markwon.Markwon
 import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
-import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
-import io.noties.markwon.image.coil.CoilImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
-import io.noties.markwon.syntax.Prism4jThemeDarkula
-import io.noties.markwon.syntax.SyntaxHighlightPlugin
-import io.noties.prism4j.Prism4j
 
 class HelpFragment : Fragment(R.layout.fragment_help) {
 
@@ -68,6 +69,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
         } catch (e: Exception) {
             Typeface.DEFAULT  // Fallback
         }
+        val versionName = getAppVersionName(requireContext())
         helpContentTextView.typeface = typeface
         val markwon = Markwon.builder(requireContext())
             .usePlugin(HtmlPlugin.create())
@@ -89,6 +91,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
         val markdownContent = """
             # oxproxion Help Guide
+            
+             **Current Version: $versionName**
 
             Welcome! This guide will help you understand how to use the **oxproxion** app.
 
@@ -108,6 +112,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ## 🔗 Important Links
 
             *   **GitHub Repo**: <br>[stardomains3/oxproxion](https://github.com/stardomains3/oxproxion)
+            <!---->
+            *   **F-Droid App Link**: <br>[oxproxion](https://f-droid.org/en/packages/io.github.stardomains3.oxproxion/)
             <!---->
             *   **Support the Dev**: <br>[Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
 
@@ -133,8 +139,9 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Copy User Message**: Tap the **user icon** to copy your message.
             *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps. Long-press to share the raw markdown of the response.
             *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.) Will not display if your device's text-to-speech engine isn't available. Long-press to save an audio wav file of the AI's response to your downloads folder. (Made on device using Android tools. Generation usually done in seconds.)
-            *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder.
+            *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder. Long-press for .jpg.
             *   **Create Markdown File of Response**: Tap the **Markdown icon** to save just that response as a .md file in your device's Downloads folder.
+            *   **Create PNG File of Response**: Tap the **PNG icon** to save just that response as a .png file in your device's Downloads folder. Long-press for .webp. 
             *   **Edit User Message**: Tap the **edit icon** on a user message to load its text into the input box for editing. Caution: this removes the message and all subsequent messages from the history.
             *   **Resend User Message**: Tap the **resend icon** on a user message to resend the prompt and generate a new response. Caution: this removes all messages after it while keeping the original prompt. Note: if the page has a white background the conversion may make that transparent, but this shouldn't be an issue with the vision model; It just may look different in the image preview you see..
 
@@ -252,6 +259,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   If you want to save your saved chats and/or System Messages, be sure to export them before you uninstall the app, otherwise they will be gone for good.
             *   Imports are programmed to not overwrite: System Messages skip duplicates by title, while Saved Chats add new entries even when titles match, leaving all existing items intact.
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
+            *   **Third-Party Licenses**: [Tap here to view](oxproxion://licenses)
             *   OpenRouter allows Presets which allow you to manage your LLM configurations—models, provider routing, and other features. You can use Presets in oxproxion by just manually adding them in your model list. [https://openrouter.ai/docs/features/presets/](https://openrouter.ai/docs/features/presets/)
             *   The app is a target for multiple text shares: "Prompt"(set the prompt to the shared text), "System Message Chooser"(set the prompt to the shared text and sets the System Message as chosen in the popup), "Auto Send"(Auto sends the prompt to current model with current settings), and "Presets"(Allows the user to apply a chosen preset and options for the shared text.)
             *   Ollama, LM Studio, llama.cpp and MLX LM endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
@@ -302,5 +310,48 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
         markwon.setMarkdown(helpContentTextView, markdownContent)
         helpContentTextView.movementMethod = LinkMovementMethod.getInstance()
+        // Custom handler for licenses link
+        val spannable = helpContentTextView.text as? Spannable ?: return
+        val urlSpans: Array<URLSpan> = spannable.getSpans(0, spannable.length, URLSpan::class.java)
+
+        for (urlSpan in urlSpans) {
+            if (urlSpan.url == "oxproxion://licenses") {
+                val start = spannable.getSpanStart(urlSpan)
+                val end = spannable.getSpanEnd(urlSpan)
+                val flags = spannable.getSpanFlags(urlSpan)
+                spannable.removeSpan(urlSpan)
+
+                val clickableSpan = object : ClickableSpan() {
+                    override fun onClick(widget: View) {
+                        parentFragmentManager.beginTransaction()
+                            .hide(this@HelpFragment)  // ← Matches your pattern: hide current (HelpFragment)
+                            .add(R.id.fragment_container, LicenseListFragment())
+                            .addToBackStack(null)
+                            .commit()
+                    }
+
+                    override fun updateDrawState(ds: TextPaint) {
+                        super.updateDrawState(ds)
+                        ds.color = ContextCompat.getColor(requireContext(), android.R.color.holo_blue_dark)
+                        ds.isUnderlineText = true
+                    }
+                }
+                spannable.setSpan(clickableSpan, start, end, flags)
+            }
+        }
+        helpContentTextView.text = spannable
+        helpContentTextView.isClickable = true
+
     }
+    // Add this helper function (e.g., in your Activity/Fragment or a Utils class)
+    private fun getAppVersionName(context: Context): String {
+        return try {
+            val packageManager = context.packageManager
+            val packageInfo = packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName ?: "Unknown"
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
+
 }

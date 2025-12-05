@@ -1,0 +1,4 @@
+- Long press PNG button on a single AI bubble -> make a webp screenshot of the message instead.
+- Long press PDF button on a single AI bubble -> make jpg screenshot of the message.
+- Updated help screen.
+- Added Third-Party Licenses screen (tap in Help).

@@ -1,6 +1,8 @@
 [versions]
 activityKtx = "1.12.1"
 agp = "8.11.2"
+oss-licenses-plugin = "0.10.9"
+oss-licenses-parser = "1.1.0"
 fragmentKtx = "1.8.9"
 gson = "2.13.2"
 json = "20250517"
@@ -69,9 +71,11 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationFragmentKtx" }
 androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+oss-licenses-parser = { module = "de.philipp-bobek:oss-licenses-parser", version.ref = "oss-licenses-parser" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerializationPlugin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "kspPlugin" }
+oss-licenses = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-licenses-plugin" }

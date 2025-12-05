@@ -1105,7 +1105,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             onSaveMarkdown = { position, rawMarkdown ->
                 viewModel.saveMarkdownToDownloads(rawMarkdown)  // Your ViewModel method
             },
-            onCaptureItemToPng = ::captureItemToPng
+            onCaptureItemToBitmap = ::captureItemToBitmap
 
         )
         chatRecyclerView.apply {
@@ -2789,24 +2789,21 @@ $cleanContent
             addUpdateListener { setTextColor(it.animatedValue as Int) }
             start()
         }
-    private fun captureItemToPng(position: Int) {
-        // Get the ViewHolder for the position (if visible)
+    private fun captureItemToBitmap(position: Int, format: String) {
         val viewHolder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
         if (viewHolder != null) {
-            val bitmap = captureViewToBitmap(viewHolder.messageContainer)
+            val bitmap = captureViewToBitmapNow(viewHolder.messageContainer)
             if (bitmap != null) {
-                viewModel.saveBitmapToDownloads(bitmap)
+                viewModel.saveBitmapToDownloads(bitmap, format)
             } else {
                 Toast.makeText(requireContext(), "Failed to capture view", Toast.LENGTH_SHORT).show()
             }
         } else {
-            // If not visible, we can still try to capture by creating a temporary view.
-            // For simplicity, we’ll just toast that the item isn’t visible.
             Toast.makeText(requireContext(), "Item not visible; cannot capture", Toast.LENGTH_SHORT).show()
         }
     }
 
-    fun captureViewToBitmap(view: View): Bitmap? {
+    fun captureViewToBitmapNow(view: View): Bitmap? {
         // If the view is already laid out, use its current size.
         if (view.width > 0 && view.height > 0) {
             val bitmap = createBitmap(view.width, view.height)

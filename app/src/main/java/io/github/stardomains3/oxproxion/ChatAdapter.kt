@@ -48,7 +48,7 @@ class ChatAdapter(
     private val onRedoMessage: (Int, JsonElement) -> Unit,
     private val onDeleteMessage: (Int) -> Unit,
     private val onSaveMarkdown: (Int, String) -> Unit,
-    private val onCaptureItemToPng: (Int) -> Unit
+    private val onCaptureItemToBitmap: (Int, String) -> Unit,
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
@@ -536,7 +536,17 @@ class ChatAdapter(
                 }
             }
             pngButton.setOnClickListener {
-                onCaptureItemToPng(bindingAdapterPosition)
+                onCaptureItemToBitmap(bindingAdapterPosition, "png")
+            }
+
+            pngButton.setOnLongClickListener {
+                onCaptureItemToBitmap(bindingAdapterPosition, "webp")
+                true
+            }
+
+            aipdfButton.setOnLongClickListener {
+                onCaptureItemToBitmap(bindingAdapterPosition, "jpg")
+                true
             }
             markdownButton.setOnLongClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

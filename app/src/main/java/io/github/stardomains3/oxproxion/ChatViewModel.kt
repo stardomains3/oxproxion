@@ -1293,16 +1293,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             out.write(content.toByteArray())
         } ?: throw Exception("Cannot open output stream")
     }
-    fun saveBitmapToDownloads(bitmap: Bitmap) {
+    fun saveBitmapToDownloads(bitmap: Bitmap, format: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val saved = saveBitmapToDownloadsnow(
-                    filename = "chat-item-${System.currentTimeMillis()}.png",
+                val ext = when (format) {
+                    "png" -> "png"
+                    "webp" -> "webp"
+                    "jpg" -> "jpg"
+                    else -> "png"
+                }
+                val mimeType = when (format) {
+                    "png" -> "image/png"
+                    "webp" -> "image/webp"
+                    "jpg" -> "image/jpeg"
+                    else -> "image/png"
+                }
+
+                val saved = saveBitmapToDownloadsNow(
+                    filename = "chat-item-${System.currentTimeMillis()}.$ext",
                     bitmap = bitmap,
-                    mimeType = "image/png"
+                    mimeType = mimeType,
+                    format = format
                 )
+
                 if (saved) {
-                    _toolUiEvent.postValue(Event("✅ PNG saved to Downloads!"))
+                    _toolUiEvent.postValue(Event("✅ Screenshot saved to Downloads!"))
                 } else {
                     _toolUiEvent.postValue(Event("❌ Save failed"))
                 }
@@ -1311,10 +1326,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-
-
-    // Add this to your ViewModel (or a helper in the same file)
-    private fun saveBitmapToDownloadsnow(filename: String, bitmap: Bitmap, mimeType: String): Boolean {
+    private fun saveBitmapToDownloadsNow(filename: String, bitmap: Bitmap, mimeType: String, format: String): Boolean {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
             put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
@@ -1326,7 +1338,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             ?: return false
 
         getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            when (format) {
+                "png" -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                "webp" -> bitmap.compress(Bitmap.CompressFormat.WEBP, 72, out)
+                "jpg" -> bitmap.compress(Bitmap.CompressFormat.JPEG, 72, out)
+                else -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) // fallback
+            }
             return true
         }
 
