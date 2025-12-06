@@ -1,0 +1,175 @@
+package io.github.stardomains3.oxproxion
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.net.Uri
+import android.os.Bundle
+import android.os.Environment
+import android.print.PrintAttributes
+import android.print.PrintManager
+import android.provider.MediaStore
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.appbar.MaterialToolbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
+
+class MarkdownViewerFragment : Fragment() {
+    companion object {
+        private const val ARG_MARKDOWN = "markdown"
+        private const val ARG_FONT_NAME = "font_name" // New Argument
+
+        // Update newInstance to accept the font name string
+        fun newInstance(markdown: String, fontName: String): MarkdownViewerFragment {
+            return MarkdownViewerFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_MARKDOWN, markdown)
+                    putString(ARG_FONT_NAME, fontName)
+                }
+            }
+        }
+    }
+
+    private var webView: WebView? = null
+    private var currentHtml: String = ""
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.fragment_markdown_viewer, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
+        toolbar.setNavigationOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+
+        toolbar.inflateMenu(R.menu.menu_markdown_viewer)
+        toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_print -> {
+                    createWebPrintJob(webView)
+                    true
+                }
+                /*R.id.action_save_html -> {
+                    saveHtmlToDownloads()
+                    true
+                }*/
+                else -> false
+            }
+        }
+
+        webView = view.findViewById(R.id.webview_markdown)
+        webView?.apply {
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                loadWithOverviewMode = true
+                useWideViewPort = true
+                setSupportZoom(true)
+                textZoom = 100
+                builtInZoomControls = true
+                displayZoomControls = false
+                defaultTextEncodingName = "UTF-8"
+                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            }
+
+            addJavascriptInterface(WebAppInterface(requireContext()), "Android")
+
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val url = request?.url?.toString() ?: return false
+                    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("mailto:")) {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                            return true
+                        } catch (e: Exception) { e.printStackTrace() }
+                    }
+                    return false
+                }
+            }
+
+            setBackgroundColor(Color.BLACK)
+
+            val markdown = arguments?.getString(ARG_MARKDOWN, "") ?: return@apply
+            val fontName = arguments?.getString(ARG_FONT_NAME, "system_default") ?: "system_default"
+
+            // Pass the font name to the renderer
+            currentHtml = MarkdownRenderer.toHtml(markdown, fontName)
+
+            loadDataWithBaseURL("file:///android_asset/", currentHtml, "text/html", "UTF-8", null)
+        }
+    }
+
+    // ... (Rest of your Save/Print functions remain the same) ...
+
+    private fun saveHtmlToDownloads() {
+        if (currentHtml.isEmpty()) return
+        val filename = "chat-${System.currentTimeMillis()}.html"
+        val context = requireContext()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "text/html")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: throw Exception("MediaStore insert failed")
+                resolver.openOutputStream(uri)?.use { out ->
+                    out.write(currentHtml.toByteArray())
+                } ?: throw Exception("Cannot open output stream")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "✅ Saved to Downloads: $filename", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "❌ Save failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun createWebPrintJob(webView: WebView?) {
+        if (webView == null) return
+        val printManager = requireContext().getSystemService(Context.PRINT_SERVICE) as? PrintManager
+        val printAdapter = webView.createPrintDocumentAdapter("Markdown_Document")
+        val jobName = getString(R.string.app_name) + " Document"
+        printManager?.print(jobName, printAdapter, PrintAttributes.Builder().build())
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        webView?.apply {
+            stopLoading()
+            removeAllViews()
+            destroy()
+        }
+        webView = null
+    }
+
+    class WebAppInterface(private val context: Context) {
+        @JavascriptInterface
+        fun copyToClipboard(text: String) {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Copied Code", text)
+            clipboard.setPrimaryClip(clip)
+        }
+    }
+}

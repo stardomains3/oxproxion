@@ -92,7 +92,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
         val markdownContent = """
             # oxproxion Help Guide
             
-             **Current Version: $versionName**
+             **App Version: $versionName**
 
             Welcome! This guide will help you understand how to use the **oxproxion** app.
 
@@ -111,12 +111,13 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ## 🔗 Important Links
 
-            *   **GitHub Repo**: <br>[stardomains3/oxproxion](https://github.com/stardomains3/oxproxion)
+            *   **GitHub Repo**: <br>[https://github.com/stardomains3/oxproxion](https://github.com/stardomains3/oxproxion)
             <!---->
             *   **F-Droid App Link**: <br>[oxproxion](https://f-droid.org/en/packages/io.github.stardomains3.oxproxion/)
             <!---->
-            *   **Support the Dev**: <br>[Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
-
+            *   **Support the Dev**(I could use it): <br>[https://www.buymeacoffee.com/oxproxion](https://www.buymeacoffee.com/oxproxion) ☕
+            <!---->
+           
             ---
 
             ## ✨ Core Features
@@ -142,6 +143,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder. Long-press for .jpg.
             *   **Create Markdown File of Response**: Tap the **Markdown icon** to save just that response as a .md file in your device's Downloads folder.
             *   **Create PNG File of Response**: Tap the **PNG icon** to save just that response as a .png file in your device's Downloads folder. Long-press for .webp. 
+            *   **View HTML of Response**: Tap the **HTML icon** to view the AI response in HTML in an Android Webview. This makes code blocks easier to read, allows one tap copy of them and other view improvements. A print option appears in the screen too.
             *   **Edit User Message**: Tap the **edit icon** on a user message to load its text into the input box for editing. Caution: this removes the message and all subsequent messages from the history.
             *   **Resend User Message**: Tap the **resend icon** on a user message to resend the prompt and generate a new response. Caution: this removes all messages after it while keeping the original prompt. Note: if the page has a white background the conversion may make that transparent, but this shouldn't be an issue with the vision model; It just may look different in the image preview you see..
 
@@ -259,13 +261,13 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   If you want to save your saved chats and/or System Messages, be sure to export them before you uninstall the app, otherwise they will be gone for good.
             *   Imports are programmed to not overwrite: System Messages skip duplicates by title, while Saved Chats add new entries even when titles match, leaving all existing items intact.
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
-            *   **Third-Party Licenses**: [Tap here to view](oxproxion://licenses)
             *   OpenRouter allows Presets which allow you to manage your LLM configurations—models, provider routing, and other features. You can use Presets in oxproxion by just manually adding them in your model list. [https://openrouter.ai/docs/features/presets/](https://openrouter.ai/docs/features/presets/)
             *   The app is a target for multiple text shares: "Prompt"(set the prompt to the shared text), "System Message Chooser"(set the prompt to the shared text and sets the System Message as chosen in the popup), "Auto Send"(Auto sends the prompt to current model with current settings), and "Presets"(Allows the user to apply a chosen preset and options for the shared text.)
             *   Ollama, LM Studio, llama.cpp and MLX LM endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
             *   Ollama, LM Studio, llama.cpp and MLX LM function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served properly on your LAN.
             *   Notifications and Connectivity Service: The "Connectivity Service Channel" runs and you can hide that; go into your app settings in the system and go to notifications and you can toggle that notification off. ("Connectivity Service Channel") And the only notifications you will receive(if in the app you have the notification bell active) is if the app is back-grounded and there's either an error or you receive the response from the model. Notifications won't show if app is in the foreground. Notifications are auto-dismissed when returning to the app. Closing the app by swiping it away in Recents will shut down the service properly.
             *   If you make a preset titled "Digital Assistant"(case-insensitive), and have oxproxion as your system digital assistant in your Android settings(Settings->Apps->Default apps), this preset will be applied for when you use it as the system digital assistant.
+            *   GitHub Changelogs: <br>[https://github.com/stardomains3/oxproxion/releases](https://github.com/stardomains3/oxproxion/releases)
             ## What You Can Do With oxproxion
 
             oxproxion puts the power of multiple AI models at your fingertips. With custom system messages, you can tailor your experience for virtually any task. Here are some popular use cases:
@@ -306,6 +308,50 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             
             ### Share Chats
             Use the PDF button and share you chats with family, friends and co-workers.
+            
+            ---
+            
+            *   **Third-Party Licenses**: 
+            
+            [Tap here to view](oxproxion://licenses)
+            
+            highlight.js v11.10.0 (BSD 3-Clause License)
+
+            Copyright (c) 2006, Ivan Sagalaev.
+            All rights reserved.
+            
+            BSD 3-Clause License
+
+            Copyright (c) 2006, Ivan Sagalaev.
+            All rights reserved.
+
+            Redistribution and use in source and binary forms, with or without
+            modification, are permitted provided that the following conditions are met:
+
+            * Redistributions of source code must retain the above copyright notice, this
+              list of conditions and the following disclaimer.
+
+            * Redistributions in binary form must reproduce the above copyright notice,
+              this list of conditions and the following disclaimer in the documentation
+              and/or other materials provided with the distribution.
+
+            * Neither the name of the copyright holder nor the names of its
+              contributors may be used to endorse or promote products derived from
+              this software without specific prior written permission.
+
+            THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+            AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+            IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+            DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+            FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+            DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+            SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+            CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+            OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+            OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+            
+            
+            
         """.trimIndent()
 
         markwon.setMarkdown(helpContentTextView, markdownContent)

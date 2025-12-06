@@ -1,0 +1,1 @@
+- Added an HTML button to AI responses. Tap and the response is opened in an Android Webview. This fixes issues with code blocks wrapping and adds a one-tap copy button for them. Print button is on this screen for paper or pdf printing.

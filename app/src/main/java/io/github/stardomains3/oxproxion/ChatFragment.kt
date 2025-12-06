@@ -1105,7 +1105,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             onSaveMarkdown = { position, rawMarkdown ->
                 viewModel.saveMarkdownToDownloads(rawMarkdown)  // Your ViewModel method
             },
-            onCaptureItemToBitmap = ::captureItemToBitmap
+            onCaptureItemToBitmap = ::captureItemToBitmap,
+            onShowMarkdown = { markdown ->
+                val selectedFontName = sharedPreferencesHelper.getSelectedFont()
+                parentFragmentManager.beginTransaction()
+                    //.setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
+                    .hide(this)  // Hides chat fragment
+                    .add(R.id.fragment_container, MarkdownViewerFragment.newInstance(markdown,selectedFontName))
+                    .addToBackStack(null)
+                    .commit()
+            }
 
         )
         chatRecyclerView.apply {

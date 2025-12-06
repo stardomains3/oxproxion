@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -49,6 +48,7 @@ class ChatAdapter(
     private val onDeleteMessage: (Int) -> Unit,
     private val onSaveMarkdown: (Int, String) -> Unit,
     private val onCaptureItemToBitmap: (Int, String) -> Unit,
+    private val onShowMarkdown: (String) -> Unit
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     var isSpeaking = false
@@ -315,6 +315,7 @@ class ChatAdapter(
         val messageContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
         private var pulseAnimator: ObjectAnimator? = null
         private var bgColorAnimator: ObjectAnimator? = null
+        private val htmlButton: ImageButton = itemView.findViewById(R.id.htmlButton)
 
         // 6. OPTIMIZATION: Lightweight bind for streaming
         fun bindTextOnly(message: FlexibleMessage) {
@@ -543,7 +544,12 @@ class ChatAdapter(
                 onCaptureItemToBitmap(bindingAdapterPosition, "webp")
                 true
             }
-
+            htmlButton.setOnClickListener {
+                val markdownContent = rawMarkdown  // Your existing
+                if (markdownContent.isNotBlank()) {
+                    onShowMarkdown.invoke(markdownContent)  // ← Calls callback
+                }
+            }
             aipdfButton.setOnLongClickListener {
                 onCaptureItemToBitmap(bindingAdapterPosition, "jpg")
                 true

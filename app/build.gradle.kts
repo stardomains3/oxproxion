@@ -12,13 +12,20 @@ configurations.all {
 android {
     namespace = "io.github.stardomains3.oxproxion"
     compileSdk = 36
-
+    configurations.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "com.atlassian.commonmark") {
+                useTarget("org.commonmark:${requested.name}:0.27.0")
+                because("The library moved from com.atlassian.commonmark to org.commonmark, causing duplicate classes")
+            }
+        }
+    }
     defaultConfig {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 120
-        versionName = "2.1.10"
+        versionCode = 121
+        versionName = "2.1.11"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -80,6 +87,7 @@ android {
 dependencies {
     implementation(libs.markwon.simple)
     implementation(libs.biometric)
+    implementation(libs.commonmark.task.list)
     implementation(libs.markwon.syntax.highlight)
     implementation(libs.prism4j.core)
     kapt(libs.prism4j.bundler)
