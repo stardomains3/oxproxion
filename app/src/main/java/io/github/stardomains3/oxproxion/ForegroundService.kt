@@ -1,4 +1,5 @@
 package io.github.stardomains3.oxproxion
+
 import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -77,15 +78,33 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
                 override fun onStart(utteranceId: String?) {}
                 override fun onDone(utteranceId: String?) {
                     if (utteranceId == "fg_tts") {
-                        stopTts(true)
+                        handleTtsFinished()
                     }
                 }
                 override fun onError(utteranceId: String?) {
                     if (utteranceId == "fg_tts") {
-                        stopTts(true)
+                        handleTtsFinished()
                     }
                 }
             })
+        }
+    }
+
+    private fun handleTtsFinished() {
+        tts?.stop()
+        isTtsActive = false
+        if (isAppInForeground()) {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.cancel(2)
+        } else {
+            // Refresh notification to show "Speak" button silently (background)
+            lastUpdateTitle?.let { title ->
+                lastUpdateText?.let { text ->
+                    isTtsUpdate = true
+                    updateNotificationWithChannel(title, text, CHANNEL_ID)
+                    isTtsUpdate = false
+                }
+            }
         }
     }
 
@@ -272,7 +291,6 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
         } else {
             builder.setOngoing(false)
-                // .setAutoCancel(true)
                 .setDeleteIntent(dismissPendingIntent)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
 

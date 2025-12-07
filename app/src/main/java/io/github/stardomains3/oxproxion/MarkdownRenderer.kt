@@ -5,6 +5,7 @@ import org.commonmark.ext.footnotes.FootnotesExtension
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.heading.anchor.HeadingAnchorExtension
+import org.commonmark.ext.ins.InsExtension
 import org.commonmark.ext.task.list.items.TaskListItemsExtension
 import org.commonmark.node.Node
 import org.commonmark.parser.Parser
@@ -17,7 +18,8 @@ object MarkdownRenderer {
         TaskListItemsExtension.create(),
         AutolinkExtension.create(),
         HeadingAnchorExtension.create(),
-        FootnotesExtension.create()
+        FootnotesExtension.create(),
+        InsExtension.create()
     )
     private val parser: Parser = Parser.builder()
         .extensions(extensions)

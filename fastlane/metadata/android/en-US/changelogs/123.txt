@@ -1,0 +1,1 @@
+- With the new TTS from the notification, if speech finishes and the app is in the foreground, it will auto-dismiss.
