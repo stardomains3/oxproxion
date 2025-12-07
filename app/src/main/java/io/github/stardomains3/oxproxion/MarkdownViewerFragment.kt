@@ -6,7 +6,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.print.PrintAttributes
@@ -32,13 +31,15 @@ class MarkdownViewerFragment : Fragment() {
     companion object {
         private const val ARG_MARKDOWN = "markdown"
         private const val ARG_FONT_NAME = "font_name" // New Argument
+        private const val ARG_MODEL_NAME = "model_name"
 
         // Update newInstance to accept the font name string
-        fun newInstance(markdown: String, fontName: String): MarkdownViewerFragment {
+        fun newInstance(markdown: String, fontName: String, modelName: String): MarkdownViewerFragment {
             return MarkdownViewerFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_MARKDOWN, markdown)
                     putString(ARG_FONT_NAME, fontName)
+                    putString(ARG_MODEL_NAME, modelName)
                 }
             }
         }
@@ -108,7 +109,8 @@ class MarkdownViewerFragment : Fragment() {
 
             val markdown = arguments?.getString(ARG_MARKDOWN, "") ?: return@apply
             val fontName = arguments?.getString(ARG_FONT_NAME, "system_default") ?: "system_default"
-
+            val modelName = arguments?.getString(ARG_MODEL_NAME, "AI") ?: "AI"
+            toolbar.title = modelName
             // Pass the font name to the renderer
             currentHtml = MarkdownRenderer.toHtml(markdown, fontName)
 

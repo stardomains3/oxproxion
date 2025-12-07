@@ -141,18 +141,18 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Share AI Response**: Tap the **share icon** to send the AI's text to other apps. Long-press to share the raw markdown of the response.
             *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.) Will not display if your device's text-to-speech engine isn't available. Long-press to save an audio wav file of the AI's response to your downloads folder. (Made on device using Android tools. Generation usually done in seconds.)
             *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder. Long-press for .jpg.
-            *   **Create Markdown File of Response**: Tap the **Markdown icon** to save just that response as a .md file in your device's Downloads folder.
+            *   **Create Markdown File of Response**: Tap the **Markdown icon** to save just that response as a .md file in your device's Downloads folder. Long-press to save a .txt file in your device's Downloads folder.
             *   **Create PNG File of Response**: Tap the **PNG icon** to save just that response as a .png file in your device's Downloads folder. Long-press for .webp. 
             *   **View HTML of Response**: Tap the **HTML icon** to view the AI response in HTML in an Android Webview. This makes code blocks easier to read, allows one tap copy of them and other view improvements. A print option appears in the screen too.
             *   **Edit User Message**: Tap the **edit icon** on a user message to load its text into the input box for editing. Caution: this removes the message and all subsequent messages from the history.
-            *   **Resend User Message**: Tap the **resend icon** on a user message to resend the prompt and generate a new response. Caution: this removes all messages after it while keeping the original prompt. Note: if the page has a white background the conversion may make that transparent, but this shouldn't be an issue with the vision model; It just may look different in the image preview you see..
+            *   **Resend User Message**: Tap the **resend icon** on a user message to resend the prompt and generate a new response. Caution: this removes all messages after it while keeping the original prompt.
 
             ### Sending Prompts
             *   **Text Box**: Enter your prompt.
             *   **Send Button**: Send your prompt to the LLM. **Long-press** will go to latest message when long pressed.
             *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
             *   **Attach Document(s) Button**: Click icon to attach **text-based only** files to send with your prompt. Long-press to see what's attached and/or detach them.
-            *   **Image Button**: Enabled for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. 
+            *   **Image Button**: Enabled for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. Note: if the page has a white background the conversion may make that transparent, but this shouldn't be an issue with the vision model; It just may look different in the image preview you see.
             *   **Palette Button**: If using Nano-Banana, tap to set aspect ratio of returned generated image.
             
             ### Other Buttons
@@ -202,7 +202,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Add a Model**: Use the floating action button to add a custom model.
             *   **Manage**: Tap the edit button on a model to **Edit** or **Delete** it.
             *   **Search**: Tap to search through the models.
-            *   **Discover Models**: Tap the **cloud icon** to go to the **"OpenRouter Models"** screen.
+            *   **Discover Models**: Tap the **cloud icon** to go to the **"OpenRouter Models"** screen. Tap the **LAN icon** to open a screen that will display your locally served available models.
 
             ### "OpenRouter Models" Screen
             *   **Sort**: Toggle between **Alphabetical** and **Newest**.
@@ -266,6 +266,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   Ollama, LM Studio, llama.cpp and MLX LM endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
             *   Ollama, LM Studio, llama.cpp and MLX LM function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served properly on your LAN.
             *   Notifications and Connectivity Service: The "Connectivity Service Channel" runs and you can hide that; go into your app settings in the system and go to notifications and you can toggle that notification off. ("Connectivity Service Channel") And the only notifications you will receive(if in the app you have the notification bell active) is if the app is back-grounded and there's either an error or you receive the response from the model. Notifications won't show if app is in the foreground. Notifications are auto-dismissed when returning to the app. Closing the app by swiping it away in Recents will shut down the service properly.
+            *   Notifications Buttons: "Dismiss" closes the notification. "Open" will bring oxproxion to the foreground. "Speak" will speak aloud the last AI response. You stop the audio here too by pressing stop, dismissing, or swiping the notification away. This is separate from the main app's text-to-speak function.
             *   If you make a preset titled "Digital Assistant"(case-insensitive), and have oxproxion as your system digital assistant in your Android settings(Settings->Apps->Default apps), this preset will be applied for when you use it as the system digital assistant.
             *   GitHub Changelogs: <br>[https://github.com/stardomains3/oxproxion/releases](https://github.com/stardomains3/oxproxion/releases)
             ## What You Can Do With oxproxion
@@ -305,7 +306,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Professional Development
             Get tailored career advice, resume feedback, interview preparation, and industry-specific guidance to advance your professional journey. "You are a career coach who provides actionable advice on resume improvement, interview preparation, and professional growth. Be specific, constructive, and tailored to my industry and experience level."
-            
+                
             ### Share Chats
             Use the PDF button and share you chats with family, friends and co-workers.
             

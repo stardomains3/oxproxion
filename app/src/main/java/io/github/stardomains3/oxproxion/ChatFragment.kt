@@ -79,6 +79,7 @@ import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.LinkResolverDef
 import io.noties.markwon.Markwon
 import io.noties.markwon.MarkwonConfiguration
+import io.noties.markwon.SoftBreakAddsNewLinePlugin
 import io.noties.markwon.SpanFactory
 import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
@@ -110,7 +111,7 @@ import kotlin.compareTo
 
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
-    private var isFontUpdate = false
+   // private var isFontUpdate = false
     private var menuClosedByTouch = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
@@ -505,7 +506,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             .usePlugin(HtmlPlugin.create())
             .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
             .usePlugin(StrikethroughPlugin.create())
-
+            .usePlugin(SoftBreakAddsNewLinePlugin.create())
             // ✅ TaskList before syntax/images
             .usePlugin(TaskListPlugin.create(
                 "#007541".toColorInt(),
@@ -1107,13 +1108,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             },
             onCaptureItemToBitmap = ::captureItemToBitmap,
             onShowMarkdown = { markdown ->
+                val modelString = viewModel.activeChatModel.value ?: "AI"
+                val modeltoPass = viewModel.getModelDisplayName(modelString)
                 val selectedFontName = sharedPreferencesHelper.getSelectedFont()
                 parentFragmentManager.beginTransaction()
                     //.setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
                     .hide(this)  // Hides chat fragment
-                    .add(R.id.fragment_container, MarkdownViewerFragment.newInstance(markdown,selectedFontName))
+                    .add(R.id.fragment_container, MarkdownViewerFragment.newInstance(markdown,selectedFontName,modeltoPass))
                     .addToBackStack(null)
                     .commit()
+            },
+            onSaveText = {position, text ->
+                viewModel.saveTextToDownloads(text)
             }
 
         )
@@ -1172,9 +1178,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             textToSpeech.stop()
             textToSpeech.shutdown()
         }
-        if (!isFontUpdate) {  // Only stop the service if not a font update (i.e., actual app closure)
-            stopForegroundService()
-        }
+        //if (!isFontUpdate) {  // Only stop the service if not a font update (i.e., actual app closure)
+        //    stopForegroundService()
+      //  }
+        val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(2)
 
     }
     @SuppressLint("ClickableViewAccessibility")
@@ -2412,8 +2420,9 @@ $cleanContent
         chatEditText.requestFocus()
         viewModel.checkAdvancedReasoningStatus()
         viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
-        val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(2)
+       // val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        //notificationManager.cancel(2)
+        ForegroundService.dismissNotificationIfNotSpeaking()
 
         /*if (viewModel.isChatLoading.value == false) {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {

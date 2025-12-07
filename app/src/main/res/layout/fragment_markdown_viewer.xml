@@ -13,7 +13,7 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:title="HTML"
+        app:title="AI"
         app:titleTextColor="@android:color/white"
         android:background="#1C1C1E"
         app:navigationIcon="@drawable/is_backarrow" />

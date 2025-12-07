@@ -24,8 +24,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 121
-        versionName = "2.1.11"
+        versionCode = 122
+        versionName = "2.1.12"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -86,19 +86,23 @@ android {
 
 dependencies {
     implementation(libs.markwon.simple)
-    implementation(libs.biometric)
-    implementation(libs.commonmark.task.list)
-    implementation(libs.markwon.syntax.highlight)
-    implementation(libs.prism4j.core)
-    kapt(libs.prism4j.bundler)
-    implementation(libs.linkify)
     implementation(libs.markwon.core)
     implementation(libs.markwon.html)
     implementation(libs.markwon.tables)
     implementation(libs.markwon.taskList)
     implementation(libs.markwon.image.coil)
-    implementation(libs.coil.kt)
     implementation(libs.markwon.strikethrough)
+    implementation(libs.markwon.syntax.highlight)
+    implementation(libs.prism4j.core)
+    kapt(libs.prism4j.bundler)
+    implementation(libs.biometric)
+    implementation(libs.coil.kt)
+    implementation(libs.commonmark.task.list)
+    implementation(libs.commonmark.autolink)
+    implementation(libs.commonmark.footnotes)
+    implementation(libs.commonmark.heading.anchor)
+    implementation(libs.commonmark.ext.ins)
+    implementation(libs.linkify)
     implementation(libs.gson)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlinx.coroutines.core)

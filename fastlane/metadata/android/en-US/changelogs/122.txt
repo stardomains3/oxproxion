@@ -1,0 +1,5 @@
+- Added tasklist, autolink, heading anchors and ins to the HTML markdown rendering.
+- Other markdown optimization.
+- Added notifications buttons: "Dismiss" closes the notification. "Open" will bring oxproxion to the foreground(so will just tapping the notification). "Speak" will speak aloud the last AI response. You stop the audio here too by pressing stop, dismissing, or swiping the notification away. This is separate from the main app's text-to-speak function.
+- Long-press the Markdown button on the AI response bubble to make a .txt file of that response in your downloads folder.
+- Model name now shows at the top of the HTML screen of the AI response.

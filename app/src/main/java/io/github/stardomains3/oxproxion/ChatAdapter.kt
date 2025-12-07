@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.ImageLoader
 import coil.request.ImageRequest
 import io.noties.markwon.Markwon
+import io.noties.markwon.utils.NoCopySpannableFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -48,9 +49,11 @@ class ChatAdapter(
     private val onDeleteMessage: (Int) -> Unit,
     private val onSaveMarkdown: (Int, String) -> Unit,
     private val onCaptureItemToBitmap: (Int, String) -> Unit,
-    private val onShowMarkdown: (String) -> Unit
+    private val onShowMarkdown: (String) -> Unit,
+    private val onSaveText: (Int, String) -> Unit
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    private val noCopyFactory = NoCopySpannableFactory.getInstance()
     var isSpeaking = false
     var currentSpeakingPosition = -1
 
@@ -170,10 +173,14 @@ class ChatAdapter(
         return when (viewType) {
             VIEW_TYPE_USER -> {
                 val view = inflater.inflate(R.layout.item_message_user, parent, false)
+                view.findViewById<TextView>(R.id.messageTextView)
+                    .setSpannableFactory(noCopyFactory)
                 UserViewHolder(view, markwon)
             }
             else -> { // Both AI and Thinking use the same base layout
                 val view = inflater.inflate(R.layout.item_message_ai, parent, false)
+                view.findViewById<TextView>(R.id.messageTextView)
+                    .setSpannableFactory(noCopyFactory)
                 AssistantViewHolder(view, markwon, onSpeakText, onSynthesizeToWavFile)
             }
         }
@@ -493,8 +500,10 @@ class ChatAdapter(
             ttsButton.setImageResource(iconRes)
 
             ttsButton.setOnClickListener {
+
                 val textToSpeak = messageTextView.text.toString()
                 if (textToSpeak.isNotEmpty()) {
+                    ForegroundService.stopTtsSpeaking()
                     onSpeakText(textToSpeak, position)
                 } else {
                     Toast.makeText(itemView.context, "No text to speak", Toast.LENGTH_SHORT).show()
@@ -503,6 +512,7 @@ class ChatAdapter(
             ttsButton.setOnLongClickListener {
                 val textToSpeak = messageTextView.text.toString()
                 if (textToSpeak.isNotEmpty()) {
+                    ForegroundService.stopTtsSpeaking()
                     onSynthesizeToWavFile(textToSpeak, position)
                 } else {
                     Toast.makeText(itemView.context, "No text to save", Toast.LENGTH_SHORT).show()
@@ -555,10 +565,7 @@ class ChatAdapter(
                 true
             }
             markdownButton.setOnLongClickListener {
-                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Copied Markdown", rawMarkdown)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
+                onSaveText(bindingAdapterPosition, messageTextView.text.toString())
                 true
             }
             markdownButton.setOnClickListener {

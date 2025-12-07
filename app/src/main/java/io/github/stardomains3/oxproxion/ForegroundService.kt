@@ -1,21 +1,33 @@
 package io.github.stardomains3.oxproxion
-
 import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.core.app.NotificationCompat
 
-class ForegroundService : Service() {
+class ForegroundService : Service(), TextToSpeech.OnInitListener {
 
     private val FOREGROUND_CHANNEL_ID = "ForegroundChannel"
     private val CHANNEL_ID = "ForegroundServiceChannel"
+
+    private val TOGGLE_TTS_ACTION = "TOGGLE_TTS_CHANNEL_2"
+    private val DISMISS_ACTION = "DISMISS_CHANNEL_2"
+
+    private var tts: TextToSpeech? = null
+    private var isTtsActive = false
+    private var isTtsUpdate = false
+    private var lastUpdateTitle: String? = null
+    private var lastUpdateText: String? = null
 
     companion object {
         private var instance: ForegroundService? = null
@@ -28,6 +40,14 @@ class ForegroundService : Service() {
             instance?.updateNotification(title, contentText)
         }
 
+        fun dismissNotificationIfNotSpeaking() {
+            instance?.dismissIfNotSpeaking()
+        }
+
+        fun stopTtsSpeaking() {
+            instance?.stopTts(false)
+        }
+
         @Volatile
         var isRunningForeground: Boolean = false
             private set
@@ -37,21 +57,68 @@ class ForegroundService : Service() {
         try {
             stopSelf()
         } catch (e: Exception) {
+            //Log.e("ForegroundService", "Error stopping service", e)
         }
     }
 
     override fun onCreate() {
         super.onCreate()
         instance = this
+        initTTS()
+    }
+
+    private fun initTTS() {
+        tts = TextToSpeech(this, this)
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {}
+                override fun onDone(utteranceId: String?) {
+                    if (utteranceId == "fg_tts") {
+                        stopTts(true)
+                    }
+                }
+                override fun onError(utteranceId: String?) {
+                    if (utteranceId == "fg_tts") {
+                        stopTts(true)
+                    }
+                }
+            })
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        tts?.stop()
+        tts?.shutdown()
+        isTtsActive = false
         isRunningForeground = false
         instance = null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        intent?.action?.let { action ->
+            when (action) {
+                TOGGLE_TTS_ACTION -> {
+                    if (isTtsActive) {
+                        stopTts(true)
+                    } else {
+                        startTtsForChannel2()
+                    }
+                    return START_NOT_STICKY
+                }
+                DISMISS_ACTION -> {
+                    val notificationManager = getSystemService(NotificationManager::class.java)
+                    notificationManager.cancel(2)
+                    tts?.stop()
+                    isTtsActive = false
+                    return START_NOT_STICKY
+                }
+            }
+        }
+
         createNotificationChannels()
 
         val notification = buildNotification("Connectivity Service", "Ensures reliable messaging connectivity", FOREGROUND_CHANNEL_ID)
@@ -90,14 +157,46 @@ class ForegroundService : Service() {
             description = "Channel for main notification updates"
         }
 
-        notificationManager.createNotificationChannels(
-            listOf(foregroundChannel, serviceChannel)
-        )
+        notificationManager.createNotificationChannels(listOf(foregroundChannel, serviceChannel))
     }
 
     fun updateNotification(title: String, contentText: String) {
         if (!isAppInForeground()) {
+            lastUpdateTitle = title
+            lastUpdateText = contentText
+            if (isTtsActive) {
+                tts?.stop()
+                isTtsActive = false
+            }
             updateNotificationWithChannel(title, contentText, CHANNEL_ID)
+        }
+    }
+
+    private fun dismissIfNotSpeaking() {
+        if (!isTtsActive && isNotificationActive(2)) {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.cancel(2)
+        }
+    }
+
+    private fun stopTts(updateNotif: Boolean) {
+        tts?.stop()
+        isTtsActive = false
+        if (updateNotif && lastUpdateTitle != null && lastUpdateText != null && isNotificationActive(2)) {
+            isTtsUpdate = true
+            updateNotificationWithChannel(lastUpdateTitle!!, lastUpdateText!!, CHANNEL_ID)
+            isTtsUpdate = false
+        }
+    }
+
+    private fun startTtsForChannel2() {
+        val lastResponse = getLastAiResponseForChannel(2) ?: return
+        tts?.speak(lastResponse, TextToSpeech.QUEUE_FLUSH, null, "fg_tts")
+        isTtsActive = true
+        if (lastUpdateTitle != null && lastUpdateText != null && isNotificationActive(2)) {
+            isTtsUpdate = true
+            updateNotificationWithChannel(lastUpdateTitle!!, lastUpdateText!!, CHANNEL_ID)
+            isTtsUpdate = false
         }
     }
 
@@ -106,17 +205,31 @@ class ForegroundService : Service() {
         val appProcesses = activityManager.runningAppProcesses ?: return false
         for (appProcess in appProcesses) {
             if (appProcess.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
-                appProcess.processName == packageName) {
+                appProcess.processName == packageName
+            ) {
                 return true
             }
         }
         return false
     }
 
+    private fun isNotificationActive(notificationId: Int): Boolean {
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        val activeNotifications = notificationManager.activeNotifications
+        return activeNotifications.any { it.id == notificationId }
+    }
+
     private fun updateNotificationWithChannel(title: String, contentText: String, channelId: String) {
+        lastUpdateTitle = title
+        lastUpdateText = contentText
         val notification = buildNotification(title, contentText, channelId)
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.notify(2, notification)
+    }
+
+    private fun getLastAiResponseForChannel(channelId: Int): String? {
+        val prefs: SharedPreferences = getSharedPreferences("MainAppPrefs", Context.MODE_PRIVATE)
+        return prefs.getString("last_ai_response_channel_$channelId", null)
     }
 
     private fun buildNotification(title: String, contentText: String, channelId: String): Notification {
@@ -132,6 +245,22 @@ class ForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val toggleIntent = Intent(this, ForegroundService::class.java).apply {
+            action = TOGGLE_TTS_ACTION
+        }
+        val togglePendingIntent = PendingIntent.getService(
+            this, 10, toggleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val dismissIntent = Intent(this, ForegroundService::class.java).apply {
+            action = DISMISS_ACTION
+        }
+        val dismissPendingIntent = PendingIntent.getService(
+            this, 11, dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(contentText)
@@ -140,8 +269,25 @@ class ForegroundService : Service() {
 
         if (channelId == FOREGROUND_CHANNEL_ID) {
             builder.setOngoing(true)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
         } else {
-            builder.setOngoing(false).setAutoCancel(true)
+            builder.setOngoing(false)
+                // .setAutoCancel(true)
+                .setDeleteIntent(dismissPendingIntent)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+
+            if (!isTtsActive) {
+                builder.addAction(android.R.drawable.ic_media_play, "Speak", togglePendingIntent)
+            } else {
+                builder.addAction(android.R.drawable.ic_media_pause, "Stop", togglePendingIntent)
+            }
+            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+            builder.addAction(android.R.drawable.ic_menu_info_details, "Open", pendingIntent)
+
+            if (isTtsUpdate) {
+                builder.setSilent(true)
+                    .setOnlyAlertOnce(true)
+            }
         }
 
         return builder.build()

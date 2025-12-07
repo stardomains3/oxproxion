@@ -889,6 +889,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         val apiIdentifier = activeChatModel.value ?: "Unknown Model"
                         val displayName = getModelDisplayName(apiIdentifier)
+                        val truncatedResponse = if (accumulatedResponse.length > 3900) {
+                            accumulatedResponse.take(3900) + "..."
+                        } else {
+                            accumulatedResponse
+                        }
+                        sharedPreferencesHelper.saveLastAiResponseForChannel(2, truncatedResponse)  //#ttsnoti
                         ForegroundService.updateNotificationStatus(displayName, "Response Received.")
                     }
                 }
@@ -898,6 +904,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         val apiIdentifier = activeChatModel.value ?: "Unknown Model"
                         val displayName = getModelDisplayName(apiIdentifier)
+                        sharedPreferencesHelper.saveLastAiResponseForChannel(2, "Error!")//#ttsnoti
                         ForegroundService.updateNotificationStatus(displayName, "Error!")
                     }
                 }
@@ -966,6 +973,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         val apiIdentifier = activeChatModel.value ?: "Unknown Model"
                         val displayName = getModelDisplayName(apiIdentifier)
+                        sharedPreferencesHelper.saveLastAiResponseForChannel(2, openRouterError)//#ttsnoti
                         ForegroundService.updateNotificationStatus(displayName, "Error!")
                     }
                     throw Exception(openRouterError)  // Now throws friendly message
@@ -1053,6 +1061,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
             val apiIdentifier = activeChatModel.value ?: "Unknown Model"
             val displayName = getModelDisplayName(apiIdentifier)
+            val truncatedResponse = if (finalContent.length > 3900) {
+                finalContent.take(3900) + "..."
+            } else {
+                finalContent
+            }
+            sharedPreferencesHelper.saveLastAiResponseForChannel(2, truncatedResponse)//#ttsnoti
             ForegroundService.updateNotificationStatus(displayName, "Response Received.")
         }
     }
@@ -1078,6 +1092,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
             val apiIdentifier = activeChatModel.value ?: "Unknown Model"
             val displayName = getModelDisplayName(apiIdentifier)
+            sharedPreferencesHelper.saveLastAiResponseForChannel(2, detailedMsg)//#ttsnoti
             ForegroundService.updateNotificationStatus(displayName, "Error!")
         }
     }
@@ -1358,6 +1373,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     mimeType = "text/markdown"
                 )
                 _toolUiEvent.postValue(Event("✅ Markdown saved to Downloads!"))  // ✅ postValue
+            } catch (e: Exception) {
+                _toolUiEvent.postValue(Event("❌ Save failed: ${e.message}"))     // ✅ postValue
+            }
+        }
+    }
+    fun saveTextToDownloads(text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                saveFileToDownloads(
+                    filename = "chat-${System.currentTimeMillis()}.txt",
+                    content = text,
+                    mimeType = "text/plain"
+                )
+                _toolUiEvent.postValue(Event("✅ Text saved to Downloads!"))  // ✅ postValue
             } catch (e: Exception) {
                 _toolUiEvent.postValue(Event("❌ Save failed: ${e.message}"))     // ✅ postValue
             }

@@ -30,6 +30,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
         private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
         const val LAN_PROVIDER_KEY = "lan_provider"
+        private const val KEY_LAST_AI_RESPONSE_CHANNEL = "last_ai_response_channel_"
         const val LAN_PROVIDER_LLAMA_CPP = "llama_cpp"
         const val LAN_PROVIDER_OLLAMA = "ollama"
         private const val KEY_WEB_SEARCH_ENGINE = "web_search_engine"
@@ -232,7 +233,13 @@ class SharedPreferencesHelper(context: Context) {
     fun getWebSearchBoolean(): Boolean {
         return mainPrefs.getBoolean(KEY_WEB_SEARCH_ENABLED, false)
     }
+    fun saveLastAiResponseForChannel(channelId: Int, responseText: String) {
+        mainPrefs.edit { putString("${KEY_LAST_AI_RESPONSE_CHANNEL}${channelId}", responseText) }
+    }
 
+    fun getLastAiResponseForChannel(channelId: Int): String? {
+        return mainPrefs.getString("${KEY_LAST_AI_RESPONSE_CHANNEL}${channelId}", null)
+    }
     fun saveWebSearchEnabled(enabled: Boolean) {
         mainPrefs.edit { putBoolean(KEY_WEB_SEARCH_ENABLED, enabled) }
     }

@@ -1,7 +1,10 @@
 package io.github.stardomains3.oxproxion
 
+import org.commonmark.ext.autolink.AutolinkExtension
+import org.commonmark.ext.footnotes.FootnotesExtension
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
+import org.commonmark.ext.heading.anchor.HeadingAnchorExtension
 import org.commonmark.ext.task.list.items.TaskListItemsExtension
 import org.commonmark.node.Node
 import org.commonmark.parser.Parser
@@ -11,7 +14,10 @@ object MarkdownRenderer {
     private val extensions = listOf(
         TablesExtension.create(),
         StrikethroughExtension.create(),
-        TaskListItemsExtension.create()
+        TaskListItemsExtension.create(),
+        AutolinkExtension.create(),
+        HeadingAnchorExtension.create(),
+        FootnotesExtension.create()
     )
     private val parser: Parser = Parser.builder()
         .extensions(extensions)
@@ -20,7 +26,6 @@ object MarkdownRenderer {
         .extensions(extensions)
         .build()
 
-    // CHANGED: Added fontName parameter (defaults to system_default)
     fun toHtml(markdown: String, fontName: String = "system_default"): String {
         val document: Node = parser.parse(markdown)
         var htmlBody = renderer.render(document)
@@ -38,7 +43,6 @@ object MarkdownRenderer {
         )
 
         // --- DYNAMIC FONT CSS ---
-        // We assume the files in res/font are .ttf. If yours are .otf, change the extension below.
         val fontCss = if (fontName != "system_default") {
             """
             @font-face {
@@ -50,7 +54,7 @@ object MarkdownRenderer {
             }
             """
         } else {
-            "" // No custom font, use default
+            ""
         }
 
         val css = """
@@ -58,16 +62,13 @@ object MarkdownRenderer {
             /* --- SCREEN STYLES (Default) --- */
             * { box-sizing: border-box; }
             
-            /* Inject User Font CSS here */
             $fontCss
             
             body { 
-                /* Fallback font definition if no custom font is selected */
                 font-size: 16px; line-height: 1.6; color: #F8F8F8; 
                 background: #000000; margin: 0; padding: 16px; overflow-x: hidden;
             }
             
-            /* ... (The rest of your CSS remains exactly the same) ... */
             h1,h2,h3 { color: #FFFFFF; border-bottom: 1px solid #333; margin-top: 24px; }
             strong { color: #FFFFFF; }
             del { color: #d32f2f; text-decoration: line-through; }
@@ -108,6 +109,9 @@ object MarkdownRenderer {
             input[type="checkbox"] { margin-right: 10px; transform: scale(1.2); cursor: default; vertical-align: -2px; }
             blockquote { border-left: 4px solid #4fc3f7; padding-left: 16px; color: #ccc; margin: 16px 0; background: #111; }
             a { color: #4fc3f7; }
+            
+            /* ADDED: Ensure images don't overflow the screen */
+            img { max-width: 100%; height: auto; border-radius: 4px; }
 
             @media print {
                 body {
@@ -192,3 +196,4 @@ object MarkdownRenderer {
         """.trimIndent()
     }
 }
+
