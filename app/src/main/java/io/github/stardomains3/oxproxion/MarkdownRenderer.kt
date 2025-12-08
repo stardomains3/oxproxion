@@ -70,13 +70,21 @@ object MarkdownRenderer {
                 font-size: 16px; line-height: 1.6; color: #F8F8F8; 
                 background: #000000; margin: 0; padding: 16px; overflow-x: hidden;
             }
-            
+            a { 
+    color: #4fc3f7; 
+    word-wrap: break-word; 
+    overflow-wrap: break-word; 
+    word-break: break-word;
+    white-space: normal; 
+    display: inline-block;
+    max-width: 100%;
+}
             h1,h2,h3 { color: #FFFFFF; border-bottom: 1px solid #333; margin-top: 24px; }
             strong { color: #FFFFFF; }
             del { color: #d32f2f; text-decoration: line-through; }
             
             .table-scroll-wrapper {
-                overflow-x: auto; margin: 16px 0; background: #111; border-radius: 8px;
+                width: 100%; overflow-x: auto; margin: 16px 0; background: #111; border-radius: 8px;
                 -webkit-overflow-scrolling: touch; 
             }
             table { 

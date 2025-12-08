@@ -198,6 +198,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isWebSearchEnabled: LiveData<Boolean> = _isWebSearchEnabled
     val _isScrollersEnabled = MutableLiveData<Boolean>(false)
     val isScrollersEnabled: LiveData<Boolean> = _isScrollersEnabled
+    val _isScreenEnabled = MutableLiveData<Boolean>(false)
+    val isScreenEnabled: LiveData<Boolean> = _isScreenEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private val _toolUiEvent = MutableLiveData<Event<String>>()
@@ -237,6 +239,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val newValue = !(_isScrollersEnabled.value ?: false)
         _isScrollersEnabled.value = newValue
         sharedPreferencesHelper.saveScrollersPreference(newValue)
+    }
+    fun toggleScreen(){
+        val newValueSc = !(_isScreenEnabled.value ?: false)
+        _isScreenEnabled.value = newValueSc
+        sharedPreferencesHelper.saveKeepScreenOnPreference(newValueSc)
     }
     fun toggleReasoning() {
         val newValue = !(_isReasoningEnabled.value ?: false)
@@ -285,6 +292,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isAdvancedReasoningOn.value = sharedPreferencesHelper.getAdvancedReasoningEnabled()
         _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
         _isScrollersEnabled.value = sharedPreferencesHelper.getScrollersPreference()
+        _isScreenEnabled.value = sharedPreferencesHelper.getKeepScreenOnPreference()
         _isWebSearchEnabled.value = sharedPreferencesHelper.getWebSearchBoolean()
         sharedPreferencesHelper.mainPrefs.registerOnSharedPreferenceChangeListener { _, key ->
             if (key == "noti_enabled") {  // Use the actual key from your companion object

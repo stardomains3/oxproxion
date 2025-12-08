@@ -81,12 +81,14 @@ class MarkdownViewerFragment : Fragment() {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 loadWithOverviewMode = true
-                useWideViewPort = true
+                useWideViewPort = false
                 setSupportZoom(true)
                 textZoom = 100
                 builtInZoomControls = true
                 displayZoomControls = false
                 defaultTextEncodingName = "UTF-8"
+                setGeolocationEnabled(false)// – Disables location access.
+                mediaPlaybackRequiresUserGesture = true //– Requires user interaction for media (if added later).
                 setLayerType(View.LAYER_TYPE_HARDWARE, null)
             }
 

@@ -30,6 +30,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
         private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
         const val LAN_PROVIDER_KEY = "lan_provider"
+        private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         private const val KEY_LAST_AI_RESPONSE_CHANNEL = "last_ai_response_channel_"
         const val LAN_PROVIDER_LLAMA_CPP = "llama_cpp"
         const val LAN_PROVIDER_OLLAMA = "ollama"
@@ -279,6 +280,13 @@ class SharedPreferencesHelper(context: Context) {
     }
     fun getExtPreference2(): Boolean {
         return mainPrefs.getBoolean(KEY_EXT_ENABLED2, false)
+    }
+    fun saveKeepScreenOnPreference(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_KEEP_SCREEN_ON, enabled) }
+    }
+
+    fun getKeepScreenOnPreference(): Boolean {
+        return mainPrefs.getBoolean(KEY_KEEP_SCREEN_ON, false)
     }
     fun saveBotModelPickerSortOrder(sortOrder: BotModelPickerFragment.SortOrder) {
         val value = when (sortOrder) {

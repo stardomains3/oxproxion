@@ -1,0 +1,2 @@
+- Optimizations and improvements to HTML rendering of AI response.
+- Added a preference to keep the screen from turning off while using the app.

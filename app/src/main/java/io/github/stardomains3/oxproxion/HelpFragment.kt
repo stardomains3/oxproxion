@@ -190,6 +190,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Biometric Button**: Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
             *   **Presets Button**: Opens the Presets screen. These enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
             *   **Fonts Button**: Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
+            *   **Screen Button**: When active it overrides the system settings and keeps the screen on.
             ---
 
             ## 📂 App Screens

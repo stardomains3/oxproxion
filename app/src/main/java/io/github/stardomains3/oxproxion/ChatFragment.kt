@@ -43,6 +43,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -120,6 +121,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var dimOverlay: View? = null
     private var currentSpeakingPosition = -1
     private lateinit var scrollersButton: MaterialButton
+    private lateinit var screenButton: MaterialButton
     private lateinit var helpButton: MaterialButton
     private lateinit var presetsButton: MaterialButton
     private lateinit var presetsButton2: MaterialButton
@@ -355,6 +357,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         scrollToBottomButton = view.findViewById(R.id.scrollToBottomButton)
         scrollToTopButton = view.findViewById(R.id.scrollToTopButton)
         scrollersButton = view.findViewById(R.id.scrollersButton)
+        screenButton = view.findViewById(R.id.screenButton)
         convoButton  = view.findViewById(R.id.convoButton)
         clearButton = view.findViewById(R.id.clearButton)
         utilityButton = view.findViewById(R.id.utilityButton)
@@ -838,7 +841,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.isWebSearchEnabled.observe(viewLifecycleOwner) { isEnabled ->
             webSearchButton.isSelected = isEnabled
         }
+        viewModel.isScreenEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            screenButton.isSelected = isEnabled
+            if(isEnabled) {
+                requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+            else{
+                requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
 
+        }
         viewModel.isScrollersEnabled.observe(viewLifecycleOwner) { isEnabled ->
             scrollersButton.isSelected = isEnabled
             if(isEnabled) {
@@ -1938,6 +1950,9 @@ $cleanContent
 
         scrollersButton.setOnClickListener {
             viewModel.toggleScrollers()
+        }
+        screenButton.setOnClickListener {
+            viewModel.toggleScreen()
         }
         sendChatButton.setOnLongClickListener {
             val lastPos = chatAdapter.itemCount - 1
