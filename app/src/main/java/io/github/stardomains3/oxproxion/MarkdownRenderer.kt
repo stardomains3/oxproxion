@@ -155,6 +155,37 @@ object MarkdownRenderer {
                 a { color: #000 !important; text-decoration: underline !important; }
                 h1, h2, h3, strong { color: #000 !important; border-color: #000 !important; }
                 blockquote { border-color: #000 !important; color: #444 !important; background: transparent !important; }
+               
+                .code-wrapper {
+        overflow: visible !important;
+        position: static !important; /* Avoid absolute positioning issues */
+        margin: 12px 0 !important;
+        width: 100% !important;
+        page-break-inside: avoid !important;
+    }
+    
+    pre {
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 12px 8px !important; /* Adjust for print */
+        white-space: pre-wrap !important;
+        word-wrap: break-word !important;
+        word-break: break-word !important; /* Less aggressive than break-all */
+        hyphens: auto !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    pre code, pre code.hljs {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        font-size: 10pt !important; /* Smaller for print */
+        display: block !important;
+        width: 100% !important;
+    }
+    .copy-btn { display: none !important; }
             }
         </style>
         """.trimIndent()

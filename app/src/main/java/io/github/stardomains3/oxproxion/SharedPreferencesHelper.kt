@@ -27,6 +27,7 @@ class SharedPreferencesHelper(context: Context) {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
         const val LAN_API_KEY = "lan_api_key"  // NEW
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
+        private const val KEY_FONT_SIZE = "font_size"
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
         private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
         const val LAN_PROVIDER_KEY = "lan_provider"
@@ -173,7 +174,13 @@ class SharedPreferencesHelper(context: Context) {
             saveDefaultSystemMessage(oldMessage)
         }
     }
+    fun saveFontSize(size: Int) {
+        mainPrefs.edit { putInt(KEY_FONT_SIZE, size) }
+    }
 
+    fun getFontSize(): Int {
+        return mainPrefs.getInt(KEY_FONT_SIZE, 100)  // Default: 100%
+    }
     fun saveSortOrder(sortOrder: SortOrder) {
         mainPrefs.edit { putString(KEY_SORT_ORDER, sortOrder.name) }
     }

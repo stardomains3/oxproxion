@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.print.PrintAttributes
@@ -32,7 +33,8 @@ class MarkdownViewerFragment : Fragment() {
         private const val ARG_MARKDOWN = "markdown"
         private const val ARG_FONT_NAME = "font_name" // New Argument
         private const val ARG_MODEL_NAME = "model_name"
-
+        private lateinit var prefs: SharedPreferencesHelper
+        private var currentFontSize = 100
         // Update newInstance to accept the font name string
         fun newInstance(markdown: String, fontName: String, modelName: String): MarkdownViewerFragment {
             return MarkdownViewerFragment().apply {
@@ -54,8 +56,9 @@ class MarkdownViewerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        prefs = SharedPreferencesHelper(requireContext())
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
+
         toolbar.setNavigationOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
@@ -63,14 +66,18 @@ class MarkdownViewerFragment : Fragment() {
         toolbar.inflateMenu(R.menu.menu_markdown_viewer)
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.action_decrease_font -> {
+                    decreaseFont()
+                    true
+                }
+                R.id.action_increase_font -> {
+                    increaseFont()
+                    true
+                }
                 R.id.action_print -> {
                     createWebPrintJob(webView)
                     true
                 }
-                /*R.id.action_save_html -> {
-                    saveHtmlToDownloads()
-                    true
-                }*/
                 else -> false
             }
         }
@@ -87,6 +94,8 @@ class MarkdownViewerFragment : Fragment() {
                 builtInZoomControls = true
                 displayZoomControls = false
                 defaultTextEncodingName = "UTF-8"
+                //allowContentAccess = false – Blocks access to content providers.
+                //cacheMode = WebSettings.LOAD_NO_CACHE – Forces no caching for local content (optional, but secure).
                 setGeolocationEnabled(false)// – Disables location access.
                 mediaPlaybackRequiresUserGesture = true //– Requires user interaction for media (if added later).
                 setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -117,6 +126,8 @@ class MarkdownViewerFragment : Fragment() {
             currentHtml = MarkdownRenderer.toHtml(markdown, fontName)
 
             loadDataWithBaseURL("file:///android_asset/", currentHtml, "text/html", "UTF-8", null)
+            currentFontSize = prefs.getFontSize()
+            settings.textZoom = currentFontSize
         }
     }
 
@@ -149,7 +160,17 @@ class MarkdownViewerFragment : Fragment() {
             }
         }
     }
+    private fun increaseFont() {
+        currentFontSize = minOf(200, currentFontSize + 5)  // Increase by 5% (max 200%)
+        webView?.settings?.textZoom = currentFontSize
+        prefs.saveFontSize(currentFontSize)
+    }
 
+    private fun decreaseFont() {
+        currentFontSize = maxOf(50, currentFontSize - 5)  // Decrease by 5% (min 50%)
+        webView?.settings?.textZoom = currentFontSize
+        prefs.saveFontSize(currentFontSize)
+    }
     private fun createWebPrintJob(webView: WebView?) {
         if (webView == null) return
         val printManager = requireContext().getSystemService(Context.PRINT_SERVICE) as? PrintManager

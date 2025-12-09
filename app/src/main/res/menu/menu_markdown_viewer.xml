@@ -2,6 +2,16 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_decrease_font"
+        android:icon="@drawable/ic_minus"
+        android:title="Decrease Font"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_increase_font"
+        android:icon="@drawable/ic_plus"
+        android:title="Increase Font"
+        app:showAsAction="always" />
+    <item
         android:id="@+id/action_print"
         android:icon="@drawable/ic_print"
         android:title="Print"

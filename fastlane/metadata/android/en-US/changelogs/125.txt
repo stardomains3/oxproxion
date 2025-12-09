@@ -1,0 +1,2 @@
+- Added ability to increase or decrease font size in the HTML rendering screen of the AI response.
+- Optimized print rendering.
