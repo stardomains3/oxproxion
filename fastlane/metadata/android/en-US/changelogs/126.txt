@@ -1,0 +1,5 @@
+- STT from notification now won't speak markdown.
+- Other notification optimizations.
+- Style and typo fix.
+- Variable Substitutions: Use `{{oxdate}}` (yyyy-MM-dd), `{{oxtime}}` (HH:mm:ss), `{{oxdatetime}}` (ISO), or `{{oxhdt}}` (human-readable) in prompts/system messages. Auto-replaces with current date/time on send.
+- Updated Help screen.

@@ -15,6 +15,8 @@ import android.os.IBinder
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.core.app.NotificationCompat
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.text.TextContentRenderer
 
 class ForegroundService : Service(), TextToSpeech.OnInitListener {
 
@@ -123,6 +125,10 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
                 TOGGLE_TTS_ACTION -> {
                     if (isTtsActive) {
                         stopTts(true)
+                        if (isAppInForeground()) {
+                            val notificationManager = getSystemService(NotificationManager::class.java)
+                            notificationManager.cancel(2)
+                        }
                     } else {
                         startTtsForChannel2()
                     }
@@ -210,7 +216,8 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
 
     private fun startTtsForChannel2() {
         val lastResponse = getLastAiResponseForChannel(2) ?: return
-        tts?.speak(lastResponse, TextToSpeech.QUEUE_FLUSH, null, "fg_tts")
+        val cleanText = stripMarkdownWithCommonMark(lastResponse)
+        tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, "fg_tts")
         isTtsActive = true
         if (lastUpdateTitle != null && lastUpdateText != null && isNotificationActive(2)) {
             isTtsUpdate = true
@@ -218,7 +225,17 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
             isTtsUpdate = false
         }
     }
-
+    private fun stripMarkdownWithCommonMark(text: String): String {
+        try {
+            val parser = Parser.builder().build()
+            val document = parser.parse(text)
+            val renderer = TextContentRenderer.builder().build()
+            return renderer.render(document).trim()
+        } catch (e: Exception) {
+            // If parsing fails, remove basic markdown with regex as fallback
+            return text.replace(Regex("\\*\\*|__|`|\\[|\\]"), "")
+        }
+    }
     private fun isAppInForeground(): Boolean {
         val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val appProcesses = activityManager.runningAppProcesses ?: return false

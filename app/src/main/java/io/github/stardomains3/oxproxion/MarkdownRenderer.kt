@@ -67,7 +67,7 @@ object MarkdownRenderer {
             $fontCss
             
             body { 
-                font-size: 16px; line-height: 1.6; color: #F8F8F8; 
+                font-size: 16px; line-height: 1.6; color: #cecece; 
                 background: #000000; margin: 0; padding: 16px; overflow-x: hidden;
             }
             a { 
@@ -79,8 +79,8 @@ object MarkdownRenderer {
     display: inline-block;
     max-width: 100%;
 }
-            h1,h2,h3 { color: #FFFFFF; border-bottom: 1px solid #333; margin-top: 24px; }
-            strong { color: #FFFFFF; }
+            h1,h2,h3 { color: #dbdbdb; border-bottom: 1px solid #333; margin-top: 24px; }
+            strong { color: #dbdbdb; }
             del { color: #d32f2f; text-decoration: line-through; }
             
             .table-scroll-wrapper {
@@ -92,7 +92,7 @@ object MarkdownRenderer {
                 border-collapse: collapse; margin: 0;
             }
             th, td { 
-                border: 1px solid #444; padding: 12px 16px; text-align: left; color: #F8F8F8;
+                border: 1px solid #444; padding: 12px 16px; text-align: left; color: #cecece;
                 white-space: normal; vertical-align: top;
             }
             th { background: #222; color: #FFFFFF; font-weight: bold; }

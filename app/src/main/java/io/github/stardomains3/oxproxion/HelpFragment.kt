@@ -5,9 +5,12 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Spannable
+import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
+import android.text.style.ImageSpan
 import android.text.style.URLSpan
 import android.text.util.Linkify
 import android.view.View
@@ -22,7 +25,9 @@ import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.html.HtmlPlugin
+import io.noties.markwon.image.coil.CoilImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
+import kotlin.math.roundToInt
 
 class HelpFragment : Fragment(R.layout.fragment_help) {
 
@@ -32,6 +37,47 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
+        }
+         val dp24 = with(requireContext().resources.displayMetrics) {
+            (24 * density).roundToInt()
+        }
+         val icons = mapOf(
+            "ic_send" to R.drawable.ic_send,
+            "ic_stop" to R.drawable.ic_stop,
+            "ic_attachdoc" to R.drawable.ic_attachdoc,
+            "ic_imgup" to R.drawable.ic_imgup,
+            "ic_palette" to R.drawable.ic_palette,
+            "ic_rechat" to R.drawable.ic_rechat,
+            "ic_tune" to R.drawable.ic_tune,
+            "ic_schats" to R.drawable.ic_schats,
+            "ic_savechat" to R.drawable.ic_savechat,
+            "ic_copi" to R.drawable.ic_copi,
+            "ic_markdown" to R.drawable.ic_markdown,
+            "ic_html" to R.drawable.ic_html,
+            "ic_print" to R.drawable.ic_print,
+            "ic_pdfnew" to R.drawable.ic_pdfnew,
+            "ic_stream" to R.drawable.ic_stream,
+            "ic_reasoning" to R.drawable.ic_reasoning,
+            "ic_ruler" to R.drawable.ic_ruler,
+            "ic_key" to R.drawable.ic_key,
+            "ic_notinew" to R.drawable.ic_notinew,
+            "ic_scrollers" to R.drawable.ic_scrollers,
+            "ic_extend" to R.drawable.ic_extend,
+            "ic_websearch" to R.drawable.ic_websearch,
+            "ic_paste" to R.drawable.ic_paste,
+            "ic_mic" to R.drawable.ic_mic,
+            "ic_convo" to R.drawable.ic_convo,
+            "ic_fingerprint" to R.drawable.ic_fingerprint,
+            "ic_presets" to R.drawable.ic_presets,
+            "ic_fonts" to R.drawable.ic_fonts,
+            "ic_backlight" to R.drawable.ic_backlight
+        )
+
+         val iconSpans: Map<String, ImageSpan> = icons.mapValues { (_, resId) ->
+            val drawable = ContextCompat.getDrawable(requireContext(), resId)!!.mutate().apply {
+                setBounds(0, 0, dp24, dp24)
+            }
+            ImageSpan(drawable)
         }
 
         val helpContentTextView = view.findViewById<TextView>(R.id.helpContentTextView)
@@ -75,6 +121,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             .usePlugin(HtmlPlugin.create())
             .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
             .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(CoilImagesPlugin.create(requireContext()))
             .usePlugin(TablePlugin.create(requireContext()))
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
@@ -149,17 +196,17 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Sending Prompts
             *   **Text Box**: Enter your prompt.
-            *   **Send Button**: Send your prompt to the LLM. **Long-press** will go to latest message when long pressed.
-            *   **Stop Button**: During an api call, tap the Stop Button to end the api call.
-            *   **Attach Document(s) Button**: Click icon to attach **text-based only** files to send with your prompt. Long-press to see what's attached and/or detach them.
-            *   **Image Button**: Enabled for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. Note: if the page has a white background the conversion may make that transparent, but this shouldn't be an issue with the vision model; It just may look different in the image preview you see.
-            *   **Palette Button**: If using Nano-Banana, tap to set aspect ratio of returned generated image.
+            *   **Send Button** {{ic_send}} : Send your prompt to the LLM. **Long-press** will go to latest message when long pressed.
+            *   **Stop Button** {{ic_stop}} : During an api call, tap the Stop Button to end the api call.
+            *   **Attach Document(s) Button** {{ic_attachdoc}} : Click icon to attach **text-based only** files to send with your prompt. Long-press to see what's attached and/or detach them.
+            *   **Image Button** {{ic_imgup}} : Enabled for vision models. Click icon to attach a single image or take picture up to 12MB in size. Long-click goes straight to camera. Also, PDF pages. Select a PDF, then select a page to send(if single page, no page selection appears.) Uses on-device native Android tools to convert to data for the vision model. Select additional pages in following rounds of the chat. Note: if the page has a white background the conversion may make that transparent, but this shouldn't be an issue with the vision model; It just may look different in the image preview you see.
+            *   **Palette Button** {{ic_palette}} : If using Nano-Banana, tap to set aspect ratio of returned generated image.
             
             ### Other Buttons
-            *   **Clear Chat**(button on bottom left): Starts a new chat with the current model. Long-press to start a new chat without a warning alert.
-            *   **System Message Button**: Opens your library of system messages. If you currently are on a non-default System Message you can long-press and it will auto switch to your default.
-            *   **Saved Chats**: Opens a list of your saved conversations.
-            *   **Save Chat**: Saves the chat. Only text chats can be saved. You can name it yourself or let an AI generate a title(qwen/qwen3-30b-a3b-instruct-2507 is used and the entire chat is sent to it for this function.)
+            *   **Clear Chat**(button on bottom left) {{ic_rechat}} : Starts a new chat with the current model. Long-press to start a new chat without a warning alert.
+            *   **System Message Button** {{ic_tune}} : Opens your library of system messages. If you currently are on a non-default System Message you can long-press and it will auto switch to your default.
+            *   **Saved Chats** {{ic_schats}} : Opens a list of your saved conversations.
+            *   **Save Chat** {{ic_savechat}} : Saves the chat. Only text chats can be saved. You can name it yourself or let an AI generate a title(qwen/qwen3-30b-a3b-instruct-2507 is used and the entire chat is sent to it for this function.)
             
             ---
 
@@ -169,28 +216,28 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "qwen/qwen3-30b-a3b-instruct-2507" to fix it and it will automatically correct the prompt in the prompt box.
 
             ### Contextual Buttons (Enabled during a chat)
-            *   **Copy Chat**: Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.
-            *   **Save to Markdown**: Saves the full conversation to a markdown file in your downloads folder.
-            *   **Save to HTML**: Saves the full conversation to an HTML file in your downloads folder.
-            *   **Print Chat**: Prints the full conversation. You can save as PDF here too. You can select page size too.
-            *   **PDF Button**: Creates a PDF of the entire chat in your downloads folder.
+            *   **Copy Chat** {{ic_copi}} : Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.
+            *   **Save to Markdown** {{ic_markdown}} : Saves the full conversation to a markdown file in your downloads folder.
+            *   **Save to HTML** {{ic_html}} : Saves the full conversation to an HTML file in your downloads folder.
+            *   **Print Chat** {{ic_print}} : Prints the full conversation. You can save as PDF here too. You can select page size too.
+            *   **PDF Button** {{ic_pdfnew}} : Creates a PDF of the entire chat in your downloads folder.
             
             ### Standard Buttons (Always in the menu)
-            *   **Stream Button**: Toggles streaming responses on or off.
-            *   **Reasoning Button**: Appears only for models that support reasoning. Toggles reasoning on or off. When enabled, the model uses deeper thinking for more thoughtful responses. When disabled, it explicitly instructs the model not to use reasoning. Reasoning traces are not returned in the response. Defaults to medium effort. If you long-press on the button if it is selected, you can enable Advanced Reasoning settings(see below). 
-            *   **Max Tokens Button**: Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
-            *   **API Key Button**: Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
-            *   **Notification Button**: Receive notifications when the app is backgrounded and you receive a response.
-            *   **Scroll Buttons**: Shows up and down buttons to scroll. Tap to go to top or bottom of chat respectively. Long-press to scroll one screen's length in respective direction.
-            *   **Extended Dock Button**: Toggles extended dock on or off. If on, an extra row is added to the bottom dock. Long-Press to show a Presets button above the Send button for quick access to presets. Long-press again to hide.
-            *   **Web Search Button**: Enables web search(model gets web search information) for **one response only** (auto-off, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!
-            *   **Paste Button**: Pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. (This button only appears when extended dock is on.)
-            *   **Speech-to-Text Button**: Appears when the prompt box is empty, or a Clear Prompt button when the prompt box has some text. (This button only appears when extended dock is on.)
-            *   **Conversation Button**: Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
-            *   **Biometric Button**: Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
-            *   **Presets Button**: Opens the Presets screen. These enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
-            *   **Fonts Button**: Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
-            *   **Screen Button**: When active it overrides the system settings and keeps the screen on.
+            *   **Stream Button** {{ic_stream}} : Toggles streaming responses on or off.
+            *   **Reasoning Button** {{ic_reasoning}} : Appears only for models that support reasoning. Toggles reasoning on or off. When enabled, the model uses deeper thinking for more thoughtful responses. When disabled, it explicitly instructs the model not to use reasoning. Reasoning traces are not returned in the response. Defaults to medium effort. If you long-press on the button if it is selected, you can enable Advanced Reasoning settings(see below). 
+            *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
+            *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
+            *   **Notification Button** {{ic_notinew}} : Receive notifications when the app is backgrounded and you receive a response.
+            *   **Scroll Buttons** {{ic_scrollers}} : Shows up and down buttons to scroll. Tap to go to top or bottom of chat respectively. Long-press to scroll one screen's length in respective direction.
+            *   **Extended Dock Button** {{ic_extend}} : Toggles extended dock on or off. If on, an extra row is added to the bottom dock. Long-Press to show a Presets button above the Send button for quick access to presets. Long-press again to hide.
+            *   **Web Search Button** {{ic_websearch}} : Enables web search(model gets web search information) for **one response only** (auto-off, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!
+            *   **Paste Button** {{ic_paste}} : Pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. (This button only appears when extended dock is on.)
+            *   **Speech-to-Text Button** {{ic_mic}} : Appears when the prompt box is empty, or a Clear Prompt button when the prompt box has some text. (This button only appears when extended dock is on.)
+            *   **Conversation Button** {{ic_convo}} : Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
+            *   **Biometric Button** {{ic_fingerprint}} : Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
+            *   **Presets Button** {{ic_presets}} : Opens the Presets screen. These enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
+            *   **Fonts Button** {{ic_fonts}} : Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
+            *   **Screen Button** {{ic_backlight}} : When active it overrides the system settings and keeps the screen on.
             ---
 
             ## 📂 App Screens
@@ -269,6 +316,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   Notifications and Connectivity Service: The "Connectivity Service Channel" runs and you can hide that; go into your app settings in the system and go to notifications and you can toggle that notification off. ("Connectivity Service Channel") And the only notifications you will receive(if in the app you have the notification bell active) is if the app is back-grounded and there's either an error or you receive the response from the model. Notifications won't show if app is in the foreground. Notifications are auto-dismissed when returning to the app. Closing the app by swiping it away in Recents will shut down the service properly.
             *   Notifications Buttons: "Dismiss" closes the notification. "Open" will bring oxproxion to the foreground. "Speak" will speak aloud the last AI response. You stop the audio here too by pressing stop, dismissing, or swiping the notification away. This is separate from the main app's text-to-speak function.
             *   If you make a preset titled "Digital Assistant"(case-insensitive), and have oxproxion as your system digital assistant in your Android settings(Settings->Apps->Default apps), this preset will be applied for when you use it as the system digital assistant.
+            *   **Variable Substitution**: Use `{{oxdate}}` (yyyy-MM-dd), `{{oxtime}}` (HH:mm:ss), `{{oxdatetime}}` (ISO), or `{{oxhdt}}` (human-readable) in prompts/system messages. Auto-replaces with current date/time on send.
             *   GitHub Changelogs: <br>[https://github.com/stardomains3/oxproxion/releases](https://github.com/stardomains3/oxproxion/releases)
             ## What You Can Do With oxproxion
 
@@ -357,6 +405,21 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
         """.trimIndent()
 
         markwon.setMarkdown(helpContentTextView, markdownContent)
+        val text = helpContentTextView.text
+        val spannable1 = SpannableStringBuilder(text)
+        iconSpans.forEach { (name, span) ->
+            val placeholder = "{{$name}}"
+            var start = 0
+            while (true) {
+                start = spannable1.indexOf(placeholder, start)
+                if (start == -1) break
+                val end = start + placeholder.length
+                spannable1.replace(start, end, " ")  // Single space for icon slot
+                spannable1.setSpan(span, start, start + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                start += 1
+            }
+        }
+        helpContentTextView.setText(spannable1, TextView.BufferType.SPANNABLE)
         helpContentTextView.movementMethod = LinkMovementMethod.getInstance()
         // Custom handler for licenses link
         val spannable = helpContentTextView.text as? Spannable ?: return

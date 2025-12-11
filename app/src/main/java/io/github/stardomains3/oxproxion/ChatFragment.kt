@@ -108,6 +108,7 @@ import io.noties.markwon.simple.ext.SimpleExtPlugin
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import kotlin.compareTo
 
 
@@ -164,7 +165,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var ttsAvailable = true
     private lateinit var setMaxTokensButton: MaterialButton
     private lateinit var notiButton: MaterialButton
-
+    private lateinit var dateFmt: SimpleDateFormat
+    private lateinit var timeFmt: SimpleDateFormat
+    private lateinit var datetimeFmt: SimpleDateFormat
+    private lateinit var humanFmt: SimpleDateFormat
     private lateinit var fontsButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
@@ -551,6 +555,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             })
             .build()
+        // 🔥 Cache formatters (init once)
+        dateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        timeFmt = SimpleDateFormat("HH:mm:ss", Locale.US)
+        datetimeFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
+            timeZone = TimeZone.getDefault()
+        }
+        humanFmt = SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault()).apply {
+            timeZone = TimeZone.getDefault()
+        }
         setupRecyclerView()
 
         // In onViewCreated(), after initializing chatEditText and before setupClickListeners()
@@ -1267,7 +1280,11 @@ $cleanContent
                         "$fileSections\n\nPlease analyze these attached files."
                     }
                 }
-                if (prompt.isNotBlank() || selectedImageBytes != null) {
+                val substitutedPrompt = substituteVariables(prompt)  //#subpromptcode
+                val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage()//#subpromptcode
+                val substitutedSystemPrompt = substituteVariables(systemMessage.prompt)//#subpromptcode
+                //if (prompt.isNotBlank() || selectedImageBytes != null) { //#subpromptcode replaced
+                if (substitutedPrompt.isNotBlank() || selectedImageBytes != null) { //#subpromptcode
                     /* if (!ForegroundService.isRunningForeground) {
                          ChatServiceGate.shouldRunService = true
                          startForegroundService()
@@ -1286,12 +1303,14 @@ $cleanContent
                         val base64 = Base64.encodeToString(selectedImageBytes, Base64.NO_WRAP)
                         val imageUrl = "data:$selectedImageMime;base64,$base64"
                         buildJsonArray {
-                            if (prompt.isNotBlank()) {
+                            // if (prompt.isNotBlank()) { //#subpromptcode replaced
+                            if (substitutedPrompt.isNotBlank()) { //#subpromptcode
                                 add(
                                     JsonObject(
                                         mapOf(
                                             "type" to JsonPrimitive("text"),
-                                            "text" to JsonPrimitive(prompt)
+                                            // "text" to JsonPrimitive(prompt) //#subpromptcode replaced
+                                            "text" to JsonPrimitive(substitutedPrompt) //#subpromptcode
                                         )
                                     )
                                 )
@@ -1310,10 +1329,12 @@ $cleanContent
                             )
                         }
                     } else {
-                        JsonPrimitive(prompt)
+                        //  JsonPrimitive(prompt) //#subpromptcode replaced
+                        JsonPrimitive(substitutedPrompt)  //#subpromptcode
                     }
-                    val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage()
-                    viewModel.sendUserMessage(userContent, systemMessage.prompt)
+                    //   val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage() //#subpromptcode commentedout
+                    //   viewModel.sendUserMessage(userContent, systemMessage.prompt) //#subpromptcode replaced
+                    viewModel.sendUserMessage(userContent, substitutedSystemPrompt) //#subpromptcode
                     chatEditText.clearFocus()
                     hideMenu()
                     selectedImageBytes = null
@@ -2833,6 +2854,22 @@ $cleanContent
             }
         } else {
             Toast.makeText(requireContext(), "Item not visible; cannot capture", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun substituteVariables(input: String): String {
+        if (!input.contains("{{ox")) return input  // 🔥 EARLY EXIT: Instant if no vars (99% cases)
+
+        val now = Date()
+        return input.replace(Regex("""\{\{ox(\w+)\}\}""")) { match ->
+            val varName = match.groupValues[1].lowercase()
+            when (varName) {
+                "date" -> dateFmt.format(now)
+                "time" -> timeFmt.format(now)
+                "datetime" -> datetimeFmt.format(now)
+                "hdt" -> humanFmt.format(now)
+                else -> match.value
+            }
         }
     }
 
