@@ -477,7 +477,54 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun onModelPreferenceSaved() {
         _modelPreferenceToSave.value = null
     }
+    fun getFormattedChatHistoryTxt(): String {
+        val messages = _chatMessages.value?.filter { message ->
+            val contentText = getMessageText(message.content).trim()
+            contentText.isNotEmpty() && contentText != "working..."
+        } ?: return ""
 
+        val currentModel = _activeChatModel.value ?: "Unknown"
+
+        return buildString {
+            append("Chat with $currentModel")
+            append("\n\n")
+
+            messages.forEachIndexed { index, message ->
+                val rawText = getMessageText(message.content).trim()
+                val contentText = stripMarkdown(rawText)  // Converts MD tables/images/etc. to plain text
+
+                when (message.role) {
+                    "user" -> {
+                        append("👤 User:\n\n")
+                        append(contentText)
+                    }
+                    "assistant" -> {
+                        append("🤖 Assistant:\n\n")
+                        append(contentText)
+                    }
+                }
+
+                if (index < messages.size - 1) {
+                    append("\n\n---\n\n")
+                }
+            }
+        }
+    }
+
+    fun saveTxtToDownloads(rawTxt: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                saveFileToDownloads(
+                    filename = "chat-${System.currentTimeMillis()}.txt",
+                    content = rawTxt,
+                    mimeType = "text/plain"
+                )
+                _toolUiEvent.postValue(Event("✅ TXT saved to Downloads!"))
+            } catch (e: Exception) {
+                _toolUiEvent.postValue(Event("❌ TXT save failed: ${e.message}"))
+            }
+        }
+    }
     fun getFormattedChatHistory(): String {
         return _chatMessages.value?.mapNotNull { message ->
             val contentText = getMessageText(message.content).trim()

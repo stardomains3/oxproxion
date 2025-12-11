@@ -70,7 +70,9 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             "ic_fingerprint" to R.drawable.ic_fingerprint,
             "ic_presets" to R.drawable.ic_presets,
             "ic_fonts" to R.drawable.ic_fonts,
-            "ic_backlight" to R.drawable.ic_backlight
+            "ic_backlight" to R.drawable.ic_backlight,
+             "ic_lan" to R.drawable.ic_lan,
+             "ic_menudot" to R.drawable.ic_menudot,
         )
 
          val iconSpans: Map<String, ImageSpan> = icons.mapValues { (_, resId) ->
@@ -212,12 +214,12 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ##  Menu
 
-            Tap the **menu button** (the one on the lower left with nine dots) to show or hide the main menu. The menu will also hide if you tap outside of it.
+            Tap the **menu button** {{ic_menudot}} (the one on the lower left with nine dots) to show or hide the main menu. The menu will also hide if you tap outside of it.
             If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "qwen/qwen3-30b-a3b-instruct-2507" to fix it and it will automatically correct the prompt in the prompt box.
 
             ### Contextual Buttons (Enabled during a chat)
             *   **Copy Chat** {{ic_copi}} : Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.
-            *   **Save to Markdown** {{ic_markdown}} : Saves the full conversation to a markdown file in your downloads folder.
+            *   **Save to Markdown** {{ic_markdown}} : Saves the full conversation to a markdown file in your downloads folder. Long-press to save to .txt.
             *   **Save to HTML** {{ic_html}} : Saves the full conversation to an HTML file in your downloads folder.
             *   **Print Chat** {{ic_print}} : Prints the full conversation. You can save as PDF here too. You can select page size too.
             *   **PDF Button** {{ic_pdfnew}} : Creates a PDF of the entire chat in your downloads folder.
@@ -237,6 +239,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Biometric Button** {{ic_fingerprint}} : Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
             *   **Presets Button** {{ic_presets}} : Opens the Presets screen. These enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
             *   **Fonts Button** {{ic_fonts}} : Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
+            *   **LAN Button** {{ic_lan}} : Opens the LAN dialog where you can choose your LAN model provider and enter its endpoint.
             *   **Screen Button** {{ic_backlight}} : When active it overrides the system settings and keeps the screen on.
             ---
 
@@ -263,7 +266,6 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Add to Your List**: Tap any model to add it to your "Select Model" screen.
             *   **Refresh**: The list will refresh when opened.
             
-
             ### "Saved Chats" Screen
             *   **Import/Export**: Use the menu bar icons to manage your saved chats.
             *   **Manage**: Tap the edit button on a chat to **Rename** or **Delete** it.
@@ -272,8 +274,18 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ### "System Message" Screen
             *   **Defaults**: Comes with "Default", "Spelling and Grammar corrector", and "Summarizer".
             *   **Add New**: Use the floating action button to create your own.
+            *   **Hold and Drag** to reorder.
             *   **Manage**: Tap the edit button on a message to **Edit** or **Delete** it.
             *   **Import/Export**: Use the menu bar icons to manage your System Messages.
+            
+             ### "Prompt Library" Screen
+            *  **Access**: Long-press the Presets button.
+            *  Stores a library of prompts you may frequently use.  
+            *  **Add New**: Use the floating action button to create your a new one.
+            *  **Hold and Drag** to reorder.
+            *  **Tap** to copy to the clipboard.
+            *  **Manage**: Tap the edit button on a message to **Edit** or **Delete** it.
+            *  **Import/Export**: Use the menu bar icons to manage your Prompt Library.
 
             ---
             

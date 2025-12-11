@@ -1,0 +1,2 @@
+- Added a Prompt library page for power users. Long-press Presets button to access. It is a library you can make of prompts you might want easy and quick access to. Tap the add button to make a new one. See Help screen for more info.
+- For the contexual buttons that appear for the entire chat in the menu, long-pressing the Markdown button there will save the whole chat to a .txt file in Downloads.

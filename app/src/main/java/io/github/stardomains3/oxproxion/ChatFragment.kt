@@ -1626,17 +1626,14 @@ $cleanContent
             }
         }
         saveMarkdownFileButton.setOnLongClickListener {
-            val chatText = viewModel.getFormattedChatHistory()  // Raw Markdown
+            hideMenu()
+            val chatText = viewModel.getFormattedChatHistoryTxt()
             if (chatText.isNotBlank()) {
-                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Chat History (Markdown)", chatText)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(requireContext(), "Chat copied as Markdown!", Toast.LENGTH_SHORT).show()
-                true  // Consume the long press
+                viewModel.saveTxtToDownloads(chatText)
             } else {
-                Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
-                true
+                Toast.makeText(requireContext(), "Nothing to save", Toast.LENGTH_SHORT).show()
             }
+            true  // Required for onLongClickListener
         }
         saveHtmlButton.setOnClickListener {
             hideMenu()
@@ -1713,6 +1710,26 @@ $cleanContent
                 .add(R.id.fragment_container, PresetsListFragment())
                 .addToBackStack(null)
                 .commit()
+        }
+        presetsButton2.setOnLongClickListener {
+            hideMenu()
+            chatEditText.hideKeyboard()
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, PromptLibraryFragment())
+                .addToBackStack(null)
+                .commit()
+            true
+        }
+        presetsButton.setOnLongClickListener {
+            hideMenu()
+            chatEditText.hideKeyboard()
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, PromptLibraryFragment())
+                .addToBackStack(null)
+                .commit()
+            true
         }
         reasoningButton.setOnLongClickListener {
             if(reasoningButton.isSelected)

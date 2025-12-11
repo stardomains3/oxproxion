@@ -27,6 +27,7 @@ class SharedPreferencesHelper(context: Context) {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
         const val LAN_API_KEY = "lan_api_key"  // NEW
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
+        private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
         private const val KEY_FONT_SIZE = "font_size"
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
         private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
@@ -122,7 +123,19 @@ class SharedPreferencesHelper(context: Context) {
             saveOpenRouterModels(oldModels)
         }
     }
+    fun getCustomPrompts(): List<Prompt> {
+        val jsonString = mainPrefs.getString(KEY_CUSTOM_PROMPTS, null)
+        return if (jsonString != null) {
+            json.decodeFromString(jsonString)
+        } else {
+            emptyList()
+        }
+    }
 
+    fun saveCustomPrompts(prompts: List<Prompt>) {
+        val jsonString = json.encodeToString(prompts)
+        mainPrefs.edit { putString(KEY_CUSTOM_PROMPTS, jsonString) }
+    }
     private fun migrateSelectedSystemMessage() {
         val oldJson = mainPrefs.getString(KEY_SELECTED_SYSTEM_MESSAGE, null)
         if (oldJson != null) {
