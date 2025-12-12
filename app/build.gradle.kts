@@ -24,8 +24,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 127
-        versionName = "2.1.17"
+        versionCode = 128
+        versionName = "2.1.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -108,6 +108,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
+    implementation (libs.okhttp.brotli)
     implementation (libs.androidx.activity.ktx)
     implementation (libs.androidx.fragment.ktx)
     implementation(libs.ktor.client.core)

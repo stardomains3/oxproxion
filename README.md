@@ -1,12 +1,12 @@
 # oxproxion
 
-oxproxion is a versatile and user-centric Android chat application designed to interact with various Language Learning Models (LLMs). It provides a seamless interface for managing conversations, customizing bot personas, and saving chat histories.
+oxproxion is a versatile and user-centric Android chat application designed to interact with various Large Language Models (LLMs). It provides a seamless interface for managing conversations, customizing bot personas, and saving chat histories.
 
 ## ✨ Features
 
 🤖 Multi-Model Support: Switch between different LLM bots and models.
 
-🤖 Chat with OpenRouter models or locally served models using Ollama, LM Studio or llama.cpp.
+🤖 Chat with OpenRouter models or locally served models using Ollama, LM Studio, llama.cpp or MLX LM.
 
 💬 Chat Interface: A clean and intuitive interface for conversing with AI models.
 

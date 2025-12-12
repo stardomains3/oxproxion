@@ -1,7 +1,7 @@
 [versions]
 activityKtx = "1.12.1"
 agp = "8.11.2"
-oss-licenses-plugin = "0.10.9"
+oss-licenses-plugin = "0.10.10"
 oss-licenses-parser = "1.1.0"
 fragmentKtx = "1.8.9"
 gson = "2.13.2"
@@ -72,6 +72,7 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationFragmentKtx" }
 androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-brotli = { module = "com.squareup.okhttp3:okhttp-brotli", version.ref = "okhttp" }
 oss-licenses-parser = { module = "de.philipp-bobek:oss-licenses-parser", version.ref = "oss-licenses-parser" }
 commonmark-task-list = { group = "org.commonmark", name = "commonmark-ext-task-list-items", version.ref = "commonmark" }
 commonmark-autolink = { group = "org.commonmark", name = "commonmark-ext-autolink", version.ref = "commonmark" }

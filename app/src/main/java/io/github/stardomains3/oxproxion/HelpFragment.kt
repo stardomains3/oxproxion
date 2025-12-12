@@ -281,7 +281,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
              ### "Prompt Library" Screen
             *  **Access**: Long-press the Presets button.
             *  Stores a library of prompts you may frequently use.  
-            *  **Add New**: Use the floating action button to create your a new one.
+            *  **Add New**: Use the floating action button to create a new one.
             *  **Hold and Drag** to reorder.
             *  **Tap** to copy to the clipboard.
             *  **Manage**: Tap the edit button on a message to **Edit** or **Delete** it.

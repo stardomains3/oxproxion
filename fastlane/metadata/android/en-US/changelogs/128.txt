@@ -1,0 +1,3 @@
+- Typo/fixes in readme/help.
+- Optimized HTML for when you save a whole chat. Those fun little code block copy buttons will be present and functional.
+- Networking optimization.

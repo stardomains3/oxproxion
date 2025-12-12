@@ -58,6 +58,7 @@ import kotlinx.serialization.json.putJsonArray
 import okhttp3.Cache
 import okhttp3.CompressionInterceptor
 import okhttp3.Gzip
+import okhttp3.brotli.BrotliInterceptor
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
@@ -146,6 +147,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             engine {
                 config {
                     addInterceptor(CompressionInterceptor( Gzip))
+                    addInterceptor(BrotliInterceptor)
                     cache(Cache(cacheDir, 50 * 1024 * 1024))
                     connectTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     readTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
@@ -2032,7 +2034,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     append("<hr style='border: none; border-top: 1px solid #eaecef; margin: 2em 0;'>")
                 }
             }
-        }
+        }.replace(
+            Regex("""<pre[^>]*>.*?</pre>""", RegexOption.DOT_MATCHES_ALL),
+            "<div class=\"code-wrapper\">\$0</div>"
+        )
     }
     fun getFormattedChatHistoryMarkdownandPrint(): String {
         val messages = _chatMessages.value?.filter { message ->
@@ -2108,6 +2113,58 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     // ✅ ViewModel: Update ONLY `buildFullPrintStyledHtml()` (add link wrapping – rest unchanged)
     private fun buildFullPrintStyledHtml(innerHtml: String): String {
+        val copyJs = """
+<script>
+(function() {
+    'use strict';
+    const wrappers = document.querySelectorAll('.code-wrapper');
+    wrappers.forEach(wrapper => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = '📋 Copy';
+        btn.title = 'Copy code to clipboard';
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const pre = wrapper.querySelector('pre');
+            const text = pre.textContent || pre.innerText || '';
+            if (!text) return;
+            
+            const copyFn = (text) => {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).then(success).catch(() => fallback(text));
+                } else {
+                    fallback(text);
+                }
+            };
+            
+            const fallback = (text) => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '-9999px';
+                document.body.appendChild(ta);
+                ta.focus(); ta.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                ok ? success() : fail();
+            };
+            
+            const success = () => {
+                const orig = btn.textContent;
+                btn.textContent = '✅ Copied!'; btn.style.background = '#28a745';
+                setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+            };
+            const fail = () => {
+                btn.textContent = '❌ Failed';
+                setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+            };
+            
+            copyFn(text);
+        });
+        wrapper.appendChild(btn);
+    });
+})();
+</script>
+""".trimIndent()
         return """
 <!DOCTYPE html>
 <html><head>
@@ -2139,7 +2196,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             text-decoration: none; 
             word-break: break-all !important;     /* ✅ Breaks long URLs at chars */
             overflow-wrap: break-word !important; /* ✅ Fallback for older browsers */
-            hyphens: none !important;      
+            hyphens: none !important;             /* ✅ Optional: hyphenate if possible */
         }
         a:hover, a:focus { text-decoration: underline; }
         
@@ -2147,6 +2204,38 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         pre, code { font-family: 'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size: 14px; }
         code { background: #f6f8fa; border-radius: 6px; padding: .2em .4em; }
         pre { background: #f6f8fa; border-radius: 6px; padding: 16px; overflow: auto; margin: 1em 0; }
+        .code-wrapper {
+            position: relative !important;
+            margin: 1em 0 !important;
+        }
+        .code-wrapper pre {
+            margin: 0 !important;
+            position: relative;
+            z-index: 1;
+        }
+        .copy-btn {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    background: #333 !important;
+    color: #fff !important;
+    border: 1px solid #555 !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+    line-height: 1.2;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: background 0.2s;
+}
+.copy-btn:hover {
+    background: #444 !important;
+}
+.copy-btn:active {
+    transform: scale(0.98);
+}
         blockquote { border-left: 4px solid #dfe2e5; color: #6a737d; padding-left: 1em; margin: 1em 0; }
         table { border-collapse: collapse; width: 100%; margin: 1em 0; }
         th, td { border: 1px solid #d0d7de; padding: .75em; text-align: left; }
@@ -2198,12 +2287,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 word-break: break-all !important; 
                 overflow-wrap: break-word !important; 
             }
-            pre { white-space: pre-wrap; }
+            pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    padding: 12px !important;
+    font-size: 10pt !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 1em !important;
+}
+.code-wrapper {
+    position: static !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    margin: 1em 0 !important;
+    width: 100% !important;
+}
+            .copy-btn {
+                display: none !important;
+            }
             @page { margin: 0.5in; }
         }
     </style>
 </head><body>
     <div class="markdown-body">$innerHtml</div>
+    $copyJs
 </body></html>
     """.trimIndent()
     }
