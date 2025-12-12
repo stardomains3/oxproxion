@@ -56,8 +56,6 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
@@ -109,8 +107,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.compareTo
-
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
    // private var isFontUpdate = false
@@ -121,9 +117,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var chatFrameView: FrameLayout
     private var dimOverlay: View? = null
     private var currentSpeakingPosition = -1
-    private lateinit var scrollersButton: MaterialButton
-    private lateinit var screenButton: MaterialButton
-    private lateinit var helpButton: MaterialButton
+    private lateinit var settingsButton: MaterialButton
     private lateinit var presetsButton: MaterialButton
     private lateinit var presetsButton2: MaterialButton
     private lateinit var attachmentButton: MaterialButton
@@ -134,7 +128,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var saveMarkdownFileButton: MaterialButton
     private lateinit var saveHtmlButton: MaterialButton
     private lateinit var printButton: MaterialButton
-    private lateinit var biometricButton: MaterialButton
     private var originalSendIcon: Drawable? = null
     private lateinit var webSearchButton: MaterialButton
     private val viewModel: ChatViewModel by activityViewModels()
@@ -149,22 +142,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var speechButton: MaterialButton
     private lateinit var scrollToTopButton: MaterialButton
     private lateinit var scrollToBottomButton: MaterialButton
-    private lateinit var extendButton: MaterialButton
     private lateinit var convoButton: MaterialButton
     private lateinit var saveChatButton: MaterialButton
     private lateinit var openSavedChatsButton: MaterialButton
     private lateinit var copyChatButton: MaterialButton
     private lateinit var buttonsRow2: LinearLayout
     private lateinit var menuButton: MaterialButton
-    private lateinit var saveapiButton: MaterialButton
-    private lateinit var lanButton: MaterialButton
+    private lateinit var progressBar: View
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
     private lateinit var streamButton: MaterialButton
     private lateinit var reasoningButton: MaterialButton
     private var ttsAvailable = true
-    private lateinit var setMaxTokensButton: MaterialButton
-    private lateinit var notiButton: MaterialButton
     private lateinit var dateFmt: SimpleDateFormat
     private lateinit var timeFmt: SimpleDateFormat
     private lateinit var datetimeFmt: SimpleDateFormat
@@ -193,6 +182,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val content: String,
         val size: Long
     )
+    private var isScrollersEnabled = false     // 🔥 Cache → NO prefs/VM in onScroll
+    private var isScrollProgressEnabled = false
     private var lastContentLength = 0
     private var hasScrolled = false
     private lateinit var textFilePicker: ActivityResultLauncher<String>
@@ -354,14 +345,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
         reasoningButton = view.findViewById(R.id.reasoningButton)
-        notiButton = view.findViewById(R.id.notiButton)
         webSearchButton = view.findViewById(R.id.webSearchButton)
         fontsButton = view.findViewById(R.id.fontsButton)
-        extendButton = view.findViewById(R.id.extendButton)
         scrollToBottomButton = view.findViewById(R.id.scrollToBottomButton)
         scrollToTopButton = view.findViewById(R.id.scrollToTopButton)
-        scrollersButton = view.findViewById(R.id.scrollersButton)
-        screenButton = view.findViewById(R.id.screenButton)
         convoButton  = view.findViewById(R.id.convoButton)
         clearButton = view.findViewById(R.id.clearButton)
         utilityButton = view.findViewById(R.id.utilityButton)
@@ -380,18 +367,17 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         printButton =   view.findViewById(R.id.printButton)
         buttonsRow2 = view.findViewById(R.id.buttonsRow2)
         menuButton = view.findViewById(R.id.menuButton)
+        progressBar = view.findViewById(R.id.progressBar)
+        progressBar.pivotX = 0f
         chatFrameView = view.findViewById(R.id.chatFrameView)
-        saveapiButton = view.findViewById(R.id.saveapiButton)
         attachmentButton = view.findViewById(R.id.attachmentButton)
-        lanButton = view.findViewById(R.id.lanButton)
-        setMaxTokensButton = view.findViewById(R.id.setMaxTokensButton)
         buttonsContainer = view.findViewById(R.id.buttonsContainer)
         modelNameTextView = view.findViewById(R.id.modelNameTextView)
         attachmentPreviewContainer = view.findViewById(R.id.attachmentPreviewContainer)
         previewImageView = view.findViewById(R.id.previewImageView)
         removeAttachmentButton = view.findViewById(R.id.removeAttachmentButton)
         headerContainer = view.findViewById(R.id.headerContainer)
-        helpButton = view.findViewById(R.id.helpButton)
+        settingsButton = view.findViewById(R.id.settingsButton)
         presetsButton = view.findViewById(R.id.presetsButton)
         presetsButton2 = view.findViewById(R.id.presetsButton2)
         arguments?.getString("shared_text")?.let { sharedText ->
@@ -582,7 +568,6 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         pdfGenerator = PdfGenerator(requireContext())
         plusButton = view.findViewById(R.id.plusButton)
         genButton = view.findViewById(R.id.genButton)
-        biometricButton = view.findViewById(R.id.biometricButton)
         setupClickListeners()
         setupPlusButtonListener()
         setupTextFilePicker()
@@ -653,7 +638,26 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
         }
+        viewModel.isExtendedDockEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            utilityButton.visibility = if (isEnabled) View.VISIBLE else View.GONE
 
+            val hasText = !chatEditText.text.isNullOrEmpty()
+            if (isEnabled) {
+                clearButton.visibility = if (hasText) View.VISIBLE else View.GONE
+                speechButton.visibility = if (hasText) View.GONE else View.VISIBLE
+            } else {
+                clearButton.visibility = View.GONE
+                speechButton.visibility = View.GONE
+            }
+        }
+
+        viewModel.isPresetsExtendedEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            // presetsButton2.visibility = if (isEnabled) View.VISIBLE else View.GONE
+            presetsButton2.visibility = if (isEnabled) View.VISIBLE else View.GONE
+
+            // Swap presetsButton
+            presetsButton.visibility = if (presetsButton2.isVisible) View.GONE else View.VISIBLE
+        }
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
             val hasMessages = messages.isNotEmpty()
@@ -854,18 +858,23 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.isWebSearchEnabled.observe(viewLifecycleOwner) { isEnabled ->
             webSearchButton.isSelected = isEnabled
         }
-        viewModel.isScreenEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            screenButton.isSelected = isEnabled
-            if(isEnabled) {
-                requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            }
-            else{
-                requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            }
+        viewModel.isScrollersEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            isScrollersEnabled = isEnabled  // Cache for perf
 
+            if (isScrollersEnabled) {
+                // Initial check (safe post)
+                chatRecyclerView.post {
+                    val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+                    val canScrollDown = chatRecyclerView.canScrollVertically(1)
+                    scrollToTopButton.visibility = if (canScrollUp) View.VISIBLE else View.INVISIBLE
+                    scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
+                }
+            } else {
+                scrollToTopButton.visibility = View.INVISIBLE
+                scrollToBottomButton.visibility = View.INVISIBLE
+            }
         }
         viewModel.isScrollersEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            scrollersButton.isSelected = isEnabled
             if(isEnabled) {
                 chatRecyclerView.post {
                     val canScrollUp = chatRecyclerView.canScrollVertically(-1)
@@ -888,15 +897,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.isAdvancedReasoningOn.observe(viewLifecycleOwner) { isAdvanced ->
             updateReasoningButtonAppearance() // Call helper
         }
-
-        viewModel.isNotiEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            notiButton.isSelected = isEnabled
-         /*   if(isEnabled && !ForegroundService.isRunningForeground ){
-                startForegroundService()
-            }
-            else if (!isEnabled && ForegroundService.isRunningForeground){
-                stopForegroundService()
-            }*/
+        viewModel.isScrollProgressEnabled.observe(viewLifecycleOwner) { enabled ->
+            isScrollProgressEnabled = enabled  // Cache for perf
+            progressBar.visibility = if (enabled) View.VISIBLE else View.GONE
         }
         viewModel.toolUiEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { message ->
@@ -990,6 +993,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatEditText.typeface = typeface ?: Typeface.DEFAULT
         modelNameTextView.typeface = typeface ?: Typeface.DEFAULT
         chatAdapter.updateFont(typeface)
+        if (sharedPreferencesHelper.getKeepScreenOnPreference()) {
+            requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
         val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         if (notificationManager != null) {
             val channels = notificationManager.notificationChannels
@@ -999,7 +1005,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
 
-
+        chatRecyclerView.post { updateScrollProgress() }
         // end onviewcreated
     }
 
@@ -1161,7 +1167,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
-                if(sharedPreferencesHelper.getScrollersPreference())
+                if (isScrollProgressEnabled) {
+                    updateScrollProgress()
+                }
+                if(isScrollersEnabled)
                     chatRecyclerView.post {  // Keep post for layout safety
                         val canScrollUp = chatRecyclerView.canScrollVertically(-1)
                         val canScrollDown = chatRecyclerView.canScrollVertically(1)
@@ -1369,30 +1378,7 @@ $cleanContent
                 .setNegativeButton("Cancel", null)
                 .show()
         }
-        biometricButton.setOnClickListener {
-            val prefs = SharedPreferencesHelper(requireContext())
-            val currentlyOn = prefs.getBiometricEnabled()
 
-            if (currentlyOn) {
-                // simply turn off
-                prefs.saveBiometricEnabled(false)
-                biometricButton.isSelected = false
-                return@setOnClickListener
-            }
-
-            // trying to turn on – check hardware
-            val bm = BiometricManager.from(requireContext())
-            when (bm.canAuthenticate(BIOMETRIC_STRONG)) {
-                BiometricManager.BIOMETRIC_SUCCESS -> {
-                    prefs.saveBiometricEnabled(true)
-                    biometricButton.isSelected = true
-                    // Toast.makeText(requireContext(), "Biometric lock enabled", Toast.LENGTH_SHORT).show()
-                }
-                else -> {
-                    Toast.makeText(requireContext(), "No biometrics available", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
         modelNameTextView.setOnClickListener {
             chatEditText.hideKeyboard()
             val picker = BotModelPickerFragment().apply {
@@ -1686,11 +1672,12 @@ $cleanContent
             }
             true
         }
-        helpButton.setOnClickListener {
+
+        settingsButton.setOnClickListener {
             hideMenu()
             parentFragmentManager.beginTransaction()
                 .hide(this)
-                .add(R.id.fragment_container, HelpFragment())
+                .add(R.id.fragment_container, SettingsFragment())
                 .addToBackStack(null)
                 .commit()
         }
@@ -1742,30 +1729,7 @@ $cleanContent
             }
             return@setOnLongClickListener true
         }
-        saveapiButton.setOnClickListener {
-            hideMenu()
-            val dialog = SaveApiDialogFragment()
-            dialog.show(childFragmentManager, "SaveApiDialogFragment")
-        }
-        lanButton.setOnClickListener {
-            hideMenu()
-            SaveLANDialogFragment().show(childFragmentManager, SaveLANDialogFragment.TAG)
-        }
-        setMaxTokensButton.setOnClickListener {
-            hideMenu()
-            val dialog = MaxTokensDialogFragment()
-            dialog.show(childFragmentManager, "MaxTokensDialogFragment")
-        }
 
-        saveapiButton.setOnLongClickListener {
-            hideMenu()
-            if (viewModel.activeChatApiKey.isBlank()) {
-                Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT).show()
-            } else {
-                viewModel.checkRemainingCredits()
-            }
-            true // Consume the long click
-        }
         modelNameTextView.setOnLongClickListener {
             try {
                 val intent = Intent(Intent.ACTION_VIEW, "https://openrouter.ai/models".toUri())
@@ -1784,10 +1748,7 @@ $cleanContent
         reasoningButton.setOnClickListener {
             viewModel.toggleReasoning()
         }
-        notiButton.setOnClickListener {
 
-            viewModel.toggleNoti()
-        }
         fontsButton.setOnClickListener {
             hideMenu()
 
@@ -1944,39 +1905,6 @@ $cleanContent
             sharedPreferencesHelper.saveConversationModeEnabled(newState)
             convoButton.isSelected = newState
         }
-        extendButton.setOnLongClickListener {
-            val currentState = sharedPreferencesHelper.getExtPreference2()
-            val newState = !currentState
-            sharedPreferencesHelper.saveExtPreference2(newState)
-           // extBG.visibility = if (newState) View.VISIBLE else View.GONE
-            presetsButton2.visibility = if (newState) View.VISIBLE else View.GONE
-            presetsButton.visibility = if (presetsButton2.isVisible) View.GONE else View.VISIBLE
-            true
-        }
-        extendButton.setOnClickListener {
-
-            val currentState = sharedPreferencesHelper.getExtPreference()
-            val newState = !currentState
-            sharedPreferencesHelper.saveExtPreference(newState)
-
-            // Update UI directly (same logic as updateInitialUI)
-            extendButton.isSelected = newState
-            utilityButton.visibility = if (newState) View.VISIBLE else View.GONE
-
-            val hasText = !chatEditText.text.isNullOrEmpty()
-            if (newState) {
-                if (hasText) {
-                    clearButton.visibility = View.VISIBLE
-                    speechButton.visibility = View.GONE
-                } else {
-                    clearButton.visibility = View.GONE
-                    speechButton.visibility = View.VISIBLE
-                }
-            } else {
-                clearButton.visibility = View.GONE
-                speechButton.visibility = View.GONE
-            }
-        }
         systemMessageButton.setOnLongClickListener {
             val defaultMessage = SharedPreferencesHelper(requireContext()).getDefaultSystemMessage()
             SharedPreferencesHelper(requireContext()).saveSelectedSystemMessage(defaultMessage)
@@ -1986,12 +1914,6 @@ $cleanContent
             true
         }
 
-        scrollersButton.setOnClickListener {
-            viewModel.toggleScrollers()
-        }
-        screenButton.setOnClickListener {
-            viewModel.toggleScreen()
-        }
         sendChatButton.setOnLongClickListener {
             val lastPos = chatAdapter.itemCount - 1
             if (lastPos >= 0) {
@@ -2117,8 +2039,6 @@ $cleanContent
         }
         val hasText = !chatEditText.text.isNullOrEmpty()
         convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
-        biometricButton.isSelected = sharedPreferencesHelper.getBiometricEnabled()
-        extendButton.isSelected = isExtended
         utilityButton.visibility = if (isExtended) View.VISIBLE else View.GONE
 
         if (isExtended) {
@@ -2462,7 +2382,6 @@ $cleanContent
             updateSystemMessageButtonState()
             chatEditText.requestFocus()
             viewModel.checkAdvancedReasoningStatus()
-            viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         }
     }
@@ -2472,7 +2391,6 @@ $cleanContent
         updateSystemMessageButtonState()
         chatEditText.requestFocus()
         viewModel.checkAdvancedReasoningStatus()
-        viewModel._isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
        // val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         //notificationManager.cancel(2)
         ForegroundService.dismissNotificationIfNotSpeaking()
@@ -2860,6 +2778,19 @@ $cleanContent
             addUpdateListener { setTextColor(it.animatedValue as Int) }
             start()
         }
+    private fun updateScrollProgress() {
+        val offset = chatRecyclerView.computeVerticalScrollOffset()
+        val extent = chatRecyclerView.computeVerticalScrollExtent()
+        val range = chatRecyclerView.computeVerticalScrollRange() - extent
+
+        if (range > 0f) {
+            val progress = (offset.toFloat() / range).coerceIn(0f, 1f)
+            progressBar.visibility = View.VISIBLE
+            progressBar.scaleX = progress  // GROWS left→right! 🎯
+        } else {
+            progressBar.visibility = View.GONE
+        }
+    }
     private fun captureItemToBitmap(position: Int, format: String) {
         val viewHolder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
         if (viewHolder != null) {

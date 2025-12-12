@@ -73,6 +73,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             "ic_backlight" to R.drawable.ic_backlight,
              "ic_lan" to R.drawable.ic_lan,
              "ic_menudot" to R.drawable.ic_menudot,
+             "ic_prompts" to R.drawable.ic_prompts,
+             "ic_settings" to R.drawable.ic_settings
         )
 
          val iconSpans: Map<String, ImageSpan> = icons.mapValues { (_, resId) ->
@@ -224,23 +226,30 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Print Chat** {{ic_print}} : Prints the full conversation. You can save as PDF here too. You can select page size too.
             *   **PDF Button** {{ic_pdfnew}} : Creates a PDF of the entire chat in your downloads folder.
             
-            ### Standard Buttons (Always in the menu)
-            *   **Stream Button** {{ic_stream}} : Toggles streaming responses on or off.
+            ### Standard Buttons
             *   **Reasoning Button** {{ic_reasoning}} : Appears only for models that support reasoning. Toggles reasoning on or off. When enabled, the model uses deeper thinking for more thoughtful responses. When disabled, it explicitly instructs the model not to use reasoning. Reasoning traces are not returned in the response. Defaults to medium effort. If you long-press on the button if it is selected, you can enable Advanced Reasoning settings(see below). 
-            *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
-            *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
-            *   **Notification Button** {{ic_notinew}} : Receive notifications when the app is backgrounded and you receive a response.
-            *   **Scroll Buttons** {{ic_scrollers}} : Shows up and down buttons to scroll. Tap to go to top or bottom of chat respectively. Long-press to scroll one screen's length in respective direction.
-            *   **Extended Dock Button** {{ic_extend}} : Toggles extended dock on or off. If on, an extra row is added to the bottom dock. Long-Press to show a Presets button above the Send button for quick access to presets. Long-press again to hide.
             *   **Web Search Button** {{ic_websearch}} : Enables web search(model gets web search information) for **one response only** (auto-off, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!
+            *   **Stream Button** {{ic_stream}} : Toggles streaming responses on or off.
+            *   **Conversation Button** {{ic_convo}} : Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
+            *   **Fonts Button** {{ic_fonts}} : Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
+            *   **Presets Button** {{ic_presets}} : Opens the Presets screen.
+            *   **Settings Button** {{ic_settings}} : Opens the Settings screen.
             *   **Paste Button** {{ic_paste}} : Pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. (This button only appears when extended dock is on.)
             *   **Speech-to-Text Button** {{ic_mic}} : Appears when the prompt box is empty, or a Clear Prompt button when the prompt box has some text. (This button only appears when extended dock is on.)
-            *   **Conversation Button** {{ic_convo}} : Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
-            *   **Biometric Button** {{ic_fingerprint}} : Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
-            *   **Presets Button** {{ic_presets}} : Opens the Presets screen. These enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
-            *   **Fonts Button** {{ic_fonts}} : Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
+           
+            ### Settings Screen
+            *   **Extended Dock** {{ic_extend}} : Toggles extended dock on or off. If on, an extra row is added to the bottom dock.
+            *   **Scroll Progress Indicator** : It gives you an indication where you are in the chat.
+            *   **Scroll Buttons on screen** {{ic_scrollers}} : If toggled on, shows up and down buttons to scroll on the chat screen. Tap them to go to top or bottom of chat respectively. Long-press them to scroll one screen's length in respective direction.
+            *   **Presets Button on chat screen** {{ic_presets}} : Option to have Preset button in menu or on chat screen. Presets enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.
+            *   **Keep Screen On** {{ic_backlight}} : When active it overrides the system settings and keeps the screen on.
+            *   **Biometric Check** {{ic_fingerprint}} : Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
+            *   **Notification** {{ic_notinew}} : Receive notifications when the app is backgrounded and you receive a response.
             *   **LAN Button** {{ic_lan}} : Opens the LAN dialog where you can choose your LAN model provider and enter its endpoint.
-            *   **Screen Button** {{ic_backlight}} : When active it overrides the system settings and keeps the screen on.
+            *   **Prompt Library Button** {{ic_prompts}}: Opens the Prompt Library Screen
+            *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
+            *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
+            
             ---
 
             ## 📂 App Screens

@@ -193,24 +193,6 @@
                         android:orientation="horizontal"
                         android:layout_gravity="center_horizontal">
 
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/streamButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_stream"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/reasoningButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -228,69 +210,20 @@
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/setMaxTokensButton"
+                            android:id="@+id/webSearchButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_ruler"
+                            app:icon="@drawable/ic_websearch"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
                             app:iconSize="28dp"
                             app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:insetLeft="0dp"
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/biometricButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:layout_marginEnd="14dp"
-                            app:icon="@drawable/ic_fingerprint"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/saveapiButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_key"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-                        <!--  <com.google.android.material.button.MaterialButton
-                              android:id="@+id/soundButton"
-                              style="@style/Widget.Material3.Button.IconButton.Filled"
-                              app:icon="@drawable/ic_mobilesound"
-                              android:layout_width="48dp"
-                              android:layout_height="48dp"
-                              app:iconGravity="textStart"
-                              app:iconSize="28dp"
-                              app:cornerRadius="24dp"
-                              android:layout_marginEnd="14dp"
-                              android:insetTop="0dp"
-                              android:insetBottom="0dp"
-                              android:insetLeft="0dp"
-                              android:insetRight="0dp"
-                              app:iconTint="#A8A8A8"
-                              app:backgroundTint="@color/button_background_col"/>-->
-
 
 
 
@@ -304,25 +237,9 @@
                         android:layout_marginTop="12dp"
                         android:layout_gravity="center_horizontal">
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/extendButton"
+                            android:id="@+id/streamButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_extend"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            android:layout_marginEnd="14dp"
-                            app:cornerRadius="24dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/webSearchButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_websearch"
+                            app:icon="@drawable/ic_stream"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -335,71 +252,10 @@
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
-
-
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/convoButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
                             app:icon="@drawable/ic_convo"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/helpButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_help"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/notiButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_notinew"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-
-
-
-                    </LinearLayout>
-                    <LinearLayout
-                        android:id="@+id/buttonsRowAux"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="12dp"
-                        android:layout_gravity="center_horizontal">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/screenButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_backlight"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:iconGravity="textStart"
@@ -421,40 +277,8 @@
                             app:iconGravity="textStart"
                             app:iconSize="28dp"
                             app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
                             android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/lanButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_lan"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
                             android:layout_marginEnd="14dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            app:iconTint="#A8A8A8"
-                            app:backgroundTint="@color/button_background_col"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/scrollersButton"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            app:icon="@drawable/ic_scrollers"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:iconGravity="textStart"
-                            app:iconSize="28dp"
-                            app:cornerRadius="24dp"
-                            android:layout_marginEnd="14dp"
-                            android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:insetLeft="0dp"
                             android:insetRight="0dp"
@@ -471,10 +295,38 @@
                             app:cornerRadius="24dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
+                            android:layout_marginEnd="14dp"
                             android:insetLeft="0dp"
                             android:insetRight="0dp"
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/settingsButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:icon="@drawable/ic_settings"
+                            app:iconSize="28dp"
+                            app:iconGravity="textStart"
+                            app:cornerRadius="24dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"/>
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/buttonsRowAux"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        android:layout_gravity="center_horizontal">
+
                     </LinearLayout>
 
                     <LinearLayout
@@ -483,6 +335,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:orientation="horizontal"
+                        android:padding="8dp"
+                        android:background="@drawable/bg_charcoal_rounded"
                         android:layout_gravity="center_horizontal">
 
                         <com.google.android.material.button.MaterialButton
@@ -678,6 +532,15 @@
                     app:backgroundTint="@color/button_background_col" />
 
             </LinearLayout>
+            <View
+                android:id="@+id/progressBar"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_gravity="top"
+                android:background="#6D2E0F"
+                android:scaleX="0"
+                android:visibility="visible"
+                android:elevation="4dp" />
         </FrameLayout>
 
         <LinearLayout

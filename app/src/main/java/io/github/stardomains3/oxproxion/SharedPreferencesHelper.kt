@@ -28,6 +28,7 @@ class SharedPreferencesHelper(context: Context) {
         const val LAN_API_KEY = "lan_api_key"  // NEW
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
+        private const val KEY_SCROLL_PROGRESS_ENABLED = "scroll_progress_enabled"
         private const val KEY_FONT_SIZE = "font_size"
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
         private const val KEY_CLEAR_CHAT_DEFAULT2 = "clear_chat_default2"
@@ -197,7 +198,10 @@ class SharedPreferencesHelper(context: Context) {
     fun saveSortOrder(sortOrder: SortOrder) {
         mainPrefs.edit { putString(KEY_SORT_ORDER, sortOrder.name) }
     }
-
+    fun getScrollProgressEnabled(): Boolean = mainPrefs.getBoolean(KEY_SCROLL_PROGRESS_ENABLED, true)  // 🔥 Default TRUE
+    fun saveScrollProgressEnabled(enabled: Boolean) = mainPrefs.edit {
+        putBoolean(KEY_SCROLL_PROGRESS_ENABLED, enabled)
+    }
     fun getSortOrder(): SortOrder {
         val sortOrderName = mainPrefs.getString(KEY_SORT_ORDER, SortOrder.ALPHABETICAL.name)
         return SortOrder.valueOf(sortOrderName ?: SortOrder.ALPHABETICAL.name)

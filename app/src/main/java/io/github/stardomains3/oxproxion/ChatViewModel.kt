@@ -194,20 +194,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isReasoningEnabled: LiveData<Boolean> = _isReasoningEnabled
     private val _isAdvancedReasoningOn = MutableLiveData(false)
     val isAdvancedReasoningOn: LiveData<Boolean> = _isAdvancedReasoningOn
-    val _isNotiEnabled = MutableLiveData<Boolean>(false)
-    val isNotiEnabled: LiveData<Boolean> = _isNotiEnabled
     val _isWebSearchEnabled = MutableLiveData<Boolean>(false)
     val isWebSearchEnabled: LiveData<Boolean> = _isWebSearchEnabled
     val _isScrollersEnabled = MutableLiveData<Boolean>(false)
     val isScrollersEnabled: LiveData<Boolean> = _isScrollersEnabled
-    val _isScreenEnabled = MutableLiveData<Boolean>(false)
-    val isScreenEnabled: LiveData<Boolean> = _isScreenEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private val _toolUiEvent = MutableLiveData<Event<String>>()
     val toolUiEvent: LiveData<Event<String>> = _toolUiEvent
     private val _isChatLoading = MutableLiveData(false)
     val isChatLoading: LiveData<Boolean> = _isChatLoading
+    private val _isExtendedDockEnabled = MutableLiveData<Boolean>()
+    val isExtendedDockEnabled: LiveData<Boolean> = _isExtendedDockEnabled
+    private val _isPresetsExtendedEnabled = MutableLiveData<Boolean>()
+    val isPresetsExtendedEnabled: LiveData<Boolean> = _isPresetsExtendedEnabled
     private var networkJob: Job? = null
     private val _autosendEvent = MutableLiveData<Event<Unit>>()
     val autosendEvent: LiveData<Event<Unit>> = _autosendEvent
@@ -215,6 +215,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val userScrolledDuringStream: LiveData<Boolean> = _userScrolledDuringStream
     private val _presetAppliedEvent = MutableLiveData<Event<Unit>>()
     val presetAppliedEvent: LiveData<Event<Unit>> = _presetAppliedEvent
+    private val _isScrollProgressEnabled = MutableLiveData<Boolean>()
+    val isScrollProgressEnabled: LiveData<Boolean> = _isScrollProgressEnabled
 
     fun signalPresetApplied() {
         _presetAppliedEvent.value = Event(Unit)
@@ -225,11 +227,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isStreamingEnabled.value = newStremingState
         sharedPreferencesHelper.saveStreamingPreference(newStremingState)
     }
-    fun toggleNoti() {
-        val newNotiState = !(_isNotiEnabled.value ?: true)
-        _isNotiEnabled.value = newNotiState
-        sharedPreferencesHelper.saveNotiPreference(newNotiState)
-
+    fun toggleScrollProgress() {
+        val newValue = !(_isScrollProgressEnabled.value ?: true)  // Default true
+        _isScrollProgressEnabled.value = newValue
+        sharedPreferencesHelper.saveScrollProgressEnabled(newValue)
+    }
+    fun toggleExtendedDock() {
+        val newValue = !(_isExtendedDockEnabled.value ?: false)
+        _isExtendedDockEnabled.value = newValue
+        sharedPreferencesHelper.saveExtPreference(newValue)
+    }
+    fun togglePresetsExtended() {
+        val newValue = !(_isPresetsExtendedEnabled.value ?: false)
+        _isPresetsExtendedEnabled.value = newValue
+        sharedPreferencesHelper.saveExtPreference2(newValue)
     }
     fun toggleWebSearch() {
         val newNotiState = !(_isWebSearchEnabled.value ?: false)
@@ -241,11 +252,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val newValue = !(_isScrollersEnabled.value ?: false)
         _isScrollersEnabled.value = newValue
         sharedPreferencesHelper.saveScrollersPreference(newValue)
-    }
-    fun toggleScreen(){
-        val newValueSc = !(_isScreenEnabled.value ?: false)
-        _isScreenEnabled.value = newValueSc
-        sharedPreferencesHelper.saveKeepScreenOnPreference(newValueSc)
     }
     fun toggleReasoning() {
         val newValue = !(_isReasoningEnabled.value ?: false)
@@ -292,15 +298,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isStreamingEnabled.value = sharedPreferencesHelper.getStreamingPreference()
         _isReasoningEnabled.value = sharedPreferencesHelper.getReasoningPreference()
         _isAdvancedReasoningOn.value = sharedPreferencesHelper.getAdvancedReasoningEnabled()
-        _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
         _isScrollersEnabled.value = sharedPreferencesHelper.getScrollersPreference()
-        _isScreenEnabled.value = sharedPreferencesHelper.getKeepScreenOnPreference()
         _isWebSearchEnabled.value = sharedPreferencesHelper.getWebSearchBoolean()
-        sharedPreferencesHelper.mainPrefs.registerOnSharedPreferenceChangeListener { _, key ->
-            if (key == "noti_enabled") {  // Use the actual key from your companion object
-                _isNotiEnabled.value = sharedPreferencesHelper.getNotiPreference()
-            }
-        }
+        _isExtendedDockEnabled.value = sharedPreferencesHelper.getExtPreference()
+        _isPresetsExtendedEnabled.value = sharedPreferencesHelper.getExtPreference2()
+        _isScrollProgressEnabled.value = sharedPreferencesHelper.getScrollProgressEnabled()
         llmService = LlmService(httpClient, activeChatUrl)
         activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
         _sortOrder.value = sharedPreferencesHelper.getSortOrder()

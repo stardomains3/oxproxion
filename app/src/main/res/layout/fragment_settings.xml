@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000"
+    android:fitsSystemWindows="true"
+    android:padding="16dp"
+    tools:context=".SettingsFragment">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="Settings"
+        app:titleTextColor="@android:color/white"
+        android:background="#1C1C1E"
+        app:navigationIcon="@drawable/is_backarrow" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Extended Dock:"
+                    android:textColor="#F8F8F8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/extendedDockSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:useMaterialThemeColors="true" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Scroll Progress Indicator:"
+                    android:textColor="#F8F8F8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/scrollProgressSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:useMaterialThemeColors="true" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Scroll to Top/Bottom Buttons:"
+                    android:textColor="#F8F8F8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/scrollButtonsSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:useMaterialThemeColors="true" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Presets Button on Chat Screen:"
+                    android:textColor="#F8F8F8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/presetsExtendedSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:useMaterialThemeColors="true" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Keep Screen On:"
+                    android:textColor="#F8F8F8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/keepScreenOnSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:useMaterialThemeColors="true" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Biometrics Check:"
+                    android:textColor="#F8F8F8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/biometricsSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:useMaterialThemeColors="true" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Notifications:"
+                    android:textColor="#F8F8F8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/notificationsSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:useMaterialThemeColors="true" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/lanButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="LAN Settings"
+                app:icon="@drawable/ic_lan"
+                app:iconSize="28dp"
+                app:iconTint="#A8A8A8"
+                app:iconTintMode="src_in"
+                app:iconGravity="start"
+                app:iconPadding="12dp"
+                android:textColor="#F8F8F8"
+                app:strokeColor="#6D2E0F"
+                app:strokeWidth="1dp"
+                app:backgroundTint="#1C1C1E" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/promptsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Prompt Library"
+                app:icon="@drawable/ic_prompts"
+                app:iconSize="28dp"
+                app:iconTint="#A8A8A8"
+                app:iconTintMode="src_in"
+                app:iconGravity="start"
+                app:iconPadding="12dp"
+                android:textColor="#F8F8F8"
+                app:strokeColor="#6D2E0F"
+                app:strokeWidth="1dp"
+                app:backgroundTint="#1C1C1E" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/maxTokensButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Max Tokens"
+                app:icon="@drawable/ic_ruler"
+                app:iconSize="28dp"
+                app:iconTint="#A8A8A8"
+                app:iconTintMode="src_in"
+                app:iconGravity="start"
+                app:iconPadding="12dp"
+                android:textColor="#F8F8F8"
+                app:strokeColor="#6D2E0F"
+                app:strokeWidth="1dp"
+                app:backgroundTint="#1C1C1E" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/apiKeyButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Api Key"
+                app:icon="@drawable/ic_key"
+                app:iconSize="28dp"
+                app:iconTint="#A8A8A8"
+                app:iconTintMode="src_in"
+                app:iconGravity="start"
+                app:iconPadding="12dp"
+                android:textColor="#F8F8F8"
+                app:strokeColor="#6D2E0F"
+                app:strokeWidth="1dp"
+                app:backgroundTint="#1C1C1E" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/creditsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Check Remaining Credits"
+                app:icon="@drawable/ic_credits"
+                app:iconSize="28dp"
+                app:iconTint="#A8A8A8"
+                app:iconTintMode="src_in"
+                app:iconGravity="start"
+                app:iconPadding="12dp"
+                android:textColor="#F8F8F8"
+                app:strokeColor="#6D2E0F"
+                app:strokeWidth="1dp"
+                app:backgroundTint="#1C1C1E" />
+
+            <!-- Help Information Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/helpButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Help Screen"
+                app:icon="@drawable/ic_help"
+                app:iconSize="28dp"
+                app:iconTint="#A8A8A8"
+                app:iconTintMode="src_in"
+                app:iconGravity="start"
+                app:iconPadding="12dp"
+                android:textColor="#F8F8F8"
+                app:strokeColor="#6D2E0F"
+                app:strokeWidth="1dp"
+                app:backgroundTint="#1C1C1E" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

@@ -1,0 +1,3 @@
+- Settings Changes: Moved less-often used settings into a new Settings screen.
+- Added a scroll progress bar optional setting. It gives you an indication where you are in the chat.
+
