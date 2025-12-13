@@ -1236,6 +1236,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startNewChat() {
+        _isChatLoading.value = true
         _chatMessages.value = emptyList()
         pendingUserImageUri = null
         currentSessionId = null

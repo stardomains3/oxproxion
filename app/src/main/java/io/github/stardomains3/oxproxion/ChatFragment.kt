@@ -779,7 +779,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     }
                 }
             }
-            if (!isAwaiting && sharedPreferencesHelper.getStreamingPreference()) {
+            if (!isAwaiting) {// && sharedPreferencesHelper.getStreamingPreference()) {
                 chatAdapter.finalizeStreaming()
             }
             sendChatButton.isEnabled = true
@@ -900,6 +900,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.isScrollProgressEnabled.observe(viewLifecycleOwner) { enabled ->
             isScrollProgressEnabled = enabled  // Cache for perf
             progressBar.visibility = if (enabled) View.VISIBLE else View.GONE
+        }
+        viewModel.isChatLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                chatAdapter.clearCache()
+            }
+
         }
         viewModel.toolUiEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { message ->
@@ -1215,6 +1221,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         //if (!isFontUpdate) {  // Only stop the service if not a font update (i.e., actual app closure)
         //    stopForegroundService()
       //  }
+        chatAdapter.clearCache()
         val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(2)
 
@@ -1438,6 +1445,7 @@ $cleanContent
             previewImageView.setImageBitmap(null)
             // Add to reset logic
             pendingFiles.clear()
+            chatAdapter.clearCache()
             updateAttachmentButton()
             true
         }
@@ -1470,6 +1478,7 @@ $cleanContent
                     previewImageView.setImageBitmap(null)
                     pendingFiles.clear()
                     updateAttachmentButton()
+                    chatAdapter.clearCache()
                 }
                 .show()
         }

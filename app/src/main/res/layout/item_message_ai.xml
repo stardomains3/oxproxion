@@ -157,6 +157,19 @@
             app:tint="#777777"
             app:layout_constraintStart_toEndOf="@id/shareButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+        <ImageButton
+            android:id="@+id/collapseToggleButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Toggle expand"
+            android:padding="4dp"
+            android:src="@drawable/ic_expand_more"
+            android:visibility="visible"
+            app:tint="#777777"
+            app:layout_constraintStart_toEndOf="@id/ttsButton"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

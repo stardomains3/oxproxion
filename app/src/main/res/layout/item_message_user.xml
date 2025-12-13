@@ -68,7 +68,16 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/messageContainer">
 
-            <!-- New resend button (leftmost) -->
+            <ImageButton
+                android:id="@+id/collapseToggleButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Toggle expand"
+                android:src="@drawable/ic_expand_more"
+                android:visibility="gone"
+                app:tint="#777777" />
             <ImageButton
                 android:id="@+id/resendButton"
                 android:layout_width="32dp"
