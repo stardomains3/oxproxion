@@ -320,6 +320,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ## ℹ️ Other Info
 
             *   An internet connection is required.
+            *   If you want the app to work well while backgrounded, turn off battery optimization and allow background data usage in the system's settings for the app; Android Settings->Apps->oxproxion->App battery usage->Allow Background usage->Unrestricted and Android Settings->Apps->oxproxion->Mobile data usage->enable background data
             *   Review OpenRouter's and its model providers' pricing, privacy, and logging policies on their websites.
             *   The app is licensed under the Apache License 2.0.
             *   This app is not affiliated with OpenRouter.ai.

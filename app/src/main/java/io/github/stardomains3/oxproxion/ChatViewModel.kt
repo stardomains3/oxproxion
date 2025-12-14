@@ -19,6 +19,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -55,7 +56,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.putJsonArray
-import okhttp3.Cache
 import okhttp3.CompressionInterceptor
 import okhttp3.Gzip
 import okhttp3.brotli.BrotliInterceptor
@@ -64,7 +64,6 @@ import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
 import org.commonmark.renderer.text.TextContentRenderer
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.text.SimpleDateFormat
@@ -72,6 +71,7 @@ import java.util.Base64
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 @Serializable
 data class OpenRouterResponse(val data: List<ModelData>)
@@ -137,18 +137,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return fromOr?.isReasoningCapable ?: false
     }
     private fun createHttpClient(): HttpClient {
-        val appContext = getApplication<Application>().applicationContext
-        val cacheDir = File(appContext.cacheDir, "http-cache").apply {
-            if (!exists()) mkdirs()
-        }
-
         return HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             engine {
                 config {
                     addInterceptor(CompressionInterceptor( Gzip))
                     addInterceptor(BrotliInterceptor)
-                    cache(Cache(cacheDir, 50 * 1024 * 1024))
                     connectTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     readTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     writeTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
@@ -217,6 +211,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val presetAppliedEvent: LiveData<Event<Unit>> = _presetAppliedEvent
     private val _isScrollProgressEnabled = MutableLiveData<Boolean>()
     val isScrollProgressEnabled: LiveData<Boolean> = _isScrollProgressEnabled
+    private val _lanModels = MutableLiveData<List<LlmModel>>()
+    val lanModels: LiveData<List<LlmModel>> = _lanModels
+
+    private var lanFetchJob: Job? = null
 
     fun signalPresetApplied() {
         _presetAppliedEvent.value = Event(Unit)
@@ -565,6 +563,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun cancelCurrentRequest() {
         networkJob?.cancel()
+        lanFetchJob?.cancel()
     }
 
     fun sendUserMessage(
@@ -1719,145 +1718,179 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return customModels.find { it.apiIdentifier == id } ?: builtIns.find { it.apiIdentifier == id } }
     fun activeModelIsLan(): Boolean = getActiveLlmModel()?.isLANModel == true
 
-    suspend fun fetchLanModels(): List<LlmModel> {
-        val provider = sharedPreferencesHelper.getLanProvider()
-        return when (provider) {
-            SharedPreferencesHelper.LAN_PROVIDER_LM_STUDIO -> fetchLmStudioModels()
-            SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP -> fetchLlamaCppModels()
-            SharedPreferencesHelper.LAN_PROVIDER_MLX_LM -> fetchLmStudioModels()  // NEW: Reuse LM Studio fetcher
-            else -> fetchOllamaModels() // Default to Ollama
+    // 3. Add this suspend aggregator (calls your existing fetch* funcs; assumes they are suspend)
+    private suspend fun fetchLanModels(provider: String): List<LlmModel> = withContext(Dispatchers.IO) {
+        when (provider) {
+            "llama_cpp" -> fetchLlamaCppModels()  // Your existing func (make suspend + short timeout if not)
+            "lm_studio" -> fetchLmStudioModels()
+            "ollama" -> fetchOllamaModels()
+            "mlx_lm" -> fetchLmStudioModels()  // If you have it; else emptyList()
+            else -> emptyList()
         }
     }
-
-    suspend fun fetchLmStudioModels(): List<LlmModel> {
-        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
-        if (lanEndpoint.isNullOrBlank()) {
-            throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
-        }
-
-        try {
-            val response = httpClient.get("$lanEndpoint/v1/models")
-            if (!response.status.isSuccess()) {
-                throw Exception("Server returned ${response.status}: ${response.status.description}")
-            }
-
-            val responseBody = response.body<JsonObject>()
-            val modelsArray = responseBody["data"]?.jsonArray ?: return emptyList()
-
-            return modelsArray.mapNotNull { modelJson ->
-                try {
-                    val modelObj = modelJson.jsonObject
-                    val id = modelObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
-
-                    // Try to determine capabilities from model name
-                    val isVisionCapable = false
-                    val isReasoningCapable = false
-
-                    LlmModel(
-                        displayName = id,
-                        apiIdentifier = id,
-                        isVisionCapable = isVisionCapable,
-                        isImageGenerationCapable = false, // LM Studio doesn't typically do image generation
-                        isReasoningCapable = isReasoningCapable,
-                        created = System.currentTimeMillis() / 1000,
-                        isFree = true, // Local models are always free
-                        isLANModel = true
-                    )
-                } catch (e: Exception) {
-                 //   Log.e("LmStudioModels", "Failed to parse model: ${e.message}", e)
-                    null // Skip malformed entries
-                }
-            }.sortedBy { it.displayName.lowercase() }
-        } catch (e: Exception) {
-          //  Log.e("LmStudioModels", "Failed to fetch LM Studio models", e)
-            throw e
-        }
-    }
-    suspend fun fetchOllamaModels(): List<LlmModel> {
-        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
-        if (lanEndpoint == null) {
-            throw IllegalStateException("LAN endpoint not configured")
-        }
-
-        val response = httpClient.get("$lanEndpoint/api/tags")
-        if (!response.status.isSuccess()) {
-            throw Exception("Failed to fetch LAN models: ${response.status}")
-        }
-
-        val responseBody = response.body<JsonObject>()
-        val modelsArray = responseBody["models"]?.jsonArray ?: return emptyList()
-
-        return modelsArray.mapNotNull { modelJson ->
+    // 2. Add this public trigger function (cancellable fetch)
+    fun startLanModelsFetch() {
+        val provider = getCurrentLanProvider()
+        lanFetchJob?.cancel()  // Cancel prior fetch
+        lanFetchJob = viewModelScope.launch {
             try {
-                val modelObj = modelJson.jsonObject
-                val name = modelObj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                val modifiedAtStr = modelObj["modified_at"]?.jsonPrimitive?.content
-                val size = modelObj["size"]?.jsonPrimitive?.longOrNull ?: 0L
-                val details = modelObj["details"]?.jsonObject
-
-                // Try to determine capabilities from model name and details
-                val isVisionCapable = false
-                val isImageGenerationCapable = false // Ollama doesn't typically do image generation
-                val isReasoningCapable = false
-
-                LlmModel(
-                    displayName = name,
-                    apiIdentifier = name,
-                    isVisionCapable = isVisionCapable,
-                    isImageGenerationCapable = isImageGenerationCapable,
-                    isReasoningCapable = isReasoningCapable,
-                    created = System.currentTimeMillis() / 1000,
-                    isFree = true, // Local models are always free
-                    isLANModel = true // All models from LAN endpoint are LAN models
-                )
+                _lanModels.value = fetchLanModels(provider)
+            } catch (e: CancellationException) {
+                if (e is TimeoutCancellationException) {  // Timeout: Show specific error
+                    _lanModels.value = emptyList()
+                    _toolUiEvent.value = Event("LAN models timeout (10s, $provider). Check server/endpoint.")
+                }
+                // else: Silent user-cancel (back/refresh)
             } catch (e: Exception) {
-                null // Skip malformed entries
+                _lanModels.value = emptyList()
+                _toolUiEvent.value = Event("LAN fetch failed ($provider): ${e.message}")
             }
-        }.sortedBy { it.displayName.lowercase() }
+        }
+    }
+    suspend fun fetchLmStudioModels(): List<LlmModel> = withTimeout(10000) {  // 10s MAX total
+        withContext(Dispatchers.IO) {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint.isNullOrBlank()) {
+                throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
+            }
+
+            try {
+                val response = httpClient.get("$lanEndpoint/v1/models") {
+                    timeout { requestTimeoutMillis = 10000 }  // Per-call short timeout (Ktor)
+                }
+                if (!response.status.isSuccess()) {
+                    throw Exception("Server returned ${response.status}: ${response.status.description}")
+                }
+
+                val responseBody = response.body<JsonObject>()
+                val modelsArray = responseBody["data"]?.jsonArray ?: return@withContext emptyList()
+
+                modelsArray.mapNotNull { modelJson ->
+                    try {
+                        val modelObj = modelJson.jsonObject
+                        val id = modelObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+
+                        // Try to determine capabilities from model name
+                        val isVisionCapable = false
+                        val isReasoningCapable = false
+
+                        LlmModel(
+                            displayName = id,
+                            apiIdentifier = id,
+                            isVisionCapable = isVisionCapable,
+                            isImageGenerationCapable = false, // LM Studio doesn't typically do image generation
+                            isReasoningCapable = isReasoningCapable,
+                            created = System.currentTimeMillis() / 1000,
+                            isFree = true, // Local models are always free
+                            isLANModel = true
+                        )
+                    } catch (e: Exception) {
+                        // Log.e("LmStudioModels", "Failed to parse model: ${e.message}", e)
+                        null // Skip malformed entries
+                    }
+                }.sortedBy { it.displayName.lowercase() }
+            } catch (e: Exception) {
+                // Log.e("LmStudioModels", "Failed to fetch LM Studio models", e)
+                throw e
+            }
+        }
+    }
+    suspend fun fetchOllamaModels(): List<LlmModel> = withTimeout(10000) {  // 10s MAX total
+        withContext(Dispatchers.IO) {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint == null) {
+                throw IllegalStateException("LAN endpoint not configured")
+            }
+
+            try {
+                val response = httpClient.get("$lanEndpoint/api/tags") {
+                    timeout { requestTimeoutMillis = 10000 }  // Per-call short timeout (Ktor)
+                }
+                if (!response.status.isSuccess()) {
+                    throw Exception("Failed to fetch LAN models: ${response.status}")
+                }
+
+                val responseBody = response.body<JsonObject>()
+                val modelsArray = responseBody["models"]?.jsonArray ?: return@withContext emptyList()
+
+                modelsArray.mapNotNull { modelJson ->
+                    try {
+                        val modelObj = modelJson.jsonObject
+                        val name = modelObj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                        val modifiedAtStr = modelObj["modified_at"]?.jsonPrimitive?.content
+                        val size = modelObj["size"]?.jsonPrimitive?.longOrNull ?: 0L
+                        val details = modelObj["details"]?.jsonObject
+
+                        // Try to determine capabilities from model name and details
+                        val isVisionCapable = false
+                        val isImageGenerationCapable = false // Ollama doesn't typically do image generation
+                        val isReasoningCapable = false
+
+                        LlmModel(
+                            displayName = name,
+                            apiIdentifier = name,
+                            isVisionCapable = isVisionCapable,
+                            isImageGenerationCapable = isImageGenerationCapable,
+                            isReasoningCapable = isReasoningCapable,
+                            created = System.currentTimeMillis() / 1000,
+                            isFree = true, // Local models are always free
+                            isLANModel = true // All models from LAN endpoint are LAN models
+                        )
+                    } catch (e: Exception) {
+                        null // Skip malformed entries
+                    }
+                }.sortedBy { it.displayName.lowercase() }
+            } catch (e: Exception) {
+                // Log.e("OllamaModels", "Failed to fetch Ollama models", e)  // Uncomment if desired
+                throw e
+            }
+        }
     }
 
-    suspend fun fetchLlamaCppModels(): List<LlmModel> {
-        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
-        if (lanEndpoint.isNullOrBlank()) {
-            throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
-        }
-
-        try {
-            val response = httpClient.get("$lanEndpoint/v1/models")
-            if (!response.status.isSuccess()) {
-                throw Exception("Server returned ${response.status}: ${response.status.description}")
+    private suspend fun fetchLlamaCppModels(): List<LlmModel> = withTimeout(10000) {  // 10s MAX total
+        withContext(Dispatchers.IO) {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint.isNullOrBlank()) {
+                throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
             }
 
-            val responseBody = response.body<JsonObject>()
-            val modelsArray = responseBody["models"]?.jsonArray ?: return emptyList()
-
-            return modelsArray.mapNotNull { modelJson ->
-                try {
-                    val modelObj = modelJson.jsonObject
-                    val name = modelObj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                    val description = modelObj["description"]?.jsonPrimitive?.content ?: ""
-                    val capabilities = modelObj["capabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
-
-
-
-                    LlmModel(
-                        displayName = if (description.isNotEmpty()) "$name - $description" else name,
-                        apiIdentifier = name,
-                        isVisionCapable = false,
-                        isImageGenerationCapable = false, // llama.cpp doesn't typically do image generation
-                        isReasoningCapable = false,
-                        created = System.currentTimeMillis() / 1000,
-                        isFree = true, // Local models are always free
-                        isLANModel = true
-                    )
-                } catch (e: Exception) {
-                  //  Log.e("LlamaCppModels", "Failed to parse model: ${e.message}", e)
-                    null // Skip malformed entries
+            try {
+                val response = httpClient.get("$lanEndpoint/v1/models") {
+                    timeout { requestTimeoutMillis = 10000 }  // Per-call short timeout (Ktor)
                 }
-            }.sortedBy { it.displayName.lowercase() }
-        } catch (e: Exception) {
-         //   Log.e("LlamaCppModels", "Failed to fetch llama.cpp models", e)
-            throw e
+                if (!response.status.isSuccess()) {
+                    throw Exception("Server returned ${response.status}: ${response.status.description}")
+                }
+
+                val responseBody = response.body<JsonObject>()
+                val modelsArray = responseBody["models"]?.jsonArray ?: return@withContext emptyList()
+
+                modelsArray.mapNotNull { modelJson ->
+                    try {
+                        val modelObj = modelJson.jsonObject
+                        val name = modelObj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                        val description = modelObj["description"]?.jsonPrimitive?.content ?: ""
+                        val capabilities = modelObj["capabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+
+                        LlmModel(
+                            displayName = if (description.isNotEmpty()) "$name - $description" else name,
+                            apiIdentifier = name,
+                            isVisionCapable = false,
+                            isImageGenerationCapable = false, // llama.cpp doesn't typically do image generation
+                            isReasoningCapable = false,
+                            created = System.currentTimeMillis() / 1000,
+                            isFree = true, // Local models are always free
+                            isLANModel = true
+                        )
+                    } catch (e: Exception) {
+                        // Log.e("LlamaCppModels", "Failed to parse model: ${e.message}", e)
+                        null // Skip malformed entries
+                    }
+                }.sortedBy { it.displayName.lowercase() }
+            } catch (e: Exception) {
+                // Log.e("LlamaCppModels", "Failed to fetch llama.cpp models", e)
+                throw e
+            }
         }
     }
     fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()

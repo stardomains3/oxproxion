@@ -37,14 +37,26 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackgroundBorderless" />
-
+                <ImageView
+                    android:id="@+id/menu_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@+id/expand_icon"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_editnote"
+                    android:padding="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/br_circle"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
+                    app:tint="@android:color/white" />
                 <ImageView
                     android:id="@+id/expand_icon"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
-                    android:layout_toStartOf="@+id/menu_button"
+
                     android:layout_marginEnd="8dp"
+                    android:layout_toStartOf="@+id/copy_button"
                     android:src="@drawable/ic_arrow_downward"
                     android:rotation="0"
                     android:padding="8dp"
@@ -54,18 +66,21 @@
                     android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Expand/collapse"
                     app:tint="@android:color/white" />
-
                 <ImageView
-                    android:id="@+id/menu_button"
+                    android:id="@+id/copy_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:src="@drawable/ic_editnote"
+                    android:layout_marginEnd="12dp"
+                    android:src="@drawable/ic_copi"
                     android:padding="8dp"
                     android:background="@drawable/br_circle"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:foreground="?attr/selectableItemBackgroundBorderless"
-                    app:tint="@android:color/white" />
+                    app:tint="@android:color/white"
+                    android:contentDescription="Copy prompt" />
             </RelativeLayout>
 
             <TextView

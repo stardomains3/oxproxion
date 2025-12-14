@@ -162,7 +162,8 @@ class PromptLibraryFragment : Fragment() {
             val clip = ClipData.newPlainText("Prompt", prompt.prompt)
             clipboard.setPrimaryClip(clip)
             recyclerView.postDelayed({
-                parentFragmentManager.popBackStack()
+                parentFragmentManager.popBackStack()  // Pop PromptLibraryFragment
+                parentFragmentManager.popBackStack()  // Pop SettingsFragment → back to ChatFragment
             }, 200)
             Toast.makeText(requireContext(), "Copied to clipboard: ${prompt.title}", Toast.LENGTH_SHORT).show()
 

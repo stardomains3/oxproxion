@@ -1,0 +1,3 @@
+- Added a copy button target for Prompt Library items(tapping on item also copies). After copy, user is now taken directly back to main chat screen.
+- Fix: Timeout reduced to 10 seconds for screen that lists LAN models. Backing out stops the request and won't crash the app.
+- Corrected some small button spacing issues.

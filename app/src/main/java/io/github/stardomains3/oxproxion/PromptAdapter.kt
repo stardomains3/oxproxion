@@ -34,7 +34,7 @@ class PromptAdapter(
         holder.title.setOnClickListener { onItemClick(prompt) }
         holder.promptText.setOnClickListener { onItemClick(prompt) }
         holder.itemView.setOnClickListener { onItemClick(prompt) }
-
+        holder.copyButton.setOnClickListener { onItemClick(prompt) }
         holder.menuButton.setOnClickListener { onMenuClick(holder.menuButton, prompt) }
     }
 
@@ -44,6 +44,7 @@ class PromptAdapter(
         val title: TextView = view.findViewById(R.id.prompt_title)
         val promptText: TextView = view.findViewById(R.id.prompt_prompt)
         val menuButton: ImageView = view.findViewById(R.id.menu_button)
+        val copyButton: ImageView = view.findViewById(R.id.copy_button)
         val expandIcon: ImageView = view.findViewById(R.id.expand_icon)
     }
 }
