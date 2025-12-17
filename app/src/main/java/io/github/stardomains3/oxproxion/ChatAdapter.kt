@@ -424,7 +424,7 @@ class ChatAdapter(
 
             copyButtonuser.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
+                val clip = ClipData.newPlainText("Copied Text", rawUserContent)
                 clipboard.setPrimaryClip(clip)
             }
             copyButtonuser.setOnLongClickListener {
@@ -435,9 +435,8 @@ class ChatAdapter(
                 true
             }
             editButton.setOnClickListener {
-                val messageText = messageTextView.text.toString()
-                if (messageText.isNotBlank()) {
-                    onEditMessage(bindingAdapterPosition, messageText)
+                if (rawUserContent.isNotBlank()) {
+                    onEditMessage(bindingAdapterPosition, rawUserContent)
                 }
             }
             resendButton.setOnClickListener {

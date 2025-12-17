@@ -1,0 +1,1 @@
+- Fix: Resend and Copy buttons for a user message item now properly use the full text of message.
