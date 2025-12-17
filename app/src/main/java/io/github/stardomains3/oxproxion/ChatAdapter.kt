@@ -488,7 +488,8 @@ class ChatAdapter(
 
             // 1. DISPLAY TEXT (Optimized: Uses Cache)
             val finalContent = getPreRenderedContent(message)
-            messageTextView.text = finalContent
+           // messageTextView.text = finalContent
+            markwon.setParsedMarkdown(messageTextView, finalContent as android.text.Spanned)
 
             // 2. LOGIC TEXT (Fast extraction)
             val text = getMessageText(message.content)
