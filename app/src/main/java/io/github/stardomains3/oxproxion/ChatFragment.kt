@@ -1157,6 +1157,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             },
             onSaveText = {position, text ->
                 viewModel.saveTextToDownloads(text)
+            }, onCollapse = {
+                if (isScrollProgressEnabled) {
+                    updateScrollProgress()
+                }
+
+                if(isScrollersEnabled)
+                    chatRecyclerView.post {  // Keep post for layout safety
+                        val canScrollUp = chatRecyclerView.canScrollVertically(-1)
+                        val canScrollDown = chatRecyclerView.canScrollVertically(1)
+                        scrollToTopButton.visibility = if (canScrollUp) View.VISIBLE else View.INVISIBLE
+                        scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
+                    }
             }
 
         )

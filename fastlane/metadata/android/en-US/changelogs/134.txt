@@ -1,0 +1,1 @@
+- After tapping a collapse button, scroll buttons/progress indicators will reflect proper state.

@@ -49,7 +49,8 @@ class ChatAdapter(
     private val onSaveMarkdown: (Int, String) -> Unit,
     private val onCaptureItemToBitmap: (Int, String) -> Unit,
     private val onShowMarkdown: (String) -> Unit,
-    private val onSaveText: (Int, String) -> Unit
+    private val onSaveText: (Int, String) -> Unit,
+    private val onCollapse: () -> Unit
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -361,6 +362,7 @@ class ChatAdapter(
                     collapseToggleButton.setOnClickListener {
                         collapsedStates[msgKey] = !isCollapsed
                         this@ChatAdapter.notifyItemChanged(pos)
+                        onCollapse()
                     }
                 } else {
                     try {
@@ -514,6 +516,7 @@ class ChatAdapter(
                     collapseToggleButton.setImageResource(
                         if (newState) R.drawable.ic_expand_more else R.drawable.ic_expand_less2
                     )
+                    onCollapse()
                 }
             } else {
                 messageTextView.maxLines = Int.MAX_VALUE
