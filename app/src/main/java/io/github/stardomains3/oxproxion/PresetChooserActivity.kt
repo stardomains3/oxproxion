@@ -125,7 +125,7 @@ class PresetChooserActivity : AppCompatActivity() {
 
 
 
-    private fun forwardToMainActivity(sharedText: String, clearChat: Boolean, preset: Preset? = null, autosend: Boolean = false, inputOnly: Boolean = false) {
+    /*private fun forwardToMainActivity(sharedText: String, clearChat: Boolean, preset: Preset? = null, autosend: Boolean = false, inputOnly: Boolean = false) {
         val mainIntent = Intent(this, MainActivity::class.java).apply {
             putExtra("shared_text", sharedText)
             putExtra("clear_chat", clearChat)
@@ -145,6 +145,26 @@ class PresetChooserActivity : AppCompatActivity() {
             if (autosend) putExtra("autosend_preset", true)
             if (inputOnly) putExtra("input_only_preset", true)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        startActivity(mainIntent)
+        finish()
+    }*/
+    private fun forwardToMainActivity(sharedText: String, clearChat: Boolean, preset: Preset? = null, autosend: Boolean = false, inputOnly: Boolean = false) {
+        val mainIntent = Intent(this, MainActivity::class.java).apply {
+            putExtra("shared_text", sharedText)
+            putExtra("clear_chat", clearChat)
+
+            if (preset != null) {
+                putExtra("apply_preset", true)
+                putExtra("preset_id", preset.id) // Only send the ID
+                // No need to send individual fields anymore
+            }
+
+            // Flags for behavior
+            if (autosend) putExtra("autosend_preset", true)
+            if (inputOnly) putExtra("input_only_preset", true)
+
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         startActivity(mainIntent)
         finish()

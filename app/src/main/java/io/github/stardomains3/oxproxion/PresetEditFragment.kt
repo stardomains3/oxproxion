@@ -15,6 +15,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputEditText
+import androidx.core.view.isVisible
 
 class PresetEditFragment : Fragment() {
 
@@ -24,6 +25,7 @@ class PresetEditFragment : Fragment() {
 
     private var editingPreset: Preset? = null
 
+    private lateinit var webSearchSwitch: MaterialSwitch
     private lateinit var titleInput: TextInputEditText
     private lateinit var modelAutoComplete: MaterialAutoCompleteTextView
     private lateinit var systemMessageAutoComplete: MaterialAutoCompleteTextView
@@ -85,9 +87,14 @@ class PresetEditFragment : Fragment() {
             )
         )
 
+        listOf(streamingSwitch, reasoningSwitch, conversationSwitch, webSearchSwitch).forEach { switch ->
+            switch.trackTintList = trackTintSelector
+            switch.thumbTintList = thumbTintSelector
+            switch.thumbTintMode = PorterDuff.Mode.SRC_ATOP
+            switch.trackTintMode = PorterDuff.Mode.SRC_ATOP
+        }
 
-
-        streamingSwitch.trackTintList = trackTintSelector
+      /*  streamingSwitch.trackTintList = trackTintSelector
         streamingSwitch.thumbTintList = thumbTintSelector
         streamingSwitch.thumbTintMode = PorterDuff.Mode.SRC_ATOP
         streamingSwitch.trackTintMode = PorterDuff.Mode.SRC_ATOP
@@ -100,12 +107,13 @@ class PresetEditFragment : Fragment() {
         conversationSwitch.trackTintList = trackTintSelector
         conversationSwitch.thumbTintList = thumbTintSelector
         conversationSwitch.thumbTintMode = PorterDuff.Mode.SRC_ATOP
-        conversationSwitch.trackTintMode = PorterDuff.Mode.SRC_ATOP
+        conversationSwitch.trackTintMode = PorterDuff.Mode.SRC_ATOP*/
     }
 
     private fun initViews(view: View) {
         toolbar = view.findViewById(R.id.toolbar)
         titleInput = view.findViewById(R.id.editPresetTitle)
+        webSearchSwitch = view.findViewById(R.id.switchWebSearch)
         modelAutoComplete = view.findViewById(R.id.autoCompleteModel)
         systemMessageAutoComplete = view.findViewById(R.id.autoCompleteSystemMessage)
         streamingSwitch = view.findViewById(R.id.switchStreaming)
@@ -142,7 +150,7 @@ class PresetEditFragment : Fragment() {
                     val selectedModel = allModels.find { it.displayName == selectedModelName }
                     selectedModel?.let {
                         selectedModelIdentifier = it.apiIdentifier
-                        updateReasoningVisibility()
+                        updateSwitchVisibility()
                     }
                 }
             }
@@ -173,14 +181,35 @@ class PresetEditFragment : Fragment() {
         systemMessageAutoComplete.setText(systemMessageTitle, false)
 
         // Set toggles
+        webSearchSwitch.isChecked = preset.webSearch
         streamingSwitch.isChecked = preset.streaming
         reasoningSwitch.isChecked = preset.reasoning
         conversationSwitch.isChecked = preset.conversationMode
 
         // Update reasoning visibility based on selected model
-        updateReasoningVisibility()
+        updateSwitchVisibility()
     }
+    private fun updateSwitchVisibility() {
+        val modelId = selectedModelIdentifier ?: return
 
+        // --- Reasoning ---
+        val isReasoning = viewModel.isReasoningModel(modelId)
+        // Reset if hidden
+        if (!isReasoning) {
+            reasoningSwitch.isChecked = false
+        }
+        reasoningSwitch.visibility = if (isReasoning) View.VISIBLE else View.GONE
+
+        // --- Web Search ---
+        val isLan = viewModel.isLanModel(modelId)
+        if (isLan) {
+            webSearchSwitch.isChecked = false
+        }
+        webSearchSwitch.visibility = if (isLan) View.GONE else View.VISIBLE
+
+        // Reset if hidden
+
+    }
     private fun updateReasoningVisibility() {
         val modelId = selectedModelIdentifier ?: return
         val isReasoning = viewModel.isReasoningModel(modelId)
@@ -230,9 +259,9 @@ class PresetEditFragment : Fragment() {
         val sysMsg = getSelectedSystemMessage() ?: prefs.getDefaultSystemMessage()
 
         val streaming = streamingSwitch.isChecked
-        val reasoning = if (reasoningSwitch.visibility == View.VISIBLE) reasoningSwitch.isChecked else false
+        val reasoning = if (reasoningSwitch.isVisible) reasoningSwitch.isChecked else false
         val conversationMode = conversationSwitch.isChecked
-
+        val webSearch = webSearchSwitch.isChecked
         val preset = Preset(
             id = editingPreset?.id ?: java.util.UUID.randomUUID().toString(),
             title = title,
@@ -240,7 +269,8 @@ class PresetEditFragment : Fragment() {
             systemMessage = sysMsg,
             streaming = streaming,
             reasoning = reasoning,
-            conversationMode = conversationMode
+            conversationMode = conversationMode,
+            webSearch = webSearch
         )
 
         val repo = PresetRepository(requireContext())

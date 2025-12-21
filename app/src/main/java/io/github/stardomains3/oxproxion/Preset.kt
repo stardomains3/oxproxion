@@ -12,6 +12,7 @@ data class Preset(
     val streaming: Boolean,
     val reasoning: Boolean,
     val conversationMode: Boolean,
+    val webSearch: Boolean = false,
     // UI‑only flag – will NOT be serialised or persisted
     @Transient
     var isExpanded: Boolean = false

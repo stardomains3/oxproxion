@@ -228,7 +228,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             
             ### Standard Buttons
             *   **Reasoning Button** {{ic_reasoning}} : Appears only for models that support reasoning. Toggles reasoning on or off. When enabled, the model uses deeper thinking for more thoughtful responses. When disabled, it explicitly instructs the model not to use reasoning. Reasoning traces are not returned in the response. Defaults to medium effort. If you long-press on the button if it is selected, you can enable Advanced Reasoning settings(see below). 
-            *   **Web Search Button** {{ic_websearch}} : Enables web search(model gets web search information) for **one response only** (auto-off, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!
+            *   **Web Search Button** {{ic_websearch}} : Enables web search(model gets web search information) for **one response only** (auto-off unless overrided with setting, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!
             *   **Stream Button** {{ic_stream}} : Toggles streaming responses on or off.
             *   **Conversation Button** {{ic_convo}} : Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
             *   **Fonts Button** {{ic_fonts}} : Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
@@ -245,6 +245,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Keep Screen On** {{ic_backlight}} : When active it overrides the system settings and keeps the screen on.
             *   **Biometric Check** {{ic_fingerprint}} : Toggles fingerprint biometric security on or off. If on, the app will not open without a successful fingerprint reading by the system. 
             *   **Notification** {{ic_notinew}} : Receive notifications when the app is backgrounded and you receive a response.
+            *   **Auto-disable Web Search**: Prevents the web search from auto turning off after each use.
             *   **LAN Button** {{ic_lan}} : Opens the LAN dialog where you can choose your LAN model provider and enter its endpoint.
             *   **Prompt Library Button** {{ic_prompts}}: Opens the Prompt Library Screen
             *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.

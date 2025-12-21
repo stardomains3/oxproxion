@@ -26,6 +26,7 @@ class SharedPreferencesHelper(context: Context) {
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
         const val LAN_API_KEY = "lan_api_key"  // NEW
+        private const val KEY_DISABLE_WEB_SEARCH_AFTER_SEND = "disable_web_search_after_send"
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
         private const val KEY_SCROLL_PROGRESS_ENABLED = "scroll_progress_enabled"
@@ -165,7 +166,14 @@ class SharedPreferencesHelper(context: Context) {
             effort
         )
     }
+    fun saveDisableWebSearchAfterSend(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_DISABLE_WEB_SEARCH_AFTER_SEND, enabled) }
+    }
 
+    fun getDisableWebSearchAfterSend(): Boolean {
+        // Default to TRUE to preserve current behavior for existing users
+        return mainPrefs.getBoolean(KEY_DISABLE_WEB_SEARCH_AFTER_SEND, true)
+    }
     fun getReasoningExclude(): Boolean = mainPrefs.getBoolean("reasoning_exclude", true)  // Default to true (exclude)
     fun saveReasoningExclude(exclude: Boolean) = mainPrefs.edit {
         putBoolean(

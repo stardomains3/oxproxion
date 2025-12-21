@@ -115,8 +115,16 @@
                 android:id="@+id/switchConversation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
+                android:layout_marginBottom="16dp"
                 android:text="Conversation Mode"
+                android:textColor="@color/white"
+                android:textSize="16sp" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchWebSearch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                android:text="Web Search"
                 android:textColor="@color/white"
                 android:textSize="16sp" />
 

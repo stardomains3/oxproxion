@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
-
-
-
-    text
-
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -34,7 +36,7 @@
             android:background="@drawable/br_circle"
             android:foreground="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Expand/collapse"
-            android:tint="@android:color/white" />
+            app:tint="@android:color/white" />
 
         <ImageView
             android:id="@+id/iconEditPreset"

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -276,8 +275,58 @@ class MainActivity : AppCompatActivity() {
             preset.title.lowercase().trim() == "digital assistant"
         }
     }
-
     private fun handlePresetIntent(intent: Intent) {
+        if (intent.getBooleanExtra("apply_preset", false)) {
+            val presetId = intent.getStringExtra("preset_id") ?: return
+
+            // 1. Fetch the full Preset object from Repository
+            val repository = PresetRepository(this)
+            val preset = repository.findById(presetId)
+
+            if (preset == null) {
+                Toast.makeText(this, "Preset not found (ID: $presetId)", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val vm: ChatViewModel by viewModels()
+            val prefs = SharedPreferencesHelper(this)
+
+            // 2. Validation (Model and System Message still exist)
+            val allModels = (vm.getBuiltInModels() + prefs.getCustomModels()).distinctBy { it.apiIdentifier.lowercase() }
+            if (allModels.none { it.apiIdentifier.equals(preset.modelIdentifier, ignoreCase = true) }) {
+                Toast.makeText(this, "Preset not applied: Model \"${preset.modelIdentifier}\" no longer exists.", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val allMessages = listOf(prefs.getDefaultSystemMessage()) + prefs.getCustomSystemMessages()
+            if (allMessages.none { it.title == preset.systemMessage.title && it.prompt == preset.systemMessage.prompt }) {
+                Toast.makeText(this, "Preset not applied: System message \"${preset.systemMessage.title}\" no longer exists.", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            // 3. Apply the Preset (This now includes Web Search via PresetManager)
+            PresetManager.applyPreset(this, vm, preset)
+            vm.signalPresetApplied()
+
+            // 4. Handle the shared text
+            val sharedText = intent.getStringExtra("shared_text")
+            if (sharedText != null) {
+                if (intent.getBooleanExtra("clear_chat", false)) {
+                    vm.startNewChat()
+                }
+
+                if (intent.getBooleanExtra("autosend_preset", false)) {
+                    vm.consumeSharedTextautosend(sharedText)
+                } else if (intent.getBooleanExtra("input_only_preset", false)) {
+                    vm.consumeSharedText(sharedText)
+                }
+            }
+
+            // Clear the flag to prevent re-applying on rotation
+            intent.removeExtra("apply_preset")
+        }
+    }
+   /* private fun handlePresetIntent(intent: Intent) {
         if (intent.getBooleanExtra("apply_preset", false)) {
             val presetId = intent.getStringExtra("preset_id") ?: return
             val presetTitle = intent.getStringExtra("preset_title") ?: return
@@ -340,7 +389,7 @@ class MainActivity : AppCompatActivity() {
             // Clear the preset flag to prevent re-applying on config change
             intent.removeExtra("apply_preset")
         }
-    }
+    }*/
 
 
 

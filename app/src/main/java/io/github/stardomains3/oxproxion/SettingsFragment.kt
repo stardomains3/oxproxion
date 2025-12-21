@@ -25,6 +25,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         val viewModel: ChatViewModel by activityViewModels()
         val biometricsSwitch = view.findViewById<MaterialSwitch>(R.id.biometricsSwitch)
+        val autoDisableWebSearchSwitch = view.findViewById<MaterialSwitch>(R.id.autoDisableWebSearchSwitch)
         val notificationsSwitch = view.findViewById<MaterialSwitch>(R.id.notificationsSwitch)
         val keepScreenOnSwitch = view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
         val scrollButtonsSwitch = view.findViewById<MaterialSwitch>(R.id.scrollButtonsSwitch)
@@ -39,6 +40,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val lanButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.lanButton)
         biometricsSwitch.isChecked = prefs.getBiometricEnabled()
         notificationsSwitch.isChecked = prefs.getNotiPreference()
+        autoDisableWebSearchSwitch.isChecked = prefs.getDisableWebSearchAfterSend()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
         scrollButtonsSwitch.isChecked = viewModel.isScrollersEnabled.value ?: false
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
@@ -63,6 +65,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         viewModel.isPresetsExtendedEnabled.observe(viewLifecycleOwner) { enabled ->
             presetsExtendedSwitch.isChecked = enabled
+        }
+        autoDisableWebSearchSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveDisableWebSearchAfterSend(isChecked)
         }
         notificationsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveNotiPreference(isChecked)
@@ -130,7 +135,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.biometricsSwitch,
             R.id.extendedDockSwitch,
             R.id.notificationsSwitch,
-            R.id.presetsExtendedSwitch
+            R.id.presetsExtendedSwitch,
+            R.id.autoDisableWebSearchSwitch
         ).forEach { id ->
             view.findViewById<MaterialSwitch>(id)?.styleSwitch()
         }

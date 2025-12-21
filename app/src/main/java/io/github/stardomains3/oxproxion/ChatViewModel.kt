@@ -121,6 +121,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val model = allModels.find { it.apiIdentifier == modelIdentifier }
         return model?.isVisionCapable ?: false
     }
+    fun isLanModel(modelIdentifier: String?): Boolean {
+        if (modelIdentifier == null) return false
+
+        // Check Built-in models
+        val builtIn = getBuiltInModels().find { it.apiIdentifier == modelIdentifier }
+        if (builtIn != null) return builtIn.isLANModel
+
+        // Check Custom models
+        val customModels = sharedPreferencesHelper.getCustomModels()
+        val custom = customModels.find { it.apiIdentifier == modelIdentifier }
+        if (custom != null) return custom.isLANModel
+
+        // Check OpenRouter models (if applicable)
+        val openRouter = sharedPreferencesHelper.getOpenRouterModels().find { it.apiIdentifier == modelIdentifier }
+        if (openRouter != null) return openRouter.isLANModel
+
+        return false
+    }
     fun isReasoningModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
 
@@ -1896,7 +1914,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()
 
     private fun buildWebSearchPlugin(): List<Plugin>? {
-        if (!sharedPreferencesHelper.getWebSearchBoolean()) return null
+        if (!sharedPreferencesHelper.getWebSearchBoolean()||activeModelIsLan()) return null
 
         val engine = getWebSearchEngine()
         val plugin = if (engine != "default") {

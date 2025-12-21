@@ -1,0 +1,3 @@
+- Added ability to have web search on/off for a preset.
+- Added a setting to turn off auto-off web search after each use.
+- Updated some dependencies.

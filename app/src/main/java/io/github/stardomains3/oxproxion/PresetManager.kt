@@ -19,6 +19,8 @@ object PresetManager {
         prefs.saveConversationModeEnabled(preset.conversationMode)
         viewModel._isStreamingEnabled.value = preset.streaming
         viewModel._isReasoningEnabled.value = preset.reasoning
+        prefs.saveWebSearchEnabled(preset.webSearch)
+        viewModel._isWebSearchEnabled.value = preset.webSearch
 
 
         // Update VM LiveData (buttons states)

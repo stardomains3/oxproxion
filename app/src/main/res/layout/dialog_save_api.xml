@@ -11,7 +11,7 @@
         android:id="@+id/dialog_titleapi"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Save OpenRouter Api Key"
+        android:text="Save OpenRouter API Key"
         android:textColor="#C2C2C2"
         android:textAppearance="?attr/textAppearanceHeadline6"
 

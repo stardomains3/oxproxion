@@ -803,12 +803,22 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
 
-            if (!isAwaiting && viewModel.shouldAutoOffWebSearch()) {
+           /* if (!isAwaiting && viewModel.shouldAutoOffWebSearch()) {
                 viewModel.resetWebSearchAutoOff()
                 if (viewModel.isWebSearchEnabled.value == true) {
                     viewModel.toggleWebSearch()  // Turn it off
                     Toast.makeText(requireContext(), "Web search auto-disabled (one-time use)", Toast.LENGTH_SHORT).show()
                 }
+            }*/
+            if (!isAwaiting //&& viewModel.shouldAutoOffWebSearch()
+                &&
+                sharedPreferencesHelper.getDisableWebSearchAfterSend() &&
+                viewModel.isWebSearchEnabled.value == true) {
+                viewModel._isWebSearchEnabled.value = false
+                sharedPreferencesHelper.saveWebSearchEnabled(false)
+                //   viewModel.resetWebSearchAutoOff()
+                // viewModel.toggleWebSearch() // Turn it off
+                Toast.makeText(requireContext(), "Web search auto-disabled (one-time use)", Toast.LENGTH_SHORT).show()
             }
            /* if (isAwaiting) {
                 if (areAnimationsEnabled(requireContext())) {
@@ -1254,7 +1264,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             //  hideMenu()
             viewModel.toggleWebSearch()
             // NEW: Set flag to auto-disable after next response
-            viewModel.setWebSearchAutoOff(true)
+           // viewModel.setWebSearchAutoOff(true)
         }
         webSearchButton.setOnLongClickListener {
             showWebSearchEngineDialog()

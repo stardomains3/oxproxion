@@ -54,6 +54,8 @@ class PresetAdapter( private val onItemClicked: (Preset) -> Unit, private val on
             append(if (preset.reasoning) "On" else "Off")
             append(" • Convo: ")
             append(if (preset.conversationMode) "On" else "Off")
+            append(" • Web Search: ")
+            append(if (preset.webSearch) "On" else "Off")
         }
        // updateSubtitle(holder, preset)
         holder.subtitleContainer.visibility = if (preset.isExpanded) View.VISIBLE else View.GONE
