@@ -1865,7 +1865,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun fetchLlamaCppModels(): List<LlmModel> = withTimeout(10000) {  // 10s MAX total
+    private suspend fun fetchLlamaCppModels(): List<LlmModel> = withTimeout(10000) {
         withContext(Dispatchers.IO) {
             val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
             if (lanEndpoint.isNullOrBlank()) {
@@ -1874,43 +1874,47 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 val response = httpClient.get("$lanEndpoint/v1/models") {
-                    timeout { requestTimeoutMillis = 10000 }  // Per-call short timeout (Ktor)
+                    timeout { requestTimeoutMillis = 10000 }
                 }
                 if (!response.status.isSuccess()) {
                     throw Exception("Server returned ${response.status}: ${response.status.description}")
                 }
 
                 val responseBody = response.body<JsonObject>()
-                val modelsArray = responseBody["models"]?.jsonArray ?: return@withContext emptyList()
+
+                // FIX: Use "data" instead of "models"
+                val modelsArray = responseBody["data"]?.jsonArray ?: return@withContext emptyList()
 
                 modelsArray.mapNotNull { modelJson ->
                     try {
                         val modelObj = modelJson.jsonObject
-                        val name = modelObj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                        val description = modelObj["description"]?.jsonPrimitive?.content ?: ""
-                        val capabilities = modelObj["capabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+                        // FIX: Use "id" instead of "name"
+                        val name = modelObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+
+                        // FIX: Handle missing description/capabilities gracefully
+                        val description = modelObj["status"]?.jsonObject?.get("value")?.jsonPrimitive?.content ?: ""
+                        val capabilities = emptyList<String>() // llama.cpp doesn't provide this in the new format
 
                         LlmModel(
                             displayName = if (description.isNotEmpty()) "$name - $description" else name,
                             apiIdentifier = name,
                             isVisionCapable = false,
-                            isImageGenerationCapable = false, // llama.cpp doesn't typically do image generation
+                            isImageGenerationCapable = false,
                             isReasoningCapable = false,
                             created = System.currentTimeMillis() / 1000,
-                            isFree = true, // Local models are always free
+                            isFree = true,
                             isLANModel = true
                         )
                     } catch (e: Exception) {
-                        // Log.e("LlamaCppModels", "Failed to parse model: ${e.message}", e)
                         null // Skip malformed entries
                     }
                 }.sortedBy { it.displayName.lowercase() }
             } catch (e: Exception) {
-                // Log.e("LlamaCppModels", "Failed to fetch llama.cpp models", e)
                 throw e
             }
         }
     }
+
     fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()
 
     private fun buildWebSearchPlugin(): List<Plugin>? {
