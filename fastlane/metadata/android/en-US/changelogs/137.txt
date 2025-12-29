@@ -1,0 +1,2 @@
+- A user of the app now has the ability to edit an AI message.
+- Updated a dependency.

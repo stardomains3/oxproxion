@@ -46,6 +46,7 @@ class ChatAdapter(
     private val onEditMessage: (Int, String) -> Unit,
     private val onRedoMessage: (Int, JsonElement) -> Unit,
     private val onDeleteMessage: (Int) -> Unit,
+    private val onEditAssistantMessage: (Int, String) -> Unit,
     private val onSaveMarkdown: (Int, String) -> Unit,
     private val onCaptureItemToBitmap: (Int, String) -> Unit,
     private val onShowMarkdown: (String) -> Unit,
@@ -68,6 +69,8 @@ class ChatAdapter(
     // OPTIMIZATION: Conflated Channel for throttling updates
     private val updateChannel = Channel<FlexibleMessage>(Channel.CONFLATED)
     private val messages = mutableListOf<FlexibleMessage>()
+    private var isUserApplyingEdit: Boolean = false
+    private var editTargetPosition: Int = -1
 
     init {
         // OPTIMIZATION: Consumer loop
@@ -122,6 +125,10 @@ class ChatAdapter(
     }
 
     fun setMessages(newMessages: List<FlexibleMessage>) {
+        if (isUserApplyingEdit) {
+            applyEditUpdate(newMessages)
+            return // Stop here, don't run the rest
+        }
         // Clear cache if loading a fresh list or switching chats
         if (newMessages.isEmpty() || (messages.isEmpty() && newMessages.isNotEmpty())) {
             renderCache.clear()
@@ -157,7 +164,26 @@ class ChatAdapter(
         messages.add(message)
         notifyItemInserted(messages.size - 1)
     }
+    private fun applyEditUpdate(newMessages: List<FlexibleMessage>) {
+        // 3. Use the stored position directly (Fast!)
+        val index = editTargetPosition
+        // Safety check: ensure index is valid
+        if (index != -1 && index < messages.size && index < newMessages.size) {
+            val oldMsg = messages[index]
 
+            // 4. Clear cache
+            renderCache.remove(oldMsg)
+
+            // 5. Update list
+            messages[index] = newMessages[index]
+
+            // 6. Notify
+            notifyItemChanged(index)
+        }
+        // 7. Reset BOTH flags
+        isUserApplyingEdit = false
+        editTargetPosition = -1
+    }
     fun removeLastMessage() {
         if (messages.isNotEmpty()) {
             val lastIndex = messages.size - 1
@@ -175,7 +201,10 @@ class ChatAdapter(
     }
 
     // --- DATA HELPERS ---
-
+    fun flagEditUpdate(position: Int) {
+        isUserApplyingEdit = true
+        editTargetPosition = position
+    }
     private fun getMessageText(content: JsonElement): String {
         if (content is JsonPrimitive) return content.content
         if (content is JsonArray) {
@@ -470,7 +499,7 @@ class ChatAdapter(
         private var bgColorAnimator: ObjectAnimator? = null
         private val htmlButton: ImageButton = itemView.findViewById(R.id.htmlButton)
         private val collapseToggleButton: ImageButton = itemView.findViewById(R.id.collapseToggleButton)
-
+        private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
         // Configuration for "Long Message" detection
         private val CHAR_THRESHOLD = 350
 
@@ -619,7 +648,11 @@ class ChatAdapter(
                     onShowMarkdown.invoke(fullRawMarkdown)
                 }
             }
-
+            editButton.setOnClickListener {
+                // Pass the position and the raw text to the fragment
+                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                onEditAssistantMessage(bindingAdapterPosition, fullRawMarkdown)
+            }
             copyButton.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())

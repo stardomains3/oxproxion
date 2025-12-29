@@ -76,6 +76,20 @@
             app:tint="#777777"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+        <ImageButton
+            android:id="@+id/editButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Edit message"
+            android:padding="4dp"
+            app:layout_constraintStart_toEndOf="@id/copyButton"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer"
+            android:src="@drawable/ic_edit"
+            android:visibility="visible"
+            app:tint="#777777" />
 
         <ImageButton
             android:id="@+id/aipdfButton"
@@ -88,7 +102,7 @@
             android:padding="4dp"
             android:src="@drawable/ic_pdfnew"
             app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/copyButton"
+            app:layout_constraintStart_toEndOf="@id/editButton"
             app:layout_constraintTop_toBottomOf="@id/messageContainer" />
         <ImageButton
             android:id="@+id/markdownButton"

@@ -1020,7 +1020,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 notificationManager.deleteNotificationChannel("SilentUpdatesChannel")
             }
         }
+        parentFragmentManager.setFragmentResultListener("edit_request_key", viewLifecycleOwner) { _, bundle ->
+            val position = bundle.getInt("position")
+            val newContent = bundle.getString("content")
 
+            if (newContent != null) {
+                chatAdapter.flagEditUpdate(position)
+                viewModel.updateMessageAt(position, newContent)
+            }
+        }
         chatRecyclerView.post { updateScrollProgress() }
         // end onviewcreated
     }
@@ -1149,7 +1157,14 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     .setCancelable(true)
                     .show()
             },
-
+            onEditAssistantMessage = { position, currentRawText ->
+                val editFragment = EditMessageFragment.newInstance(position, currentRawText)
+                parentFragmentManager.beginTransaction()
+                    .hide(this)
+                    .add(R.id.fragment_container, editFragment)
+                    .addToBackStack(null)
+                    .commit()
+            },
             onSaveMarkdown = { position, rawMarkdown ->
                 viewModel.saveMarkdownToDownloads(rawMarkdown)  // Your ViewModel method
             },

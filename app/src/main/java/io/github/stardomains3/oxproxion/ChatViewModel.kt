@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -650,6 +651,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 networkJob = null
             }
         }
+    }
+    fun updateMessageAt(position: Int, newContent: String) {
+        val currentList = _chatMessages.value ?: return
+        if (position < 0 || position >= currentList.size) {
+            return
+        }
+        val messageToUpdate = currentList[position]
+        val updatedMessage = messageToUpdate.copy(
+            content = JsonPrimitive(newContent),
+            reasoning = null
+        )
+        val newList = currentList.toMutableList()
+        newList[position] = updatedMessage
+        _chatMessages.value = newList
     }
     // NEW: Specialized resend for existing user prompt (keeps original UI bubble intact)
     fun resendExistingPrompt(userMessageIndex: Int, systemMessage: String? = null) {
