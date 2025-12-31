@@ -31,6 +31,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val scrollButtonsSwitch = view.findViewById<MaterialSwitch>(R.id.scrollButtonsSwitch)
         val extendedDockSwitch = view.findViewById<MaterialSwitch>(R.id.extendedDockSwitch)
         val presetsExtendedSwitch = view.findViewById<MaterialSwitch>(R.id.presetsExtendedSwitch)
+        val timeoutButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.timeoutButton)
         val scrollProgressSwitch = view.findViewById<MaterialSwitch>(R.id.scrollProgressSwitch)
         val apiKeyButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.apiKeyButton)
         val promptsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.promptsButton)
@@ -81,6 +82,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 parentFragmentManager.popBackStack()
                 viewModel.checkRemainingCredits()
             }
+        }
+        timeoutButton.setOnClickListener {
+            TimeoutDialogFragment().show(childFragmentManager, TimeoutDialogFragment.TAG)
         }
         scrollButtonsSwitch.setOnCheckedChangeListener { _, isChecked ->
             viewModel.toggleScrollers()  // 🔥 VM saves prefs + notifies Chat instantly

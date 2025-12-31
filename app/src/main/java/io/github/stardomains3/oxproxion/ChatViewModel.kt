@@ -8,7 +8,6 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -156,16 +155,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return fromOr?.isReasoningCapable ?: false
     }
     private fun createHttpClient(): HttpClient {
+        val timeoutMs = sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L
         return HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             engine {
                 config {
-                    addInterceptor(CompressionInterceptor( Gzip))
+                    addInterceptor(CompressionInterceptor(Gzip))
                     addInterceptor(BrotliInterceptor)
-                    connectTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    readTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    writeTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    callTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    writeTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    connectTimeout(60_000L, TimeUnit.MILLISECONDS)
                 }
             }
         }
@@ -281,7 +281,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     // var runningCost: Double = 0.0 // Updated on successful responses
 
     companion object {
-        private const val TIMEOUT_MS = 300_000L
+      //  private const val TIMEOUT_MS = 300_000L
         val THINKING_MESSAGE = FlexibleMessage(
             role = "assistant",
             content = JsonPrimitive("working...")
@@ -1009,7 +1009,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
-        withTimeout(TIMEOUT_MS) {
+        withTimeout(sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L) {
             withContext(Dispatchers.IO) {
                 val sharedPreferencesHelper = SharedPreferencesHelper( getApplication<Application>().applicationContext)
                 val maxTokens = try {
@@ -1523,9 +1523,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
                         engine {
                             config {
-                                connectTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                                readTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                                writeTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                                callTimeout(38_000L, TimeUnit.MILLISECONDS)
+                                readTimeout(38_000L, TimeUnit.MILLISECONDS)
+                                writeTimeout(30_000L, TimeUnit.MILLISECONDS)
+                                connectTimeout(30_000L, TimeUnit.MILLISECONDS)
                             }
                         }
                     }

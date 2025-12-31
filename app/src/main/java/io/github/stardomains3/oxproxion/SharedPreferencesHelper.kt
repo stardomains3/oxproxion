@@ -26,6 +26,7 @@ class SharedPreferencesHelper(context: Context) {
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
         const val LAN_API_KEY = "lan_api_key"  // NEW
+        private const val KEY_TIMEOUT_MINUTES = "timeout_minutes"
         private const val KEY_DISABLE_WEB_SEARCH_AFTER_SEND = "disable_web_search_after_send"
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
@@ -206,6 +207,9 @@ class SharedPreferencesHelper(context: Context) {
     fun saveSortOrder(sortOrder: SortOrder) {
         mainPrefs.edit { putString(KEY_SORT_ORDER, sortOrder.name) }
     }
+    fun getTimeoutMinutes(): Int = mainPrefs.getInt(KEY_TIMEOUT_MINUTES, 5)
+
+    fun saveTimeoutMinutes(minutes: Int) = mainPrefs.edit { putInt(KEY_TIMEOUT_MINUTES, minutes) }
     fun getScrollProgressEnabled(): Boolean = mainPrefs.getBoolean(KEY_SCROLL_PROGRESS_ENABLED, true)  // 🔥 Default TRUE
     fun saveScrollProgressEnabled(enabled: Boolean) = mainPrefs.edit {
         putBoolean(KEY_SCROLL_PROGRESS_ENABLED, enabled)

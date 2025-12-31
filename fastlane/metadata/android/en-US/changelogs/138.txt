@@ -1,0 +1,1 @@
+- Added a setting for the user of the app to change the timeout length for the AI request.
