@@ -126,6 +126,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var plusButton: MaterialButton
     private lateinit var genButton: MaterialButton
     private lateinit var saveMarkdownFileButton: MaterialButton
+    private lateinit var saveEpubButton: MaterialButton
     private lateinit var saveHtmlButton: MaterialButton
     private lateinit var printButton: MaterialButton
     private var originalSendIcon: Drawable? = null
@@ -363,6 +364,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         openSavedChatsButton = view.findViewById(R.id.openSavedChatsButton)
         copyChatButton = view.findViewById(R.id.copyChatButton)
         saveMarkdownFileButton  = view.findViewById(R.id.saveMarkdownFileButton)
+        saveEpubButton  = view.findViewById(R.id.saveEpubButton)
         saveHtmlButton  = view.findViewById(R.id.saveHtmlButton)
         printButton =   view.findViewById(R.id.printButton)
         buttonsRow2 = view.findViewById(R.id.buttonsRow2)
@@ -1655,6 +1657,20 @@ $cleanContent
                 // No need for local Toast - ViewModel handles UI event via _toolUiEvent
             } else {
                 Toast.makeText(requireContext(), "Nothing to save", Toast.LENGTH_SHORT).show()
+            }
+        }
+        saveEpubButton.setOnClickListener {
+            hideMenu()
+            lifecycleScope.launch {
+                // Reuse your existing HTML generation logic
+                val innerHtml = viewModel.getFormattedChatHistoryEpubHtml()
+
+                if (innerHtml.isNotBlank()) {
+                    // Call the new ViewModel function
+                    viewModel.saveEpubToDownloads(innerHtml)
+                } else {
+                    Toast.makeText(requireContext(), "Nothing to save", Toast.LENGTH_SHORT).show()
+                }
             }
         }
         saveMarkdownFileButton.setOnLongClickListener {

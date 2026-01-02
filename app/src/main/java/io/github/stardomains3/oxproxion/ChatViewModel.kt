@@ -70,7 +70,11 @@ import java.text.SimpleDateFormat
 import java.util.Base64
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.zip.CRC32
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.coroutines.cancellation.CancellationException
 
 @Serializable
@@ -1607,7 +1611,388 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         sharedPreferencesHelper.saveSortOrder(sortOrder)
         applySort()
     }
+    suspend fun getFormattedChatHistoryEpubHtml(): String = withContext(Dispatchers.IO) {
+        val messages = _chatMessages.value?.filter { message ->
+            val contentText = getMessageText(message.content).trim()
+            val hasText = contentText.isNotEmpty() && contentText != "working..."
+            val hasImage = when (message.role) {
+                "user" -> (message.content as? JsonArray)?.any {
+                    it.jsonObject["type"]?.jsonPrimitive?.content == "image_url"
+                } == true
+                "assistant" -> !message.imageUri.isNullOrEmpty()
+                else -> false
+            }
+            hasText || hasImage
+        } ?: return@withContext ""
 
+        val currentModel = _activeChatModel.value ?: "Unknown"
+        val appContext = getApplication<Application>().applicationContext
+        val resolver: ContentResolver = appContext.contentResolver
+
+        buildString {
+            // Title
+            append("""
+                <h1 style="text-align: center; margin-bottom: 1em;">Chat with $currentModel</h1>
+                <hr style="border: 0; border-top: 1px solid #000; margin-bottom: 2em;" />
+            """.trimIndent())
+
+            messages.forEachIndexed { index, message ->
+                val rawText = getMessageText(message.content).trim()
+
+                // Fix table spacing and convert to HTML
+                val fixedText = ensureTableSpacing(rawText)
+                val contentHtml = markdownToHtmlFragment(fixedText)
+
+                // We use a simple div with NO margin/padding for the container
+                // We use inline styles for the labels to keep colors but remove icons
+                when (message.role) {
+                    "user" -> {
+                        append("""
+                        <div style="margin: 0; padding: 0;">
+                            <p style="margin: 0 0 0.2em 0; font-weight: bold; color: #0366d6;">User:</p>
+                            <div style="margin: 0; padding: 0;">
+                                $contentHtml
+                            </div>
+                            ${extractAndEmbedUserImages(message.content, resolver)}
+                        </div>
+                        """.trimIndent())
+                    }
+                    "assistant" -> {
+                        append("""
+                        <div style="margin: 0; padding: 0;">
+                            <p style="margin: 0 0 0.2em 0; font-weight: bold; color: #28a745;">Assistant:</p>
+                            <div style="margin: 0; padding: 0;">
+                                $contentHtml
+                            </div>
+                            ${message.imageUri?.let { embedGeneratedImage(it, resolver) } ?: ""}
+                        </div>
+                        """.trimIndent())
+                    }
+                }
+
+                // Minimal separator: Just a small blank space or a very thin line
+                if (index < messages.size - 1) {
+                    append("""
+                        <div style="margin-top: 1em; margin-bottom: 1em; border-top: 1px solid #eee;"></div>
+                    """.trimIndent())
+                }
+            }
+        }
+    }
+    fun saveEpubToDownloads(innerHtml: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val currentModel = _activeChatModel.value ?: "Unknown"
+                val sdf = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
+                val dateTime = sdf.format(Date())
+                val filename = "${currentModel.replace("/", "-")}_$dateTime.epub"
+
+                // Generate the EPUB binary data
+                val epubBytes = createEpubBytes(currentModel, innerHtml)
+
+                // Save to Downloads
+                saveBinaryFileToDownloads(filename, epubBytes, "application/epub+zip")
+
+                _toolUiEvent.postValue(Event("✅ EPUB saved to Downloads!"))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _toolUiEvent.postValue(Event("❌ EPUB save failed: ${e.message}"))
+            }
+        }
+    }
+    private fun createEpubBytes(title: String, contentHtml: String): ByteArray {
+        val outputStream = ByteArrayOutputStream()
+        val zip = ZipOutputStream(outputStream)
+
+        // 1. mimetype (MUST be the first file, and MUST be STORED/Uncompressed for Apple Books)
+        val mimetypeBytes = "application/epub+zip".toByteArray(Charsets.UTF_8)
+        val mimetypeEntry = ZipEntry("mimetype").apply {
+            method = ZipEntry.STORED
+            size = mimetypeBytes.size.toLong()
+            compressedSize = mimetypeBytes.size.toLong()
+            val crc = CRC32()
+            crc.update(mimetypeBytes)
+            this.crc = crc.value
+        }
+        zip.putNextEntry(mimetypeEntry)
+        zip.write(mimetypeBytes)
+        zip.closeEntry()
+
+        // 2. META-INF/container.xml
+        // We use trimMargin("|") to ensure absolutely no whitespace before <?xml
+        val containerXml = """
+            |<?xml version="1.0"?>
+            |<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+                |<rootfiles>
+                    |<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+                |</rootfiles>
+            |</container>
+        """.trimMargin()
+        zip.putNextEntry(ZipEntry("META-INF/container.xml"))
+        zip.write(containerXml.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        // 3. Prepare XHTML Content
+        val xhtmlContent = """
+            |<?xml version="1.0" encoding="utf-8"?>
+|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+|<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+|<head>
+|<title>$title</title>
+|<style>
+|body { font-family: sans-serif; margin: 5px; padding: 0; }
+|img { max-width: 100%; height: auto; display: block; margin-top: 0.5em; }
+|/* CODE BLOCK STYLE */
+|pre {
+|background: transparent;
+|border-left: 4px solid #28a745;
+|padding: 5px 5px 5px 10px;
+|overflow-x: auto;
+|white-space: pre-wrap;
+|font-size: 0.9em;
+|margin: 0.5em 0;
+|}
+|p { margin-top: 0; margin-bottom: 0.5em; }
+|/* LIST STYLES - Explicit indentation to override reader defaults */
+|ul, ol {
+|margin: 0 0 0.5em 0;
+|padding: 0 0 0 2em; /* Force 2em indentation on left */
+|}
+|li {
+|margin: 0;
+|padding: 0;
+|}
+|/* TABLE STYLES */
+|.table-wrapper {
+|width: 100%;
+|overflow-x: auto;
+|margin-bottom: 1em;
+|border: 1px solid #eee;
+|}
+|table {
+|border-collapse: collapse;
+|width: 100%;
+|font-size: 0.9em;
+|margin: 0;
+|}
+|th, td {
+|border: 1px solid #444;
+|padding: 0.4em;
+|text-align: left;
+|vertical-align: top;
+|}
+|th {
+|background-color: #f0f0f0;
+|font-weight: bold;
+|}
+|</style>
+|</head>
+|<body>
+|${makeHtmlXhtmlCompliant(contentHtml)}
+|</body>
+|</html>
+        """.trimMargin()
+
+        // 4. OEBPS/content.opf (The Manifest)
+        val uuid = UUID.randomUUID().toString()
+        val opfContent = """
+            |<?xml version="1.0" encoding="UTF-8"?>
+            |<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+                |<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+                    |<dc:title>$title</dc:title>
+                    |<dc:language>en</dc:language>
+                    |<dc:identifier id="BookId" opf:scheme="UUID">$uuid</dc:identifier>
+                    |<dc:creator opf:role="aut">oxproxion AI</dc:creator>
+                |</metadata>
+                |<manifest>
+                    |<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+                    |<item id="content" href="chat.xhtml" media-type="application/xhtml+xml"/>
+                |</manifest>
+                |<spine toc="ncx">
+                    |<itemref idref="content"/>
+                |</spine>
+            |</package>
+        """.trimMargin()
+        zip.putNextEntry(ZipEntry("OEBPS/content.opf"))
+        zip.write(opfContent.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        // 5. OEBPS/toc.ncx (Table of Contents)
+        val ncxContent = """
+            |<?xml version="1.0" encoding="UTF-8"?>
+            |<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+            |<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+                |<head>
+                    |<meta name="dtb:uid" content="$uuid"/>
+                    |<meta name="dtb:depth" content="1"/>
+                    |<meta name="dtb:totalPageCount" content="0"/>
+                    |<meta name="dtb:maxPageNumber" content="0"/>
+                |</head>
+                |<docTitle><text>$title</text></docTitle>
+                |<navMap>
+                    |<navPoint id="navPoint-1" playOrder="1">
+                        |<navLabel><text>Chat History</text></navLabel>
+                        |<content src="chat.xhtml"/>
+                    |</navPoint>
+                |</navMap>
+            |</ncx>
+        """.trimMargin()
+        zip.putNextEntry(ZipEntry("OEBPS/toc.ncx"))
+        zip.write(ncxContent.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        // 6. OEBPS/chat.xhtml (The actual content)
+        zip.putNextEntry(ZipEntry("OEBPS/chat.xhtml"))
+        zip.write(xhtmlContent.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        zip.close()
+        return outputStream.toByteArray()
+    }
+    private fun createEpubBytesold(title: String, contentHtml: String): ByteArray {
+        val outputStream = ByteArrayOutputStream()
+        val zip = ZipOutputStream(outputStream)
+
+        // 1. mimetype (Must be the first file, uncompressed)
+        // Note: For strict compliance, this should be STORED (uncompressed), but most modern readers
+        // handle DEFLATED fine. For simplicity in Android, we write it normally first.
+        val mimetype = "application/epub+zip".toByteArray(Charsets.UTF_8)
+        zip.putNextEntry(ZipEntry("mimetype"))
+        zip.write(mimetype)
+        zip.closeEntry()
+
+        // 2. META-INF/container.xml (Points to the .opf file)
+        val containerXml = """
+            <?xml version="1.0"?>
+            <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+                <rootfiles>
+                    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+                </rootfiles>
+            </container>
+        """.trimIndent().trim()
+        zip.putNextEntry(ZipEntry("META-INF/container.xml"))
+        zip.write(containerXml.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        // 3. Prepare Content
+        // EPUB requires strict XHTML. Your existing HTML might have unclosed tags (like <br> or <img>).
+        // We do a quick dirty fix to ensure basic XML validity for common tags.
+        val xhtmlContent = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+            <html xmlns="http://www.w3.org/1999/xhtml">
+            <head>
+                <title>$title</title>
+            <style>
+                    body { font-family: sans-serif; margin: 5px; padding: 0; }
+                    img { max-width: 100%; height: auto; display: block; margin-top: 0.5em; }
+                    pre { background: #f4f4f4; padding: 5px; overflow-x: auto; white-space: pre-wrap; font-size: 0.9em; }
+                    /* Remove default massive margins from markdown paragraphs */
+                    p { margin-top: 0; margin-bottom: 0.5em; } 
+                    ul, ol { margin-top: 0; margin-bottom: 0.5em; padding-left: 1.5em; }
+                </style>
+            </head>
+            <body>
+                ${makeHtmlXhtmlCompliant(contentHtml)}
+            </body>
+            </html>
+        """.trimIndent()
+
+        // 4. OEBPS/content.opf (The Manifest)
+        val uuid = UUID.randomUUID().toString()
+        val opfContent = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+                <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+                    <dc:title>$title</dc:title>
+                    <dc:language>en</dc:language>
+                    <dc:identifier id="BookId" opf:scheme="UUID">$uuid</dc:identifier>
+                    <dc:creator opf:role="aut">oxproxion AI</dc:creator>
+                </metadata>
+                <manifest>
+                    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+                    <item id="content" href="chat.xhtml" media-type="application/xhtml+xml"/>
+                </manifest>
+                <spine toc="ncx">
+                    <itemref idref="content"/>
+                </spine>
+            </package>
+        """.trimIndent().trim()
+        zip.putNextEntry(ZipEntry("OEBPS/content.opf"))
+        zip.write(opfContent.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        // 5. OEBPS/toc.ncx (Table of Contents - required for EPUB 2 compatibility)
+        val ncxContent = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+            <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+                <head>
+                    <meta name="dtb:uid" content="$uuid"/>
+                    <meta name="dtb:depth" content="1"/>
+                    <meta name="dtb:totalPageCount" content="0"/>
+                    <meta name="dtb:maxPageNumber" content="0"/>
+                </head>
+                <docTitle><text>$title</text></docTitle>
+                <navMap>
+                    <navPoint id="navPoint-1" playOrder="1">
+                        <navLabel><text>Chat History</text></navLabel>
+                        <content src="chat.xhtml"/>
+                    </navPoint>
+                </navMap>
+            </ncx>
+        """.trimIndent().trim()
+        zip.putNextEntry(ZipEntry("OEBPS/toc.ncx"))
+        zip.write(ncxContent.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        // 6. OEBPS/chat.xhtml (The actual content)
+        zip.putNextEntry(ZipEntry("OEBPS/chat.xhtml"))
+        zip.write(xhtmlContent.toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+
+        zip.close()
+        return outputStream.toByteArray()
+    }
+
+    // Helper to make standard HTML bits more friendly to XML/EPUB parsers
+    private fun makeHtmlXhtmlCompliant(html: String): String {
+        var compliant = html
+            // Close break tags
+            .replace("<br>", "<br/>")
+            // Close horizontal rules
+            .replace("<hr>", "<hr/>")
+            .replace("<hr ", "<hr ")
+            // Ensure images are self-closing
+            .replace(Regex("<img([^>]+)(?<!/)>"), "<img$1 />")
+            // INJECT LIST SEMANTICS
+            .replace("<ul>", "<ul epub:type=\"list\">")
+            .replace("<ol>", "<ol epub:type=\"list\">")
+
+        // WRAP TABLES FOR SCROLLING
+        if (compliant.contains("<table")) {
+            compliant = compliant
+                .replace("<table>", "<div class=\"table-wrapper\"><table epub:type=\"table\">")
+                .replace("</table>", "</table></div>")
+        }
+
+        return compliant
+    }
+    private fun saveBinaryFileToDownloads(filename: String, bytes: ByteArray, mimeType: String) {
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val uri = getApplication<Application>().contentResolver
+            .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw Exception("MediaStore insert failed")
+
+        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+            out.write(bytes)
+        } ?: throw Exception("Cannot open output stream")
+    }
     private fun applySort() {
         val sortedList = when (_sortOrder.value) {
             SortOrder.ALPHABETICAL -> allOpenRouterModels.sortedBy { it.displayName.lowercase() }

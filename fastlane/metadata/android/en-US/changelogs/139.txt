@@ -1,0 +1,2 @@
+- Added scrollbars to prompt box to appear if prompt is larger than what the box can show.
+- A user of the app can now save a chat to an EPUB file. Note: Chats with large tables will not render well in EPUB readers.

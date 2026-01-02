@@ -54,6 +54,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             "ic_copi" to R.drawable.ic_copi,
             "ic_markdown" to R.drawable.ic_markdown,
             "ic_html" to R.drawable.ic_html,
+            "ic_epub" to R.drawable.ic_epub,
             "ic_print" to R.drawable.ic_print,
             "ic_pdfnew" to R.drawable.ic_pdfnew,
             "ic_stream" to R.drawable.ic_stream,
@@ -223,6 +224,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Copy Chat** {{ic_copi}} : Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.
             *   **Save to Markdown** {{ic_markdown}} : Saves the full conversation to a markdown file in your downloads folder. Long-press to save to .txt.
             *   **Save to HTML** {{ic_html}} : Saves the full conversation to an HTML file in your downloads folder.
+            *   **Save to EPUB** {{ic_epub}} : Saves the full conversation to an EPUB file in your downloads folder. Note: Chats with large tables will not render well in EPUB readers.
             *   **Print Chat** {{ic_print}} : Prints the full conversation. You can save as PDF here too. You can select page size too.
             *   **PDF Button** {{ic_pdfnew}} : Creates a PDF of the entire chat in your downloads folder.
             
