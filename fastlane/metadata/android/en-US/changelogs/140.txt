@@ -1,0 +1,2 @@
+- Changes of timeout now take effect on next AI request rather than next restart.
+- Added a setting/option to expand prompt box on focus.

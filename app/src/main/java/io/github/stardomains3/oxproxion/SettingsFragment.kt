@@ -24,6 +24,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val prefs = SharedPreferencesHelper(requireContext())
 
         val viewModel: ChatViewModel by activityViewModels()
+        val expandableInputSwitch = view.findViewById<MaterialSwitch>(R.id.expandableInputSwitch)
         val biometricsSwitch = view.findViewById<MaterialSwitch>(R.id.biometricsSwitch)
         val autoDisableWebSearchSwitch = view.findViewById<MaterialSwitch>(R.id.autoDisableWebSearchSwitch)
         val notificationsSwitch = view.findViewById<MaterialSwitch>(R.id.notificationsSwitch)
@@ -44,6 +45,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         autoDisableWebSearchSwitch.isChecked = prefs.getDisableWebSearchAfterSend()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
         scrollButtonsSwitch.isChecked = viewModel.isScrollersEnabled.value ?: false
+        expandableInputSwitch.isChecked = viewModel.isExpandableInputEnabled.value ?: false
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
         presetsExtendedSwitch.isChecked = viewModel.isPresetsExtendedEnabled.value ?: false
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
@@ -69,6 +71,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         autoDisableWebSearchSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveDisableWebSearchAfterSend(isChecked)
+        }
+        expandableInputSwitch.setOnCheckedChangeListener { _, _ ->
+            viewModel.toggleExpandableInput()
         }
         notificationsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveNotiPreference(isChecked)
@@ -134,6 +139,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         // 🔥 STYLE ALL SWITCHES (your exact code → reusable)
         listOf(
             R.id.scrollButtonsSwitch,
+            R.id.expandableInputSwitch,
             R.id.scrollProgressSwitch,
             R.id.keepScreenOnSwitch,
             R.id.biometricsSwitch,

@@ -22,9 +22,18 @@ class SharedPreferencesHelper(context: Context) {
     val mainPrefs: SharedPreferences = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
     private val gson = Gson() // Kept temporarily for migration only
+    interface OnTimeoutChangedListener {
+        fun onTimeoutChanged(newMinutes: Int)
+    }
 
+    private var timeoutListener: OnTimeoutChangedListener? = null
+
+    fun setTimeoutChangedListener(listener: OnTimeoutChangedListener) {
+        this.timeoutListener = listener
+    }
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
+        private const val KEY_EXPANDABLE_INPUT = "expandable_input_enabled"
         const val LAN_API_KEY = "lan_api_key"  // NEW
         private const val KEY_TIMEOUT_MINUTES = "timeout_minutes"
         private const val KEY_DISABLE_WEB_SEARCH_AFTER_SEND = "disable_web_search_after_send"
@@ -209,7 +218,11 @@ class SharedPreferencesHelper(context: Context) {
     }
     fun getTimeoutMinutes(): Int = mainPrefs.getInt(KEY_TIMEOUT_MINUTES, 5)
 
-    fun saveTimeoutMinutes(minutes: Int) = mainPrefs.edit { putInt(KEY_TIMEOUT_MINUTES, minutes) }
+    fun saveTimeoutMinutes(minutes: Int) {
+        mainPrefs.edit { putInt(KEY_TIMEOUT_MINUTES, minutes) }
+        // Notify the listener if it exists
+        timeoutListener?.onTimeoutChanged(minutes)
+    }
     fun getScrollProgressEnabled(): Boolean = mainPrefs.getBoolean(KEY_SCROLL_PROGRESS_ENABLED, true)  // 🔥 Default TRUE
     fun saveScrollProgressEnabled(enabled: Boolean) = mainPrefs.edit {
         putBoolean(KEY_SCROLL_PROGRESS_ENABLED, enabled)
@@ -222,7 +235,15 @@ class SharedPreferencesHelper(context: Context) {
     fun setOpenRouterInfoDismissed(dismissed: Boolean) {
         mainPrefs.edit { putBoolean(KEY_INFO_BAR_DISMISSED, dismissed) }
     }
+    fun saveExpandableInput(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_EXPANDABLE_INPUT, enabled) }
+    }
 
+    fun getExpandableInput(): Boolean {
+        // Defaulting to FALSE or TRUE based on what you prefer.
+        // I set it to false so it's opt-in, change to true if you want it on by default.
+        return mainPrefs.getBoolean(KEY_EXPANDABLE_INPUT, false)
+    }
     fun hasDismissedOpenRouterInfo(): Boolean {
         return mainPrefs.getBoolean(KEY_INFO_BAR_DISMISSED, false)
     }

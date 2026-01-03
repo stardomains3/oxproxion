@@ -215,6 +215,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isWebSearchEnabled: LiveData<Boolean> = _isWebSearchEnabled
     val _isScrollersEnabled = MutableLiveData<Boolean>(false)
     val isScrollersEnabled: LiveData<Boolean> = _isScrollersEnabled
+    private val _isExpandableInputEnabled = MutableLiveData<Boolean>(false)
+    val isExpandableInputEnabled: LiveData<Boolean> = _isExpandableInputEnabled
     private val _scrollToBottomEvent = MutableLiveData<Event<Unit>>()
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private val _toolUiEvent = MutableLiveData<Event<String>>()
@@ -274,6 +276,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isScrollersEnabled.value = newValue
         sharedPreferencesHelper.saveScrollersPreference(newValue)
     }
+    fun toggleExpandableInput() {
+        val newValue = !(_isExpandableInputEnabled.value ?: false)
+        _isExpandableInputEnabled.value = newValue
+        sharedPreferencesHelper.saveExpandableInput(newValue)
+    }
     fun toggleReasoning() {
         val newValue = !(_isReasoningEnabled.value ?: false)
         _isReasoningEnabled.value = newValue
@@ -293,7 +300,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     //val generatedImages = mutableMapOf<Int, String>()
     private var pendingUserImageUri: String? = null  // String (toString())
-    private val httpClient: HttpClient
+    private var httpClient: HttpClient
     private var llmService: LlmService
     private val sharedPreferencesHelper: SharedPreferencesHelper = SharedPreferencesHelper(application)
     //private val soundManager: SoundManager
@@ -302,6 +309,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // soundManager = SoundManager(application)
         val chatDao = AppDatabase.getDatabase(application).chatDao()
         repository = ChatRepository(chatDao)
+        sharedPreferencesHelper.setTimeoutChangedListener(object :
+            SharedPreferencesHelper.OnTimeoutChangedListener {
+            override fun onTimeoutChanged(newMinutes: Int) {
+                refreshHttpClient()
+            }
+        })
         httpClient = createHttpClient()
         /*httpClient = HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
@@ -322,6 +335,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isScrollersEnabled.value = sharedPreferencesHelper.getScrollersPreference()
         _isWebSearchEnabled.value = sharedPreferencesHelper.getWebSearchBoolean()
         _isExtendedDockEnabled.value = sharedPreferencesHelper.getExtPreference()
+        _isExpandableInputEnabled.value =  sharedPreferencesHelper.getExpandableInput()
         _isPresetsExtendedEnabled.value = sharedPreferencesHelper.getExtPreference2()
         _isScrollProgressEnabled.value = sharedPreferencesHelper.getScrollProgressEnabled()
         llmService = LlmService(httpClient, activeChatUrl)
@@ -1121,7 +1135,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-
+    fun refreshHttpClient() {
+        httpClient.close()
+        httpClient = createHttpClient()
+        llmService = LlmService(httpClient, activeChatUrl)
+    }
     private fun handleSuccessResponse(
         chatResponse: ChatResponse,
         thinkingMessage: FlexibleMessage,

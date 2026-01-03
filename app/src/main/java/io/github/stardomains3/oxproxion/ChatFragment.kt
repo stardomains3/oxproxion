@@ -44,6 +44,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -62,6 +63,8 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -148,6 +151,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var openSavedChatsButton: MaterialButton
     private lateinit var copyChatButton: MaterialButton
     private lateinit var buttonsRow2: LinearLayout
+    private lateinit var chatInputContainer: LinearLayout
     private lateinit var menuButton: MaterialButton
     private lateinit var progressBar: View
     private lateinit var pdfChatButton: MaterialButton
@@ -368,6 +372,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         saveHtmlButton  = view.findViewById(R.id.saveHtmlButton)
         printButton =   view.findViewById(R.id.printButton)
         buttonsRow2 = view.findViewById(R.id.buttonsRow2)
+        chatInputContainer = view.findViewById(R.id.chatInputContainer)
         menuButton = view.findViewById(R.id.menuButton)
         progressBar = view.findViewById(R.id.progressBar)
         progressBar.pivotX = 0f
@@ -870,6 +875,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.isWebSearchEnabled.observe(viewLifecycleOwner) { isEnabled ->
             webSearchButton.isSelected = isEnabled
         }
+        viewModel.isExpandableInputEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            if (isEnabled) {
+                attachExpandableInputListeners()
+            } else {
+                detachExpandableInputListeners()
+            }
+        }
         viewModel.isScrollersEnabled.observe(viewLifecycleOwner) { isEnabled ->
             isScrollersEnabled = isEnabled  // Cache for perf
 
@@ -900,7 +912,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 scrollToBottomButton.visibility = View.INVISIBLE
             }
         }
-
+        viewModel.isExpandableInputEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            if (isEnabled) {
+                attachExpandableInputListeners()
+            } else {
+                detachExpandableInputListeners()
+            }
+        }
         viewModel.isReasoningEnabled.observe(viewLifecycleOwner) { isEnabled ->
             reasoningButton.isSelected = isEnabled
             updateReasoningButtonAppearance()
@@ -968,7 +986,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val shouldStartStt = arguments?.getBoolean("start_stt_on_launch", false) ?: false
         if (shouldStartStt) {
             arguments?.remove("start_stt_on_launch")  // Clear flag to prevent re-trigger
-            chatEditText.hideKeyboard()  // Ensure clean state
+            hideKeyboard()
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)  // NEW: Use launcher
             } else {
@@ -1062,7 +1080,51 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatEditText.setText(sharedText.trim())
         chatEditText.setSelection(chatEditText.length())
     }
+    private fun setInputExpandedState(expanded: Boolean) {
+        val params = chatInputContainer.layoutParams
+        if (expanded) {
+            params.height = LinearLayout.LayoutParams.MATCH_PARENT
+            chatEditText.maxLines = Integer.MAX_VALUE
+            chatFrameView.visibility = View.GONE
+        } else {
+            params.height = LinearLayout.LayoutParams.WRAP_CONTENT
+            chatEditText.maxLines = 5
+            chatFrameView.visibility = View.VISIBLE
+        }
+        chatInputContainer.layoutParams = params
+    }
 
+    private fun attachExpandableInputListeners() {
+        // 1. Focus Listener: Expands when touched
+        chatEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                setInputExpandedState(true)
+            }
+        }
+        val rootView = view as FrameLayout
+        // 2. Insets Listener: Collapses when Keyboard closes (Back button or hideKeyboard())
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
+            val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+
+            // If keyboard is gone AND we have focus, it means we need to close up shop
+            if (!isKeyboardVisible && chatEditText.hasFocus()) {
+                setInputExpandedState(false)
+                chatEditText.clearFocus()
+            }
+            insets
+        }
+    }
+
+    private fun detachExpandableInputListeners() {
+        // 1. Force collapse immediately (in case user disabled it while it was open)
+        setInputExpandedState(false)
+        val rootView = view as FrameLayout
+        // 2. Remove Focus Listener
+        chatEditText.onFocusChangeListener = null
+
+        // 3. Remove Insets Listener (Stop listening to keyboard)
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, null)
+    }
     private fun setupRecyclerView() {
         layoutManager = NonScrollingOnFocusLayoutManager(requireContext()).apply {
             stackFromEnd = false
@@ -1087,7 +1149,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         chatEditText.setText(text)
                         chatEditText.setSelection(text.length)
                         hideMenu()
-                        chatEditText.requestFocus()
+                    //    chatEditText.requestFocus()
                         chatEditText.showKeyboard()
                     }
                     .setCancelable(true)
@@ -1310,6 +1372,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         return@setOnClickListener
                     }
                 }
+                hideKeyboard()
                 hasScrolled = false
                 var prompt = chatEditText.text.toString().trim()
                 if (pendingFiles.isNotEmpty()) {
@@ -1353,7 +1416,7 @@ $cleanContent
 
                     chatEditText.setText("")
                     chatEditText.text.clear()
-                    chatEditText.hideKeyboard()
+
                     val userContent = if (selectedImageBytes != null) {
                         val base64 = Base64.encodeToString(selectedImageBytes, Base64.NO_WRAP)
                         val imageUrl = "data:$selectedImageMime;base64,$base64"
@@ -1390,7 +1453,7 @@ $cleanContent
                     //   val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage() //#subpromptcode commentedout
                     //   viewModel.sendUserMessage(userContent, systemMessage.prompt) //#subpromptcode replaced
                     viewModel.sendUserMessage(userContent, substitutedSystemPrompt) //#subpromptcode
-                    chatEditText.clearFocus()
+                  //  chatEditText.clearFocus()
                     hideMenu()
                     selectedImageBytes = null
                     selectedImageMime = null
@@ -1426,7 +1489,7 @@ $cleanContent
         }
 
         modelNameTextView.setOnClickListener {
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             val picker = BotModelPickerFragment().apply {
                 onModelSelected = { modelString ->
                     val newModelSupportsWebp = viewModel.supportsWebp(modelString)
@@ -1465,7 +1528,7 @@ $cleanContent
         }
 
         systemMessageButton.setOnClickListener {
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             parentFragmentManager.beginTransaction()
                 .hide(this)
                 .add(R.id.fragment_container, SystemMessageLibraryFragment())
@@ -1532,7 +1595,7 @@ $cleanContent
         }
 
         openSavedChatsButton.setOnClickListener {
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             parentFragmentManager.beginTransaction()
                 .hide(this)
                 .add(R.id.fragment_container, SavedChatsFragment())
@@ -1701,7 +1764,7 @@ $cleanContent
             if (headerContainer.isVisible) {
                 hideMenu()
             } else {
-                chatEditText.hideKeyboard()
+                hideKeyboard()
                 showMenu()
             }
         }
@@ -1752,7 +1815,7 @@ $cleanContent
                 .commit()
         }
         presetsButton2.setOnClickListener {
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             hideMenu()
             parentFragmentManager.beginTransaction()
                 .hide(this)
@@ -1762,7 +1825,7 @@ $cleanContent
         }
         presetsButton2.setOnLongClickListener {
             hideMenu()
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             parentFragmentManager.beginTransaction()
                 .hide(this)
                 .add(R.id.fragment_container, PromptLibraryFragment())
@@ -1772,7 +1835,7 @@ $cleanContent
         }
         presetsButton.setOnLongClickListener {
             hideMenu()
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             parentFragmentManager.beginTransaction()
                 .hide(this)
                 .add(R.id.fragment_container, PromptLibraryFragment())
@@ -2058,7 +2121,7 @@ $cleanContent
             true
         }
         speechButton.setOnClickListener {
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)  // NEW: Use launcher instead of ActivityCompat
             } else {
@@ -2070,7 +2133,14 @@ $cleanContent
             chatEditText.text.clear()
         }
     }
+    fun Fragment.hideKeyboard() {
+        view?.let { activity?.hideKeyboard(it) }
+    }
 
+    fun Context.hideKeyboard(view: View) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(view.windowToken, 0)
+    }
     private fun isTouchOutsideHeader(x: Float, y: Float): Boolean {
         val location = IntArray(2)
         headerContainer.getLocationOnScreen(location)
@@ -2316,7 +2386,7 @@ $cleanContent
 
     private fun setupPlusButtonListener() {
         plusButton.setOnClickListener {
-            chatEditText.hideKeyboard()
+            hideKeyboard()
             val model = viewModel.activeChatModel.value
             if (model == null || !viewModel.isVisionModel(model)) {
                 Toast.makeText(requireContext(), "Image/PDF selection not supported for the current model.", Toast.LENGTH_SHORT).show()
@@ -2442,7 +2512,7 @@ $cleanContent
         super.onHiddenChanged(hidden)
         if (!hidden) {  // Fragment is now visible
             updateSystemMessageButtonState()
-            chatEditText.requestFocus()
+           // chatEditText.requestFocus()
             viewModel.checkAdvancedReasoningStatus()
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         }
@@ -2451,7 +2521,7 @@ $cleanContent
     override fun onResume() {
         super.onResume()
         updateSystemMessageButtonState()
-        chatEditText.requestFocus()
+       // chatEditText.requestFocus()
         viewModel.checkAdvancedReasoningStatus()
        // val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         //notificationManager.cancel(2)
@@ -2472,6 +2542,7 @@ $cleanContent
 
 
     fun onBackPressed(): Boolean {
+        chatEditText.clearFocus()
         if (headerContainer.isVisible) {
             hideMenu()
             return true
@@ -2507,7 +2578,7 @@ $cleanContent
         }
     }
     fun startSpeechRecognitionSafely() {
-        chatEditText.hideKeyboard()
+        hideKeyboard()
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)  // NEW: Use launcher
         } else {
