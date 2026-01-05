@@ -1,0 +1,1 @@
+- Optimized the functioning of the recently added "Expand Input on Focus" setting/option.

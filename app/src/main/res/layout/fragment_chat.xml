@@ -569,8 +569,9 @@
             android:gravity="bottom">
 
             <LinearLayout
+                android:id="@+id/leftButtonContainer"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="bottom">
 
@@ -626,6 +627,7 @@
                     android:visibility="visible"
                     app:iconTint="#A8A8A8"
                     app:backgroundTint="@color/button_background_col" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/resetChatButton"
                     style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -650,41 +652,56 @@
                   android:orientation="vertical"
                   android:gravity="bottom">-->
 
-
-            <EditText
-                android:id="@+id/chatEditText"
+            <LinearLayout
+                android:id="@+id/centerInputWrapper"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                android:background="@drawable/bg_rounded"
-                android:scrollbars="vertical"
-                android:fadeScrollbars="false"
-                android:hint="Type a message..."
-                android:inputType="textMultiLine|textCapSentences"
-                android:maxLines="5"
-                android:minHeight="48dp"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
-                android:textSize="16sp"
-                android:textColor="#C2C2C2"
-                android:textColorHint="#888888"
-                android:importantForAutofill="no"
-                android:privateImeOptions="disableRichTextEditor=true"
-                android:textCursorDrawable="@drawable/cursor_c"
-                android:textColorHighlight="@color/spinner_item_color"
-                android:gravity="top"
-                tools:ignore="VisualLintTextFieldSize" />
+                android:orientation="vertical">
+                <EditText
+                    android:id="@+id/chatEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_rounded"
+                    android:hint="Type a message..."
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:maxLines="5"
+                    android:minHeight="48dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textSize="16sp"
+                    android:textColor="#C2C2C2"
+                    android:textColorHint="#888888"
+                    android:importantForAutofill="no"
+                    android:textCursorDrawable="@drawable/cursor_c"
+                    android:textColorHighlight="@color/spinner_item_color"
+                    android:gravity="top"
+                    android:scrollbars="vertical"
+                    android:fadeScrollbars="false"
+                    tools:ignore="VisualLintTextFieldSize" />
+
+                <LinearLayout
+                    android:id="@+id/expandedButtonContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone"
+                    android:paddingTop="8dp" />
+
+            </LinearLayout>
 
 
 
 
             <LinearLayout
+                android:id="@+id/rightButtonContainer"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="bottom">
 
@@ -723,6 +740,7 @@
                     android:insetRight="0dp"
                     app:iconTint="#A8A8A8"
                     app:backgroundTint="@color/button_background_col" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/systemMessageButton"
                     style="@style/Widget.Material3.Button.IconButton.Filled"
