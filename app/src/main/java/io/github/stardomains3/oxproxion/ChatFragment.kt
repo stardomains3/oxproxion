@@ -1095,76 +1095,71 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val containerParams = chatInputContainer.layoutParams
         val editParams = chatEditText.layoutParams as LinearLayout.LayoutParams
 
-        val leftButtons = listOf(menuButton, speechButton, clearButton, resetChatButton)
-        val rightButtons = listOf(systemMessageButton, utilityButton, sendChatButton)
-        // Combine them into one list for easier loop handling
-        val allButtons = leftButtons + rightButtons
+        // 1. Define the order for EXPANDED (Left-to-Right)
+        // Send button is last to make it rightmost
+        val expandedOrder = listOf(
+            menuButton, resetChatButton, speechButton, clearButton,
+            utilityButton, systemMessageButton, sendChatButton
+        )
+
+        // 2. Define the order for COLLAPSED (Top-to-Bottom)
+        val leftCollapsed = listOf(menuButton, speechButton, clearButton, resetChatButton)
+        // Send button is first to make it stay at the top
+        val rightCollapsed = listOf(sendChatButton, utilityButton, systemMessageButton)
 
         if (expanded) {
-            // --- 1. Container & EditText Expansion ---
             containerParams.height = LinearLayout.LayoutParams.MATCH_PARENT
             editParams.height = 0
             editParams.weight = 1f
             chatEditText.maxLines = Integer.MAX_VALUE
             chatFrameView.visibility = View.GONE
 
-            // --- 2. Move & Style Buttons for "Even Spacing" ---
-            // We add them to the expanded container
-            allButtons.forEach { btn ->
+            // Use the horizontal order
+            expandedOrder.forEach { btn ->
                 moveView(btn, expandedButtonContainer)
-
-                // Create params for "Spread" layout (Weight 1.0)
-                val params = LinearLayout.LayoutParams(
-                    0, // Width 0 because weight handles it
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                params.weight = 1f
-                params.gravity = Gravity.CENTER // Keeps the icon centered in the new wide area
-                params.setMargins(0, 0, 0, 0) // Remove margins so they align flush
-
+                val params = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                params.gravity = Gravity.CENTER
                 btn.layoutParams = params
             }
 
-            // --- 3. Toggle Visibility ---
             leftButtonContainer.visibility = View.GONE
             rightButtonContainer.visibility = View.GONE
             expandedButtonContainer.visibility = View.VISIBLE
 
         } else {
-            // --- 1. Collapse Container ---
             containerParams.height = LinearLayout.LayoutParams.WRAP_CONTENT
             editParams.height = LinearLayout.LayoutParams.MATCH_PARENT
             editParams.weight = 0f
             chatEditText.maxLines = 5
             chatFrameView.visibility = View.VISIBLE
 
-            // --- 2. Restore Buttons to Original Styling ---
-            // Put them back in their original homes
-            leftButtons.forEach { moveView(it, leftButtonContainer) }
-            rightButtons.forEach { moveView(it, rightButtonContainer) }
-
-            // Reset params to "Fixed Size" (48dp x 48dp)
-            allButtons.forEach { btn ->
-                val params = LinearLayout.LayoutParams(
-                    (48 * resources.displayMetrics.density).toInt(), // 48dp converted to pixels
-                    (48 * resources.displayMetrics.density).toInt()
-                )
-                params.weight = 0f
-                // Restore your original bottom margin of 2dp
-                val marginBottomPx = (2 * resources.displayMetrics.density).toInt()
-                params.setMargins(0, 0, 0, marginBottomPx)
-
-                btn.layoutParams = params
+            // Restore Left side in order
+            leftCollapsed.forEach { btn ->
+                moveView(btn, leftButtonContainer)
+                applyCollapsedParams(btn)
             }
 
-            // --- 3. Toggle Visibility ---
+            // Restore Right side in order (Send will be added first, so it sits at the top)
+            rightCollapsed.forEach { btn ->
+                moveView(btn, rightButtonContainer)
+                applyCollapsedParams(btn)
+            }
+
             expandedButtonContainer.visibility = View.GONE
             leftButtonContainer.visibility = View.VISIBLE
             rightButtonContainer.visibility = View.VISIBLE
         }
-
         chatInputContainer.layoutParams = containerParams
         chatEditText.layoutParams = editParams
+    }
+
+    // Helper to keep the code clean
+    private fun applyCollapsedParams(btn: View) {
+        val size = (48 * resources.displayMetrics.density).toInt()
+        val margin = (2 * resources.displayMetrics.density).toInt()
+        val params = LinearLayout.LayoutParams(size, size)
+        params.setMargins(0, 0, 0, margin)
+        btn.layoutParams = params
     }
 
     private fun attachExpandableInputListeners() {
