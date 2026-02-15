@@ -15,7 +15,7 @@ android {
     configurations.all {
         resolutionStrategy.eachDependency {
             if (requested.group == "com.atlassian.commonmark") {
-                useTarget("org.commonmark:${requested.name}:0.27.0")
+                useTarget("org.commonmark:${requested.name}:0.27.1")
                 because("The library moved from com.atlassian.commonmark to org.commonmark, causing duplicate classes")
             }
         }
@@ -24,8 +24,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 142
-        versionName = "2.1.32"
+        versionCode = 143
+        versionName = "2.1.33"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

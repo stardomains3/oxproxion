@@ -1,0 +1,2 @@
+- Updated a bunch of dependencies
+- A little more robustness to contract input box when doing a back gesture as it sometimes was getting stuck in expanded state.

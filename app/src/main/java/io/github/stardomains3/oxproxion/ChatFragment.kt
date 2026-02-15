@@ -2610,6 +2610,9 @@ $cleanContent
 
 
     fun onBackPressed(): Boolean {
+        if (viewModel.isExpandableInputEnabled.value == true && chatEditText.hasFocus()) {
+            setInputExpandedState(false)
+        }
         chatEditText.clearFocus()
         if (headerContainer.isVisible) {
             hideMenu()
