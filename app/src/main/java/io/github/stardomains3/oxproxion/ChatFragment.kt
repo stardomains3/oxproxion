@@ -117,6 +117,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private var isSpeaking = false
+    private var isShare = false
     private lateinit var chatFrameView: FrameLayout
     private var dimOverlay: View? = null
     private var currentSpeakingPosition = -1
@@ -156,6 +157,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var leftButtonContainer: LinearLayout
     private lateinit var rightButtonContainer: LinearLayout
     private lateinit var menuButton: MaterialButton
+    private lateinit var backcopyButton: MaterialButton
+    private lateinit var backButton: MaterialButton
     private lateinit var progressBar: View
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
@@ -380,6 +383,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         leftButtonContainer = view.findViewById(R.id.leftButtonContainer)
         rightButtonContainer = view.findViewById(R.id.rightButtonContainer)
         menuButton = view.findViewById(R.id.menuButton)
+        backcopyButton = view.findViewById(R.id.backcopyButton)
+        backButton = view.findViewById(R.id.backButton)
         progressBar = view.findViewById(R.id.progressBar)
         progressBar.pivotX = 0f
         chatFrameView = view.findViewById(R.id.chatFrameView)
@@ -717,6 +722,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         chatRecyclerView.post {
                             chatRecyclerView.post {
                                 chatRecyclerView.post {  // Triple post handles layout/draw timing
+                                    if(isShare){
+                                        backcopyButton.visibility = View.VISIBLE
+                                        isShare = false
+                                    }
                                     val lastPos = chatAdapter.itemCount - 1
                                     val lastVh = chatRecyclerView.findViewHolderForAdapterPosition(lastPos)
 
@@ -864,6 +873,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             event.getContentIfNotHandled()?.let {
                 // Perform autosend: Simulate send button click
                 sendChatButton.performClick()
+                backButton.visibility = View.VISIBLE
+                isShare = true
             }
         }
 
@@ -1768,6 +1779,18 @@ $cleanContent
                 Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
             }
         }
+        backcopyButton.setOnClickListener {
+            copyLatestMessage()
+            backButton.visibility = View.GONE
+            backcopyButton.visibility = View.GONE
+            activity?.moveTaskToBack(true) ?: false
+        }
+
+        backButton.setOnClickListener {
+            backButton.visibility = View.GONE
+            backcopyButton.visibility = View.GONE
+            activity?.moveTaskToBack(true) ?: false
+        }
         printButton.setOnClickListener {
             hideMenu()
             lifecycleScope.launch {
@@ -2585,7 +2608,11 @@ $cleanContent
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         }
     }
-
+    override fun onStop() {
+        super.onStop()
+        backButton.visibility = View.GONE
+        backcopyButton.visibility = View.GONE
+    }
     override fun onResume() {
         super.onResume()
         updateSystemMessageButtonState()
@@ -2995,6 +3022,7 @@ $cleanContent
             progressBar.visibility = View.GONE
         }
     }
+
     private fun captureItemToBitmap(position: Int, format: String) {
         val viewHolder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
         if (viewHolder != null) {
@@ -3008,7 +3036,19 @@ $cleanContent
             Toast.makeText(requireContext(), "Item not visible; cannot capture", Toast.LENGTH_SHORT).show()
         }
     }
-
+    fun copyLatestMessage() {
+        chatAdapter.getLatestPlainText()?.let { text ->
+            if (text.isNotBlank()) {
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Copied", text))
+                Toast.makeText(requireContext(), "Copied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    fun onOpenedFromNotification() {
+        backButton.visibility = View.VISIBLE
+        backcopyButton.visibility = View.VISIBLE
+    }
     private fun substituteVariables(input: String): String {
         if (!input.contains("{{ox")) return input  // 🔥 EARLY EXIT: Instant if no vars (99% cases)
 

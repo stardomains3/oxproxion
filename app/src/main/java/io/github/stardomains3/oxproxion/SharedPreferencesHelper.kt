@@ -33,6 +33,7 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
+        private const val KEY_OPENROUTER_TRANSFORMS_ENABLED = "openrouter_transforms_enabled"
         private const val KEY_EXPANDABLE_INPUT = "expandable_input_enabled"
         const val LAN_API_KEY = "lan_api_key"  // NEW
         private const val KEY_TIMEOUT_MINUTES = "timeout_minutes"
@@ -143,7 +144,13 @@ class SharedPreferencesHelper(context: Context) {
             emptyList()
         }
     }
+    fun saveOpenRouterTransformsEnabled(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_OPENROUTER_TRANSFORMS_ENABLED, enabled) }
+    }
 
+    fun getOpenRouterTransformsEnabled(): Boolean {
+        return mainPrefs.getBoolean(KEY_OPENROUTER_TRANSFORMS_ENABLED, false)
+    }
     fun saveCustomPrompts(prompts: List<Prompt>) {
         val jsonString = json.encodeToString(prompts)
         mainPrefs.edit { putString(KEY_CUSTOM_PROMPTS, jsonString) }

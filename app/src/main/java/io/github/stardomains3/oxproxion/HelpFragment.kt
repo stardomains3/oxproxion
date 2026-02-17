@@ -75,7 +75,9 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
              "ic_lan" to R.drawable.ic_lan,
              "ic_menudot" to R.drawable.ic_menudot,
              "ic_prompts" to R.drawable.ic_prompts,
-             "ic_settings" to R.drawable.ic_settings
+             "ic_settings" to R.drawable.ic_settings,
+             "backcopy" to R.drawable.backcopy,
+             "backtoapp" to R.drawable.backtoapp
         )
 
          val iconSpans: Map<String, ImageSpan> = icons.mapValues { (_, resId) ->
@@ -238,6 +240,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Settings Button** {{ic_settings}} : Opens the Settings screen.
             *   **Paste Button** {{ic_paste}} : Pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. (This button only appears when extended dock is on.)
             *   **Speech-to-Text Button** {{ic_mic}} : Appears when the prompt box is empty, or a Clear Prompt button when the prompt box has some text. (This button only appears when extended dock is on.)
+            *   **Back to App Button** {{backtoapp}} : Returns to the previous app. Appears when notification clicked or text shared to Preset target.
+            *   **Copy/Back to App Button** {{backcopy}} : Copies last response and returns to the previous app.  Appears when notification clicked or text shared to Preset target.
            
             ### Settings Screen
             *   **Extended Dock** {{ic_extend}} : Toggles extended dock on or off. If on, an extra row is added to the bottom dock.
@@ -252,6 +256,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Prompt Library Button** {{ic_prompts}}: Opens the Prompt Library Screen
             *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
             *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
+            *   **OpenRouter Transforms** : To help with prompts that exceed the maximum context size of a model, OpenRouter supports a custom parameter called transforms. https://openrouter.ai/docs/guides/features/message-transforms
             
             ---
 

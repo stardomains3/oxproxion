@@ -16,6 +16,7 @@ data class ChatRequest(
     val reasoning: Reasoning? = null,
     val stream: Boolean = false,
     val max_tokens: Int? = null,
+    val transforms: List<String>? = null,
     val user: String? = null,
     val tools: List<Tool>? = null,
     @SerialName("tool_choice")

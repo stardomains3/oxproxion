@@ -782,6 +782,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val chatRequest = ChatRequest(
                 model = modelForRequest,
                 messages = messagesForApiRequest,
+                transforms = if (sharedPreferencesHelper.getOpenRouterTransformsEnabled() && !activeModelIsLan())
+                    listOf("middle-out")
+                else
+                    null,
                 stream = true,
                 max_tokens = maxTokens,
                 //logprobs = null,
@@ -1040,6 +1044,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messages = messagesForApiRequest,
+                    transforms = if (sharedPreferencesHelper.getOpenRouterTransformsEnabled() && !activeModelIsLan())
+                        listOf("middle-out")
+                    else
+                        null,
                     //logprobs = null,
                     //  usage = UsageRequest(include = true),
                     max_tokens = maxTokens,

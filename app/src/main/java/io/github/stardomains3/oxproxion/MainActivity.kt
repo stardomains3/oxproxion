@@ -207,6 +207,10 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.getBooleanExtra("from_notification", false)) {
+            (supportFragmentManager.findFragmentById(R.id.fragment_container) as? ChatFragment)
+                ?.onOpenedFromNotification()
+        }
         handlePresetIntent(intent)
 
         if (intent.action == Intent.ACTION_SEND && "text/plain" == intent.type && !intent.getBooleanExtra("autosend", false)) {

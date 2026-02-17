@@ -40,6 +40,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val helpButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.helpButton)
         val maxTokensButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.maxTokensButton)
         val lanButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.lanButton)
+        val openRouterTransformsSwitch = view.findViewById<MaterialSwitch>(R.id.openRouterTransformsSwitch)
         biometricsSwitch.isChecked = prefs.getBiometricEnabled()
         notificationsSwitch.isChecked = prefs.getNotiPreference()
         autoDisableWebSearchSwitch.isChecked = prefs.getDisableWebSearchAfterSend()
@@ -49,6 +50,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
         presetsExtendedSwitch.isChecked = viewModel.isPresetsExtendedEnabled.value ?: false
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
+        openRouterTransformsSwitch.isChecked = prefs.getOpenRouterTransformsEnabled()
+        openRouterTransformsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveOpenRouterTransformsEnabled(isChecked)
+        }
         apiKeyButton.setOnClickListener {
             val dialog = SaveApiDialogFragment()
             dialog.show(childFragmentManager, "SaveApiDialogFragment")
@@ -146,7 +151,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.extendedDockSwitch,
             R.id.notificationsSwitch,
             R.id.presetsExtendedSwitch,
-            R.id.autoDisableWebSearchSwitch
+            R.id.autoDisableWebSearchSwitch,
+            R.id.openRouterTransformsSwitch
         ).forEach { id ->
             view.findViewById<MaterialSwitch>(id)?.styleSwitch()
         }

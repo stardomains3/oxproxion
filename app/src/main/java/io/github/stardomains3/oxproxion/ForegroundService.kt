@@ -269,8 +269,10 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
     }
 
     private fun buildNotification(title: String, contentText: String, channelId: String): Notification {
-        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-        launchIntent?.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra("from_notification", true)  // <-- Add this
+        }
 
         val pendingIntent = PendingIntent.getActivity(
             this,

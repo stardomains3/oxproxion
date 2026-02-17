@@ -1,0 +1,2 @@
+- Added option in settings to include OpenRouter Middle-Out Message Transforms for context management. https://openrouter.ai/docs/guides/features/message-transforms
+- Added two buttons that appear when user comes to the app from a notification or a share to the Presets share-target: Back to App and Copy/Back to App. They appear above the menu button. Allows for faster return to the previous app. The copy one copies the last response and returns user to previous app. Especially helpful when using oxproxion for spelling/grammar fixes from other apps.

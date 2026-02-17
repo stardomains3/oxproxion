@@ -93,6 +93,9 @@ class ChatAdapter(
         renderCache.clear()
         collapsedStates.clear()
     }
+    fun getLatestPlainText(): String? {
+        return messages.lastOrNull()?.let { getMessageText(it.content) }
+    }
 
     fun updateTtsState(speaking: Boolean, position: Int) {
         isSpeaking = speaking
