@@ -1,0 +1,1 @@
+- Moved the new Back and Copy/Back buttons (from last release) to the upper area of the screen.

@@ -15,13 +15,13 @@
         android:fitsSystemWindows="true"
         tools:context=".ChatFragment">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:padding="2dp"
             android:background="@drawable/bg_rounded_lin">
 
+            <!-- Left Column -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/openSavedChatsButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -36,7 +36,33 @@
                 android:insetLeft="1dp"
                 android:insetRight="1dp"
                 app:iconTint="#A8A8A8"
-                app:backgroundTint="@color/button_background_col" />
+                app:backgroundTint="@color/button_background_col"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/backcopyButton"
+                style="@style/Widget.Material3.Button.IconButton.Filled"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="2dp"
+                android:visibility="gone"
+                app:backgroundTint="@color/button_background_col"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/backcopy"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="#A8A8A8"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                app:layout_constraintStart_toStartOf="@id/openSavedChatsButton"
+                app:layout_constraintTop_toBottomOf="@id/openSavedChatsButton" />
+
+            <!-- attachmentButton -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/attachmentButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -56,13 +82,16 @@
                 android:insetRight="0dp"
                 android:insetBottom="0dp"
                 android:padding="0dp"
-                android:layout_gravity="top" />
+                android:layout_gravity="top"
+                app:layout_constraintStart_toEndOf="@id/openSavedChatsButton"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- genButton -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/genButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-
                 android:layout_marginEnd="2dp"
                 android:visibility="gone"
                 app:backgroundTint="@color/button_background_col"
@@ -77,17 +106,18 @@
                 android:insetRight="0dp"
                 android:insetBottom="0dp"
                 android:padding="0dp"
-                android:layout_gravity="top" />
+                android:layout_gravity="top"
+                app:layout_constraintStart_toEndOf="@id/attachmentButton"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Model Name (center, won't stretch over buttons) -->
+            <!-- Model Name -->
             <TextView
                 android:id="@+id/modelNameTextView"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
                 android:layout_weight="1"
                 android:layout_gravity="center"
                 android:gravity="center"
-
                 android:textColor="#A8A8A8"
                 android:padding="2dp"
                 android:clickable="true"
@@ -96,7 +126,13 @@
                 android:ellipsize="end"
                 android:singleLine="true"
                 android:visibility="visible"
-                tools:text="model-8ai-mini-maximum-length-model-name" />
+                tools:text="model-8ai-mini-maximum-length-model-name"
+                app:layout_constraintStart_toEndOf="@id/genButton"
+                app:layout_constraintEnd_toStartOf="@id/plusButton"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="@id/openSavedChatsButton" />
+
+            <!-- plusButton -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/plusButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -115,8 +151,11 @@
                 android:insetRight="0dp"
                 android:insetBottom="0dp"
                 android:padding="0dp"
-                android:layout_gravity="top" />
-            <!-- Save Chat Button (right) -->
+                android:layout_gravity="top"
+                app:layout_constraintEnd_toStartOf="@id/saveChatButton"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Right Column -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveChatButton"
                 style="@style/Widget.Material3.Button.IconButton.Filled"
@@ -132,8 +171,34 @@
                 android:insetLeft="0dp"
                 android:insetRight="0dp"
                 app:iconTint="#A8A8A8"
-                app:backgroundTint="@color/button_background_col" />
-        </LinearLayout>
+                app:backgroundTint="@color/button_background_col"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/backButton"
+                style="@style/Widget.Material3.Button.IconButton.Filled"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="2dp"
+                android:visibility="gone"
+                app:backgroundTint="@color/button_background_col"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/backtoapp"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="#A8A8A8"
+                android:layout_marginBottom="2dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                app:layout_constraintEnd_toEndOf="@id/saveChatButton"
+                app:layout_constraintTop_toBottomOf="@id/saveChatButton" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
 
         <FrameLayout
@@ -574,44 +639,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="bottom">
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/backcopyButton"
-                    style="@style/Widget.Material3.Button.IconButton.Filled"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:visibility="gone"
-                    app:backgroundTint="@color/button_background_col"
-                    app:cornerRadius="24dp"
-                    app:icon="@drawable/backcopy"
-                    app:iconGravity="textStart"
-                    app:iconPadding="0dp"
-                    app:iconSize="24dp"
-                    app:iconTint="#A8A8A8"
-                    android:layout_marginBottom="2dp"
-                    android:insetLeft="0dp"
-                    android:insetTop="0dp"
-                    android:insetRight="0dp"
-                    android:insetBottom="0dp"
-                    android:padding="0dp" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/backButton"
-                    style="@style/Widget.Material3.Button.IconButton.Filled"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    app:backgroundTint="@color/button_background_col"
-                    app:cornerRadius="24dp"
-                    app:icon="@drawable/backtoapp"
-                    app:iconGravity="textStart"
-                    app:iconPadding="0dp"
-                    app:iconSize="24dp"
-                    app:iconTint="#A8A8A8"
-                    android:layout_marginBottom="2dp"
-                    android:insetLeft="0dp"
-                    android:visibility="gone"
-                    android:insetTop="0dp"
-                    android:insetRight="0dp"
-                    android:insetBottom="0dp"
-                    android:padding="0dp" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/menuButton"
                     style="@style/Widget.Material3.Button.IconButton.Filled"
