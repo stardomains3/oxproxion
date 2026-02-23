@@ -1,0 +1,1 @@
+Fixes for last additions which were: - Added "Extend Top Bar" setting option that allows the reasoning, web search, streaming, conversation, presets, and setting buttons to be on chat screen all the time below the top bar for convenient access. Also includes a Home button to bring to Android Home screen.

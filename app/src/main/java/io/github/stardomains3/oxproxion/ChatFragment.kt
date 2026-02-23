@@ -1710,6 +1710,17 @@ $cleanContent
             showWebSearchEngineDialog()
             true
         }
+        topReasoningButton.setOnLongClickListener {
+            if(reasoningButton.isSelected)
+            {
+                parentFragmentManager.beginTransaction()
+                    .hide(this)
+                    .add(R.id.fragment_container, AdvancedReasoningFragment())
+                    .addToBackStack(null)
+                    .commit()
+            }
+            return@setOnLongClickListener true
+        }
 
         openSavedChatsButton.setOnClickListener {
             hideKeyboard()
