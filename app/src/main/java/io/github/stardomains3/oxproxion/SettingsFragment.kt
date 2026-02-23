@@ -28,6 +28,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val biometricsSwitch = view.findViewById<MaterialSwitch>(R.id.biometricsSwitch)
         val autoDisableWebSearchSwitch = view.findViewById<MaterialSwitch>(R.id.autoDisableWebSearchSwitch)
         val notificationsSwitch = view.findViewById<MaterialSwitch>(R.id.notificationsSwitch)
+        val extendedTopBarSwitch = view.findViewById<MaterialSwitch>(R.id.extendedTopBarSwitch)
         val keepScreenOnSwitch = view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
         val scrollButtonsSwitch = view.findViewById<MaterialSwitch>(R.id.scrollButtonsSwitch)
         val extendedDockSwitch = view.findViewById<MaterialSwitch>(R.id.extendedDockSwitch)
@@ -50,6 +51,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
         presetsExtendedSwitch.isChecked = viewModel.isPresetsExtendedEnabled.value ?: false
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
+        extendedTopBarSwitch.isChecked = prefs.getExtendedTopBarEnabled()
         openRouterTransformsSwitch.isChecked = prefs.getOpenRouterTransformsEnabled()
         openRouterTransformsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveOpenRouterTransformsEnabled(isChecked)
@@ -79,6 +81,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         expandableInputSwitch.setOnCheckedChangeListener { _, _ ->
             viewModel.toggleExpandableInput()
+        }
+        extendedTopBarSwitch.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.toggleExtendedTopBar()  // VM saves + notifies Chat
         }
         notificationsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveNotiPreference(isChecked)
@@ -152,6 +157,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.notificationsSwitch,
             R.id.presetsExtendedSwitch,
             R.id.autoDisableWebSearchSwitch,
+            R.id.extendedTopBarSwitch,
             R.id.openRouterTransformsSwitch
         ).forEach { id ->
             view.findViewById<MaterialSwitch>(id)?.styleSwitch()

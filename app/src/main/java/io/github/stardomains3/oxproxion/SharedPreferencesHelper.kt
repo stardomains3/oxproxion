@@ -33,6 +33,7 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
+        private const val KEY_EXTENDED_TOP_BAR = "extended_top_bar_enabled"
         private const val KEY_OPENROUTER_TRANSFORMS_ENABLED = "openrouter_transforms_enabled"
         private const val KEY_EXPANDABLE_INPUT = "expandable_input_enabled"
         const val LAN_API_KEY = "lan_api_key"  // NEW
@@ -315,6 +316,12 @@ class SharedPreferencesHelper(context: Context) {
             KEY_WEB_SEARCH_ENGINE,
             engine
         )
+    }
+    fun saveExtendedTopBarEnabled(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_EXTENDED_TOP_BAR, enabled) }
+    }
+    fun getExtendedTopBarEnabled(): Boolean {
+        return mainPrefs.getBoolean(KEY_EXTENDED_TOP_BAR, false)
     }
     fun getSelectedFont(): String {
         return mainPrefs.getString(KEY_SELECTED_FONT, "geologica_light") ?: "geologica_light"

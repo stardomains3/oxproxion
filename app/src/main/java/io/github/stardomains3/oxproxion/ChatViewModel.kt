@@ -31,6 +31,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readLine
 import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -207,6 +208,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val creditsResult: LiveData<Event<String>> = _creditsResult
     val _isStreamingEnabled = MutableLiveData<Boolean>(false)
     val isStreamingEnabled: LiveData<Boolean> = _isStreamingEnabled
+    private val _isExtendedTopBarEnabled = MutableLiveData<Boolean>(false)
+    val isExtendedTopBarEnabled: LiveData<Boolean> = _isExtendedTopBarEnabled
     val _isReasoningEnabled = MutableLiveData(false)
     val isReasoningEnabled: LiveData<Boolean> = _isReasoningEnabled
     private val _isAdvancedReasoningOn = MutableLiveData(false)
@@ -249,6 +252,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val newStremingState = !(_isStreamingEnabled.value ?: false)
         _isStreamingEnabled.value = newStremingState
         sharedPreferencesHelper.saveStreamingPreference(newStremingState)
+    }
+    fun toggleExtendedTopBar() {
+        val newValue = !(_isExtendedTopBarEnabled.value ?: false)
+        _isExtendedTopBarEnabled.value = newValue
+        sharedPreferencesHelper.saveExtendedTopBarEnabled(newValue)
     }
     fun toggleScrollProgress() {
         val newValue = !(_isScrollProgressEnabled.value ?: true)  // Default true
@@ -335,6 +343,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isScrollersEnabled.value = sharedPreferencesHelper.getScrollersPreference()
         _isWebSearchEnabled.value = sharedPreferencesHelper.getWebSearchBoolean()
         _isExtendedDockEnabled.value = sharedPreferencesHelper.getExtPreference()
+        _isExtendedTopBarEnabled.value = sharedPreferencesHelper.getExtendedTopBarEnabled()
         _isExpandableInputEnabled.value =  sharedPreferencesHelper.getExpandableInput()
         _isPresetsExtendedEnabled.value = sharedPreferencesHelper.getExtPreference2()
         _isScrollProgressEnabled.value = sharedPreferencesHelper.getScrollProgressEnabled()
@@ -847,7 +856,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val accumulatedImages = mutableListOf<String>()
 
                     while (!channel.isClosedForRead) {
-                        val line = channel.readUTF8Line() ?: continue
+                        val line = channel.readLine() ?: continue
                         if (line.startsWith("data:")) {
                             val jsonString = line.substring(5).trim()
                           //  if (jsonString == "[DONE]") break

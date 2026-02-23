@@ -196,7 +196,143 @@
                 android:insetBottom="0dp"
                 android:padding="0dp"
                 app:layout_constraintEnd_toEndOf="@id/saveChatButton"
-                app:layout_constraintTop_toBottomOf="@id/saveChatButton" />
+                app:layout_constraintTop_toBottomOf="@id/saveChatButton" /><com.google.android.material.button.MaterialButton
+            android:id="@+id/homeButton"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="2dp"
+            android:visibility="gone"
+            app:backgroundTint="@color/button_background_col"
+            app:cornerRadius="24dp"
+            app:icon="@drawable/ic_home"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="24dp"
+            app:iconTint="#A8A8A8"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:padding="0dp"
+            app:layout_constraintStart_toStartOf="@id/saveChatButton"
+            app:layout_constraintTop_toBottomOf="@id/saveChatButton" />
+            <!-- Extended Top Bar Container -->
+            <LinearLayout
+                android:id="@+id/extendedTopBarContainer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:visibility="gone"
+                android:layout_marginTop="2dp"
+                app:layout_constraintStart_toEndOf="@id/openSavedChatsButton"
+                app:layout_constraintEnd_toStartOf="@id/saveChatButton"
+                app:layout_constraintTop_toBottomOf="@id/openSavedChatsButton">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/topReasoningButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="2dp"
+                    app:icon="@drawable/ic_reasoning"
+                    app:iconGravity="textStart"
+                    app:iconSize="28dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/topWebSearchButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="2dp"
+                    app:icon="@drawable/ic_websearch"
+                    app:iconGravity="textStart"
+                    app:iconSize="28dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/topStreamButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="2dp"
+                    app:icon="@drawable/ic_stream"
+                    app:iconGravity="textStart"
+                    app:iconSize="28dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/topConvoButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="2dp"
+                    app:icon="@drawable/ic_convo"
+                    app:iconGravity="textStart"
+                    app:iconSize="28dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/topPresetsButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="2dp"
+                    app:icon="@drawable/ic_presets"
+                    app:iconGravity="textStart"
+                    app:iconSize="28dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/topSettingsButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    app:icon="@drawable/ic_settings"
+                    app:iconGravity="textStart"
+                    app:iconSize="28dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"/>
+
+            </LinearLayout>
+
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

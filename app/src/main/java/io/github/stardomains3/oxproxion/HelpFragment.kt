@@ -257,7 +257,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
             *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
             *   **OpenRouter Transforms** : To help with prompts that exceed the maximum context size of a model, OpenRouter supports a custom parameter called transforms. https://openrouter.ai/docs/guides/features/message-transforms
-            
+            *   **Extended Top Bar** : Allows the reasoning, web search, streaming, conversation, presets, and setting buttons to be on chat screen all the time below the top bar for convenient access. Also includes a Home button to bring to Android Home screen.
             ---
 
             ## 📂 App Screens

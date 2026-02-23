@@ -8,7 +8,10 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 class SavedChatsViewModel(application: Application) : AndroidViewModel(application) {
-
+    companion object {
+        // One Json instance shared by all ViewModel instances
+        private val json = Json { prettyPrint = true }
+    }
     private val repository: ChatRepository
     val allSessions: LiveData<List<ChatSession>>
 
@@ -25,7 +28,6 @@ class SavedChatsViewModel(application: Application) : AndroidViewModel(applicati
     fun updateSessionTitle(sessionId: Long, newTitle: String) = viewModelScope.launch {
         repository.updateSessionTitle(sessionId, newTitle)
     }
-
     suspend fun getChatsAsJson(): String {
         val sessionsWithMessages = repository.getAllSessionsWithMessages()
         val exportedSessions = sessionsWithMessages.map { sessionWithMessages ->
@@ -41,7 +43,8 @@ class SavedChatsViewModel(application: Application) : AndroidViewModel(applicati
             )
         }
         val backup = ChatBackup(sessions = exportedSessions)
-        return Json { prettyPrint = true }.encodeToString(backup)
+        // Reuse the singleton Json instance
+        return json.encodeToString(backup)
     }
 
     fun importChatsFromJson(json: String) {

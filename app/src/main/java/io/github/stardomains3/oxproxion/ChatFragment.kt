@@ -122,9 +122,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var dimOverlay: View? = null
     private var currentSpeakingPosition = -1
     private lateinit var settingsButton: MaterialButton
+    private lateinit var homeButton: MaterialButton
     private lateinit var presetsButton: MaterialButton
     private lateinit var presetsButton2: MaterialButton
     private lateinit var attachmentButton: MaterialButton
+    private lateinit var topSettingsButton: MaterialButton
+    private lateinit var topPresetsButton: MaterialButton
+    private lateinit var extendedTopBarContainer: LinearLayout
+    private lateinit var topStreamButton: MaterialButton
+    private lateinit var topReasoningButton: MaterialButton
+    private lateinit var topWebSearchButton: MaterialButton
+    private lateinit var topConvoButton: MaterialButton
+
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
@@ -382,8 +391,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         expandedButtonContainer = view.findViewById(R.id.expandedButtonContainer)
         leftButtonContainer = view.findViewById(R.id.leftButtonContainer)
         rightButtonContainer = view.findViewById(R.id.rightButtonContainer)
+        extendedTopBarContainer =  view.findViewById(R.id.extendedTopBarContainer)
+        topReasoningButton = view.findViewById(R.id.topReasoningButton)
+        topWebSearchButton = view.findViewById(R.id.topWebSearchButton)
+        topStreamButton = view.findViewById(R.id.topStreamButton)
+        topConvoButton = view.findViewById(R.id.topConvoButton)
+        topPresetsButton = view.findViewById(R.id.topPresetsButton)
+        topSettingsButton = view.findViewById(R.id.topSettingsButton)
         menuButton = view.findViewById(R.id.menuButton)
         backcopyButton = view.findViewById(R.id.backcopyButton)
+        homeButton = view.findViewById(R.id.homeButton)
         backButton = view.findViewById(R.id.backButton)
         progressBar = view.findViewById(R.id.progressBar)
         progressBar.pivotX = 0f
@@ -615,38 +632,39 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         rootView.addView(overlayView)
         dimOverlay = view.findViewById<View>(R.id.dimOverlay)
-
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
                 modelNameTextView.text = viewModel.getModelDisplayName(model)
-                if(viewModel.isVisionModel(model)){
+
+                // Handle vision model capabilities
+                if (viewModel.isVisionModel(model)) {
                     plusButton.icon.alpha = 255
                     plusButton.isEnabled = true
-                }
-                else
-                {
+                } else {
                     plusButton.icon.alpha = 102
                     plusButton.isEnabled = false
                 }
+
                 genButton.visibility = if (viewModel.isImageGenerationModel(model)) View.VISIBLE else View.GONE
-                reasoningButton.visibility = if (viewModel.isReasoningModel(model)) View.VISIBLE else View.GONE
-                // BUG FIX START: Clear staged image if new model is not a vision model
+
+                // Auto-disable web search if switching to LAN model
+                if (viewModel.activeModelIsLan() && viewModel.isWebSearchEnabled.value == true) {
+                    viewModel.toggleWebSearch()
+                }
+
+                // Clear staged image if model doesn't support vision
                 if (selectedImageBytes != null && !viewModel.isVisionModel(model)) {
                     selectedImageBytes = null
                     selectedImageMime = null
                     attachmentPreviewContainer.visibility = View.GONE
                     Toast.makeText(requireContext(), "Image removed: selected model doesn't support images.", Toast.LENGTH_SHORT).show()
                 }
-                val isLanModel = viewModel.activeModelIsLan()
-                if (isLanModel && viewModel.isWebSearchEnabled.value == true) {
-                    // Auto-disable if it was ON (prevents sending invalid requests)
-                    viewModel.toggleWebSearch()
-                }
-
-                webSearchButton.visibility = if (isLanModel) View.GONE else View.VISIBLE
-
             }
+
+            // Update button visibility based on current model and preference
+            updateExtendedTopBarVisibility(sharedPreferencesHelper.getExtendedTopBarEnabled())
         }
+
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -724,6 +742,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                                 chatRecyclerView.post {  // Triple post handles layout/draw timing
                                     if(isShare){
                                         backcopyButton.visibility = View.VISIBLE
+                                        homeButton.visibility = View.GONE
                                         isShare = false
                                     }
                                     val lastPos = chatAdapter.itemCount - 1
@@ -887,10 +906,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
         viewModel.isStreamingEnabled.observe(viewLifecycleOwner) { isEnabled ->
             streamButton.isSelected = isEnabled
+            topStreamButton.isSelected = isEnabled
         }
 
         viewModel.isWebSearchEnabled.observe(viewLifecycleOwner) { isEnabled ->
             webSearchButton.isSelected = isEnabled
+            topWebSearchButton.isSelected = isEnabled
         }
         viewModel.isExpandableInputEnabled.observe(viewLifecycleOwner) { isEnabled ->
             if (isEnabled) {
@@ -938,11 +959,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         viewModel.isReasoningEnabled.observe(viewLifecycleOwner) { isEnabled ->
             reasoningButton.isSelected = isEnabled
+            topReasoningButton.isSelected = isEnabled
             updateReasoningButtonAppearance()
         }
 
         viewModel.isAdvancedReasoningOn.observe(viewLifecycleOwner) { isAdvanced ->
             updateReasoningButtonAppearance() // Call helper
+        }
+        viewModel.isExtendedTopBarEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            updateExtendedTopBarVisibility(isEnabled)
         }
         viewModel.isScrollProgressEnabled.observe(viewLifecycleOwner) { enabled ->
             isScrollProgressEnabled = enabled  // Cache for perf
@@ -1067,6 +1092,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
         chatRecyclerView.post { updateScrollProgress() }
+
+        updateExtendedTopBarVisibility(sharedPreferencesHelper.getExtendedTopBarEnabled())
+
         // end onviewcreated
     }
 
@@ -1663,7 +1691,12 @@ $cleanContent
                 }
                 .show()
         }
-
+        topReasoningButton.setOnClickListener { reasoningButton.performClick() }
+        topWebSearchButton.setOnClickListener { webSearchButton.performClick() }
+        topStreamButton.setOnClickListener { streamButton.performClick() }
+        topConvoButton.setOnClickListener { convoButton.performClick() }
+        topPresetsButton.setOnClickListener { presetsButton.performClick() }
+        topSettingsButton.setOnClickListener { settingsButton.performClick() }
         saveChatButton.setOnClickListener {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
                 return@setOnClickListener
@@ -1783,12 +1816,14 @@ $cleanContent
             copyLatestMessage()
             backButton.visibility = View.GONE
             backcopyButton.visibility = View.GONE
+            updateHomeButtonVisibility()
             activity?.moveTaskToBack(true) ?: false
         }
 
         backButton.setOnClickListener {
             backButton.visibility = View.GONE
             backcopyButton.visibility = View.GONE
+            updateHomeButtonVisibility()
             activity?.moveTaskToBack(true) ?: false
         }
         printButton.setOnClickListener {
@@ -1801,6 +1836,13 @@ $cleanContent
                     Toast.makeText(requireContext(), "Nothing to print", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+        homeButton.setOnClickListener {
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(homeIntent)
         }
 
         saveMarkdownFileButton.setOnClickListener {
@@ -2262,6 +2304,7 @@ $cleanContent
         }
         val hasText = !chatEditText.text.isNullOrEmpty()
         convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
+        topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         utilityButton.visibility = if (isExtended) View.VISIBLE else View.GONE
 
         if (isExtended) {
@@ -2594,9 +2637,12 @@ $cleanContent
 
             reasoningButton.strokeColor = ColorStateList.valueOf(strokeColor)
             reasoningButton.strokeWidth = strokeWidth
+            topReasoningButton.strokeColor = ColorStateList.valueOf(strokeColor)
+            topReasoningButton.strokeWidth = strokeWidth
         } else {
             // STATE: Normal or OFF. Remove the outline by setting its width to 0.
             reasoningButton.strokeWidth = 0
+            topReasoningButton.strokeWidth = 0
         }
     }
     override fun onHiddenChanged(hidden: Boolean) {
@@ -2606,12 +2652,14 @@ $cleanContent
            // chatEditText.requestFocus()
             viewModel.checkAdvancedReasoningStatus()
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
+            topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         }
     }
     override fun onStop() {
         super.onStop()
         backButton.visibility = View.GONE
         backcopyButton.visibility = View.GONE
+        updateHomeButtonVisibility()
     }
     override fun onResume() {
         super.onResume()
@@ -3022,7 +3070,42 @@ $cleanContent
             progressBar.visibility = View.GONE
         }
     }
+    private fun updateExtendedTopBarVisibility(extendedEnabled: Boolean) {
+        extendedTopBarContainer.visibility = if (extendedEnabled) View.VISIBLE else View.GONE
 
+        val model = viewModel.activeChatModel.value // Get current model (may be null on startup)
+        val isLan = viewModel.activeModelIsLan()
+
+        val buttons = listOf(
+            Triple(reasoningButton, topReasoningButton) {
+                model != null && viewModel.isReasoningModel(model)
+            },
+            Triple(webSearchButton, topWebSearchButton) {
+                !isLan // Hide web search for local models
+            },
+            Triple(streamButton, topStreamButton) { true },
+            Triple(convoButton, topConvoButton) { true },
+            Triple(presetsButton, topPresetsButton) { true },
+            Triple(settingsButton, topSettingsButton) { true }
+        )
+
+        buttons.forEach { (popup, top, condition) ->
+            val shouldShow = condition()
+
+            if (extendedEnabled) {
+                popup.visibility = View.GONE
+                top.visibility = if (shouldShow) View.VISIBLE else View.GONE
+            } else {
+                top.visibility = View.GONE
+                popup.visibility = if (shouldShow) View.VISIBLE else View.GONE
+            }
+        }
+        homeButton.visibility = if (extendedEnabled) View.VISIBLE else View.GONE
+    }
+    private fun updateHomeButtonVisibility() {
+        val extendedEnabled = sharedPreferencesHelper.getExtendedTopBarEnabled()
+        homeButton.visibility = if (extendedEnabled) View.VISIBLE else View.GONE //backcopyButton.isGone &&
+    }
     private fun captureItemToBitmap(position: Int, format: String) {
         val viewHolder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
         if (viewHolder != null) {
@@ -3048,6 +3131,7 @@ $cleanContent
     fun onOpenedFromNotification() {
         backButton.visibility = View.VISIBLE
         backcopyButton.visibility = View.VISIBLE
+        homeButton.visibility = View.GONE
     }
     private fun substituteVariables(input: String): String {
         if (!input.contains("{{ox")) return input  // 🔥 EARLY EXIT: Instant if no vars (99% cases)
