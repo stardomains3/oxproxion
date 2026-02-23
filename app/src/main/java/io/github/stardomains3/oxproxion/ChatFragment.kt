@@ -741,8 +741,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                             chatRecyclerView.post {
                                 chatRecyclerView.post {  // Triple post handles layout/draw timing
                                     if(isShare){
-                                        backcopyButton.visibility = View.VISIBLE
                                         homeButton.visibility = View.GONE
+                                        backcopyButton.visibility = View.VISIBLE
                                         isShare = false
                                     }
                                     val lastPos = chatAdapter.itemCount - 1
@@ -892,6 +892,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             event.getContentIfNotHandled()?.let {
                 // Perform autosend: Simulate send button click
                 sendChatButton.performClick()
+                homeButton.visibility = View.GONE
                 backButton.visibility = View.VISIBLE
                 isShare = true
             }
@@ -1704,6 +1705,10 @@ $cleanContent
             else {
                 showSaveChatDialogWithResultApi()
             }
+        }
+        topWebSearchButton.setOnLongClickListener {
+            showWebSearchEngineDialog()
+            true
         }
 
         openSavedChatsButton.setOnClickListener {
@@ -3129,9 +3134,9 @@ $cleanContent
         }
     }
     fun onOpenedFromNotification() {
+        homeButton.visibility = View.GONE
         backButton.visibility = View.VISIBLE
         backcopyButton.visibility = View.VISIBLE
-        homeButton.visibility = View.GONE
     }
     private fun substituteVariables(input: String): String {
         if (!input.contains("{{ox")) return input  // 🔥 EARLY EXIT: Instant if no vars (99% cases)
