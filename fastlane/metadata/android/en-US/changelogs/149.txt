@@ -1,0 +1,1 @@
+- For Ollama LAN reasoning models, if you have reasoning off it will send "think=false" and if you have it on it will send "think=true". https://docs.ollama.com/capabilities/thinking

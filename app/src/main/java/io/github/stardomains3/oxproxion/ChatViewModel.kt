@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OLLAMA
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -796,6 +797,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 else
                     null,
                 stream = true,
+                think = if (isReasoningModel(_activeChatModel.value) &&
+                    sharedPreferencesHelper.getLanProvider() == LAN_PROVIDER_OLLAMA
+                ) {
+                    _isReasoningEnabled.value
+                } else null,
                 max_tokens = maxTokens,
                 //logprobs = null,
                 reasoning = if (_isReasoningEnabled.value == true && isReasoningModel(_activeChatModel.value)) {
@@ -1057,6 +1063,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         listOf("middle-out")
                     else
                         null,
+                    think = if (isReasoningModel(_activeChatModel.value) &&
+                        sharedPreferencesHelper.getLanProvider() == LAN_PROVIDER_OLLAMA
+                    ) {
+                        _isReasoningEnabled.value
+                    } else null,
                     //logprobs = null,
                     //  usage = UsageRequest(include = true),
                     max_tokens = maxTokens,

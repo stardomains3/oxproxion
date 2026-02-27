@@ -26,6 +26,7 @@ data class ChatRequest(
     val temperature: Double? = null,
     val modalities: List<String>? = null,
     val logprobs: Boolean? = null,
+    val think: Boolean? = null,
     @SerialName("image_config")  // NEW: Optional for Gemini
     val imageConfig: ImageConfig? = null,
     val plugins: List<Plugin>? = null
