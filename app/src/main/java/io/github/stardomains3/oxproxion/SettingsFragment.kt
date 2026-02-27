@@ -24,6 +24,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val prefs = SharedPreferencesHelper(requireContext())
 
         val viewModel: ChatViewModel by activityViewModels()
+        val showCitationsSwitch = view.findViewById<MaterialSwitch>(R.id.showCitationsSwitch)
         val expandableInputSwitch = view.findViewById<MaterialSwitch>(R.id.expandableInputSwitch)
         val biometricsSwitch = view.findViewById<MaterialSwitch>(R.id.biometricsSwitch)
         val autoDisableWebSearchSwitch = view.findViewById<MaterialSwitch>(R.id.autoDisableWebSearchSwitch)
@@ -53,6 +54,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
         extendedTopBarSwitch.isChecked = prefs.getExtendedTopBarEnabled()
         openRouterTransformsSwitch.isChecked = prefs.getOpenRouterTransformsEnabled()
+        showCitationsSwitch.isChecked = prefs.getShowCitations()
         openRouterTransformsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveOpenRouterTransformsEnabled(isChecked)
         }
@@ -97,6 +99,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 parentFragmentManager.popBackStack()
                 viewModel.checkRemainingCredits()
             }
+        }
+        showCitationsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveShowCitations(isChecked)
         }
         timeoutButton.setOnClickListener {
             TimeoutDialogFragment().show(childFragmentManager, TimeoutDialogFragment.TAG)
@@ -158,7 +163,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.presetsExtendedSwitch,
             R.id.autoDisableWebSearchSwitch,
             R.id.extendedTopBarSwitch,
-            R.id.openRouterTransformsSwitch
+            R.id.openRouterTransformsSwitch,
+            R.id.showCitationsSwitch
         ).forEach { id ->
             view.findViewById<MaterialSwitch>(id)?.styleSwitch()
         }

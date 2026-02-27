@@ -33,6 +33,7 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
+        private const val KEY_SHOW_CITATIONS = "show_citations"
         private const val KEY_EXTENDED_TOP_BAR = "extended_top_bar_enabled"
         private const val KEY_OPENROUTER_TRANSFORMS_ENABLED = "openrouter_transforms_enabled"
         private const val KEY_EXPANDABLE_INPUT = "expandable_input_enabled"
@@ -401,7 +402,9 @@ class SharedPreferencesHelper(context: Context) {
             //  Log.e("API_KEY_STORAGE", "Error encrypting $alias", e)
         }
     }
+    fun getShowCitations(): Boolean = mainPrefs.getBoolean(KEY_SHOW_CITATIONS, true)  // Default true (show citations)
 
+    fun saveShowCitations(show: Boolean) = mainPrefs.edit { putBoolean(KEY_SHOW_CITATIONS, show) }
     fun getApiKeyFromPrefs(alias: String): String {
         val encryptedKeyString = apiKeysPrefs.getString("${alias}_encrypted", "")
         val ivString = apiKeysPrefs.getString("${alias}_iv", "")

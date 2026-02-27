@@ -1,0 +1,5 @@
+v2.1.40
+- Added a setting to show/hide citations
+
+v2.1.39
+- For Ollama LAN reasoning models, if you have reasoning off it will send "think=false" and if you have it on it will send "think=true". https://docs.ollama.com/capabilities/thinking

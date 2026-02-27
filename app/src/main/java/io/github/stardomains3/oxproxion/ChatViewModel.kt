@@ -998,7 +998,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         accumulatedReasoning += "\n\n---\n\n"
                     }
 
-                    val citationsMarkdown = formatCitations(accumulatedAnnotations)
+                    //OLD val citationsMarkdown = formatCitations(accumulatedAnnotations)
+                    val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+                        formatCitations(accumulatedAnnotations)
+                    } else ""
                     val finalContent = (accumulatedResponse + citationsMarkdown).takeIf { it.isNotBlank() } ?: "No response received."
 
                     withContext(Dispatchers.Main) {
@@ -1183,7 +1186,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             ?: ""
 
         val separator = if (reasoningForDisplay.isNotBlank()) "\n\n---\n\n" else ""
-        val citationsMarkdown = formatCitations(message.annotations)
+       //OLD  val citationsMarkdown = formatCitations(message.annotations)
+        val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+            formatCitations(message.annotations)
+        } else {
+            ""
+        }
+
         val finalContent = responseText + citationsMarkdown
 
         var finalAiMessage = FlexibleMessage(
