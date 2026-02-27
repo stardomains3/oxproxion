@@ -85,6 +85,12 @@
     <style name="Font.AroneSansRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/aronesans_regular</item>
     </style>
+    <style name="Font_AtkinsonhyperlegiblemonoRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/atkinsonhyperlegiblemono_regular</item>
+    </style>
+    <style name="Font_AtkinsonhyperlegiblenextRegular" parent="Base.Theme.Oxproxion">
+        <item name="fontFamily">@font/atkinsonhyperlegiblenext_regular</item>
+    </style>
     <style name="Font.FunnelDisplayRegular" parent="Base.Theme.Oxproxion">
         <item name="fontFamily">@font/funneldisplay_regular</item>
     </style>

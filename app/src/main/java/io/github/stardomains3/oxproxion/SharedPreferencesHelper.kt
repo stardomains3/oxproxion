@@ -50,6 +50,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         private const val KEY_LAST_AI_RESPONSE_CHANNEL = "last_ai_response_channel_"
         const val LAN_PROVIDER_LLAMA_CPP = "llama_cpp"
+        private const val KEY_FONT_SIZEC = "font_sizec"
         const val LAN_PROVIDER_OLLAMA = "ollama"
         private const val KEY_WEB_SEARCH_ENGINE = "web_search_engine"
         private const val KEY_WEB_SEARCH_ENABLED = "web_search_enabled"
@@ -326,6 +327,13 @@ class SharedPreferencesHelper(context: Context) {
     }
     fun getSelectedFont(): String {
         return mainPrefs.getString(KEY_SELECTED_FONT, "geologica_light") ?: "geologica_light"
+    }
+    fun saveFontSizeCh(size: Int) {
+        mainPrefs.edit { putInt(KEY_FONT_SIZEC, size) }
+    }
+
+    fun getFontSizeCh(): Int {
+        return mainPrefs.getInt(KEY_FONT_SIZEC, 100)  // Default: 100%
     }
     fun getNotiPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_NOTI_ENABLED, true)

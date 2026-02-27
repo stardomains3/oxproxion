@@ -68,7 +68,7 @@
                 style="@style/Widget.Material3.Button.IconButton.Filled"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="2dp"
+                android:layout_marginStart="0dp"
                 android:layout_marginEnd="2dp"
                 app:backgroundTint="@color/button_background_col"
                 app:cornerRadius="24dp"
@@ -486,6 +486,22 @@
                             app:iconTint="#A8A8A8"
                             app:backgroundTint="@color/button_background_col"/>
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/fontSizeButton"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            app:icon="@drawable/ic_format"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:iconGravity="textStart"
+                            app:iconSize="28dp"
+                            app:cornerRadius="24dp"
+                            android:layout_marginEnd="14dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            app:iconTint="#A8A8A8"
+                            app:backgroundTint="@color/button_background_col"/>
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/presetsButton"
                             style="@style/Widget.Material3.Button.IconButton.Filled"
                             app:icon="@drawable/ic_presets"
@@ -748,6 +764,65 @@
                     app:iconTint="#A8A8A8"
                     app:backgroundTint="@color/button_background_col" />
 
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/fontSizeControlsContainer"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start"
+                android:layout_marginStart="2dp"
+                android:layout_marginBottom="8dp"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:padding="2dp">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnIncreaseFont"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    app:icon="@drawable/ic_plus"
+                    app:iconSize="24dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"
+                    android:contentDescription="Increase font" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDecreaseFont"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    app:icon="@drawable/ic_minus"
+                    app:iconSize="24dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"
+                    android:contentDescription="Decrease font" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDoneFont"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    app:icon="@drawable/ic_check"
+                    app:iconSize="24dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"
+                    android:contentDescription="Done" />
             </LinearLayout>
             <View
                 android:id="@+id/progressBar"

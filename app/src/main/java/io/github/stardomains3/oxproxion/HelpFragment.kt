@@ -71,6 +71,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             "ic_fingerprint" to R.drawable.ic_fingerprint,
             "ic_presets" to R.drawable.ic_presets,
             "ic_fonts" to R.drawable.ic_fonts,
+             "ic_format" to R.drawable.ic_format,
             "ic_backlight" to R.drawable.ic_backlight,
              "ic_lan" to R.drawable.ic_lan,
              "ic_menudot" to R.drawable.ic_menudot,
@@ -93,6 +94,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
         val typeface = try {
             when (selectedFontName) {
                 "system_default" -> Typeface.DEFAULT
+                "atkinsonhyperlegiblemono_regular" -> ResourcesCompat.getFont(requireContext(), R.font.atkinsonhyperlegiblemono_regular)
+                "atkinsonhyperlegiblenext_regular" -> ResourcesCompat.getFont(requireContext(), R.font.atkinsonhyperlegiblenext_regular)
                 "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
                 "notoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notoserif_regular)
                 "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
@@ -198,6 +201,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Create Markdown File of Response**: Tap the **Markdown icon** to save just that response as a .md file in your device's Downloads folder. Long-press to save a .txt file in your device's Downloads folder.
             *   **Create PNG File of Response**: Tap the **PNG icon** to save just that response as a .png file in your device's Downloads folder. Long-press for .webp. 
             *   **View HTML of Response**: Tap the **HTML icon** to view the AI response in HTML in an Android Webview. This makes code blocks easier to read, allows one tap copy of them and other view improvements. A print option appears in the screen too.
+            *   **Save HTML of Response**: Long-Press the **HTML icon** to save the AI response as an HTML file in your device's Downloads folder.
             *   **Edit User Message**: Tap the **edit icon** on a user message to load its text into the input box for editing. Caution: this removes the message and all subsequent messages from the history.
             *   **Resend User Message**: Tap the **resend icon** on a user message to resend the prompt and generate a new response. Caution: this removes all messages after it while keeping the original prompt.
 
@@ -236,6 +240,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Stream Button** {{ic_stream}} : Toggles streaming responses on or off.
             *   **Conversation Button** {{ic_convo}} : Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
             *   **Fonts Button** {{ic_fonts}} : Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
+            *   **Font Size Button** {{ic_format}} : Makes visible the font resizing buttons for to change the size of the font in the main chat screen.
             *   **Presets Button** {{ic_presets}} : Opens the Presets screen.
             *   **Settings Button** {{ic_settings}} : Opens the Settings screen.
             *   **Paste Button** {{ic_paste}} : Pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. (This button only appears when extended dock is on.)

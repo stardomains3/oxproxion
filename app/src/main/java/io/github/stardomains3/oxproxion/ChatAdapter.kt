@@ -50,6 +50,7 @@ class ChatAdapter(
     private val onSaveMarkdown: (Int, String) -> Unit,
     private val onCaptureItemToBitmap: (Int, String) -> Unit,
     private val onShowMarkdown: (String) -> Unit,
+    private val onSaveHtml: (String) -> Unit,
     private val onSaveText: (Int, String) -> Unit,
     private val onCollapse: () -> Unit
 
@@ -71,7 +72,7 @@ class ChatAdapter(
     private val messages = mutableListOf<FlexibleMessage>()
     private var isUserApplyingEdit: Boolean = false
     private var editTargetPosition: Int = -1
-
+    private var currentFontScale: Int = 100
     init {
         // OPTIMIZATION: Consumer loop
         scope.launch(Dispatchers.Main) {
@@ -208,6 +209,10 @@ class ChatAdapter(
         isUserApplyingEdit = true
         editTargetPosition = position
     }
+    fun updateFontSize(scalePercent: Int) {
+        currentFontScale = scalePercent.coerceIn(50, 200) // clamp 50%-200%
+        notifyDataSetChanged()
+    }
     private fun getMessageText(content: JsonElement): String {
         if (content is JsonPrimitive) return content.content
         if (content is JsonArray) {
@@ -343,6 +348,7 @@ class ChatAdapter(
         private val collapseToggleButton: ImageButton = itemView.findViewById(R.id.collapseToggleButton)
 
         fun bind(message: FlexibleMessage) {
+            messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
             val rawUserContent = getMessageText(message.content)
             val pos = bindingAdapterPosition
@@ -518,6 +524,7 @@ class ChatAdapter(
         }
 
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
+            messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
 
             // 1. DISPLAY TEXT (Optimized: Uses Cache)
@@ -650,6 +657,13 @@ class ChatAdapter(
                 if (fullRawMarkdown.isNotBlank()) {
                     onShowMarkdown.invoke(fullRawMarkdown)
                 }
+            }
+            htmlButton.setOnLongClickListener {
+                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                if (fullRawMarkdown.isNotBlank()) {
+                    onSaveHtml.invoke(fullRawMarkdown)
+                    true // Consume long press
+                } else false
             }
             editButton.setOnClickListener {
                 // Pass the position and the raw text to the fragment

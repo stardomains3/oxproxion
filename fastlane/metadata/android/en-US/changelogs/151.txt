@@ -1,0 +1,3 @@
+- You can now long-press the HTML button on a individual AI response to save it as HTML in your downloads folder.
+- Added Atkinson Hyperlegible Next and Atkinson Hyperlegible Mono fonts.
+- You can now increase/decrease the font size of the AI and User message bubbles. Tap the new Font resizing button in the menu, which appears increase/decrease font size buttons on the main screen. Tap the check button when done. Your new size is saved automatically.

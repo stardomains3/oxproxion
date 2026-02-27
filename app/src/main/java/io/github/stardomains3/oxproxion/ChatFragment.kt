@@ -137,6 +137,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
     private lateinit var plusButton: MaterialButton
+    private lateinit var btnDecreaseFont: MaterialButton
+    private lateinit var btnIncreaseFont: MaterialButton
+    private lateinit var btnDoneFont: MaterialButton
     private lateinit var genButton: MaterialButton
     private lateinit var saveMarkdownFileButton: MaterialButton
     private lateinit var saveEpubButton: MaterialButton
@@ -149,6 +152,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var chatRecyclerView: RecyclerView
     private lateinit var chatEditText: EditText
     private lateinit var extBG: LinearLayout
+    private lateinit var fontSizeControlsContainer: LinearLayout
     private lateinit var sendChatButton: MaterialButton
     private lateinit var resetChatButton: MaterialButton
     private lateinit var utilityButton: MaterialButton
@@ -179,6 +183,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var datetimeFmt: SimpleDateFormat
     private lateinit var humanFmt: SimpleDateFormat
     private lateinit var fontsButton: MaterialButton
+    private lateinit var fontSizeButton: MaterialButton
     private lateinit var buttonsContainer: LinearLayout
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var markwon: Markwon
@@ -367,6 +372,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         reasoningButton = view.findViewById(R.id.reasoningButton)
         webSearchButton = view.findViewById(R.id.webSearchButton)
         fontsButton = view.findViewById(R.id.fontsButton)
+        fontSizeButton = view.findViewById(R.id.fontSizeButton)
         scrollToBottomButton = view.findViewById(R.id.scrollToBottomButton)
         scrollToTopButton = view.findViewById(R.id.scrollToTopButton)
         convoButton  = view.findViewById(R.id.convoButton)
@@ -377,6 +383,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
         extBG = view.findViewById(R.id.extBG)
+        fontSizeControlsContainer = view.findViewById(R.id.fontSizeControlsContainer)
         originalSendIcon = sendChatButton.icon
         resetChatButton = view.findViewById(R.id.resetChatButton)
         saveChatButton = view.findViewById(R.id.saveChatButton)
@@ -602,6 +609,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         })
         pdfGenerator = PdfGenerator(requireContext())
         plusButton = view.findViewById(R.id.plusButton)
+        btnDecreaseFont = view.findViewById(R.id.btnDecreaseFont)
+        btnIncreaseFont = view.findViewById(R.id.btnIncreaseFont)
+        btnDoneFont = view.findViewById(R.id.btnDoneFont)
         genButton = view.findViewById(R.id.genButton)
         setupClickListeners()
         setupPlusButtonListener()
@@ -1041,6 +1051,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             when (selectedFontName) {
                 "system_default" -> Typeface.DEFAULT
                 "alansans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alansans_regular)
+                "atkinsonhyperlegiblemono_regular" -> ResourcesCompat.getFont(requireContext(), R.font.atkinsonhyperlegiblemono_regular)
+                "atkinsonhyperlegiblenext_regular" -> ResourcesCompat.getFont(requireContext(), R.font.atkinsonhyperlegiblenext_regular)
                 "notoserif_regular" -> ResourcesCompat.getFont(requireContext(), R.font.notoserif_regular)
                 "alexandria_regular" -> ResourcesCompat.getFont(requireContext(), R.font.alexandria_regular)
                 "aronesans_regular" -> ResourcesCompat.getFont(requireContext(), R.font.aronesans_regular)
@@ -1095,7 +1107,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatRecyclerView.post { updateScrollProgress() }
 
         updateExtendedTopBarVisibility(sharedPreferencesHelper.getExtendedTopBarEnabled())
-
+        val savedScale = sharedPreferencesHelper.getFontSizeCh()
+        chatAdapter.updateFontSize(savedScale)
         // end onviewcreated
     }
 
@@ -1351,6 +1364,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     .add(R.id.fragment_container, MarkdownViewerFragment.newInstance(markdown,selectedFontName,modeltoPass))
                     .addToBackStack(null)
                     .commit()
+            },
+            onSaveHtml = { markdown ->
+                // Generate clean HTML (light theme, no custom font)
+                val htmlContent = MarkdownRenderer.toHtmlExp(markdown)
+                viewModel.saveHtmlSingleToDownloads(htmlContent)
             },
             onSaveText = {position, text ->
                 viewModel.saveTextToDownloads(text)
@@ -1698,6 +1716,22 @@ $cleanContent
         topConvoButton.setOnClickListener { convoButton.performClick() }
         topPresetsButton.setOnClickListener { presetsButton.performClick() }
         topSettingsButton.setOnClickListener { settingsButton.performClick() }
+        btnIncreaseFont.setOnClickListener {
+            val newScale = (sharedPreferencesHelper.getFontSizeCh() + 5).coerceAtMost(300)
+            sharedPreferencesHelper.saveFontSizeCh(newScale)
+            chatAdapter.updateFontSize(newScale)
+        }
+
+        btnDecreaseFont.setOnClickListener {
+            val newScale = (sharedPreferencesHelper.getFontSizeCh() - 5).coerceAtLeast(50)
+            sharedPreferencesHelper.saveFontSizeCh(newScale)
+            chatAdapter.updateFontSize(newScale)
+        }
+
+// Hide controls
+        btnDoneFont.setOnClickListener {
+            fontSizeControlsContainer.visibility = View.GONE
+        }
         saveChatButton.setOnClickListener {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
                 return@setOnClickListener
@@ -2022,7 +2056,11 @@ $cleanContent
         reasoningButton.setOnClickListener {
             viewModel.toggleReasoning()
         }
+        fontSizeButton.setOnClickListener {
+            hideMenu()
+            fontSizeControlsContainer.visibility = View.VISIBLE
 
+        }
         fontsButton.setOnClickListener {
             hideMenu()
 
@@ -2030,6 +2068,8 @@ $cleanContent
             val fontOptions = listOf(
                 Triple("System Default", null, R.style.Base_Theme_Oxproxion),
                 Triple("Alan Sans Regular", R.font.alansans_regular, R.style.Font_AlanSansRegular),
+                Triple("Atkinson Mono", R.font.atkinsonhyperlegiblemono_regular, R.style.Font_AtkinsonhyperlegiblemonoRegular),
+                Triple("Atkinson Next", R.font.atkinsonhyperlegiblenext_regular, R.style.Font_AtkinsonhyperlegiblenextRegular),
                 Triple("Alexandria Regular", R.font.alexandria_regular, R.style.Font_AlexandriaRegular),
                 Triple("Arone Sans Regular", R.font.aronesans_regular, R.style.Font_AroneSansRegular),
                 Triple("Funnel Display Regular", R.font.funneldisplay_regular, R.style.Font_FunnelDisplayRegular),
@@ -2059,6 +2099,8 @@ $cleanContent
             fun getFontNameFromRes(fontResId: Int?): String = when (fontResId) {
                 null -> "system_default"
                 R.font.alansans_regular -> "alansans_regular"
+                R.font.atkinsonhyperlegiblemono_regular -> "atkinsonhyperlegiblemono_regular"
+                R.font.atkinsonhyperlegiblenext_regular -> "atkinsonhyperlegiblenext_regular"
                 R.font.alexandria_regular -> "alexandria_regular"
                 R.font.notoserif_regular -> "notoserif_regular"
                 R.font.aronesans_regular -> "aronesans_regular"

@@ -1543,6 +1543,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    fun saveHtmlSingleToDownloads(htmlContent: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                saveFileToDownloads(
+                    filename = "chat-${System.currentTimeMillis()}.html",
+                    content = htmlContent,
+                    mimeType = "text/html"
+                )
+                _toolUiEvent.postValue(Event("✅ HTML saved to Downloads!"))
+            } catch (e: Exception) {
+                _toolUiEvent.postValue(Event("❌ Save failed: ${e.message}"))
+            }
+        }
+    }
     fun saveHtmlToDownloads(innerHtml: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
