@@ -218,7 +218,13 @@ object MarkdownRenderer {
     """.trimIndent()
     }
     fun toHtml(markdown: String, fontName: String = "system_default"): String {
-        val document: Node = parser.parse(markdown)
+        // Escape backslashes for math delimiters so Commonmark doesn't eat them
+        val escapedMarkdown = markdown
+            .replace("\\(", "\\\\(")
+            .replace("\\)", "\\\\)")
+            .replace("\\[", "\\\\[")
+            .replace("\\]", "\\\\]")
+        val document: Node = parser.parse(escapedMarkdown)
         var htmlBody = renderer.render(document)
 
         // Wrap Tables
@@ -247,6 +253,12 @@ object MarkdownRenderer {
         } else {
             ""
         }
+        val katexLinks = """
+    <link rel="stylesheet" href="katex.min.css">
+    <script src="katex.min.js"></script>
+    <script src="contrib/auto-render.min.js"></script>
+""".trimIndent()
+
 
         val css = """
         <style>
@@ -273,8 +285,8 @@ object MarkdownRenderer {
             del { color: #d32f2f; text-decoration: line-through; }
             
             .table-scroll-wrapper {
-                width: 100%; overflow-x: auto; margin: 16px 0; background: #111; border-radius: 8px;
-                -webkit-overflow-scrolling: touch; 
+                width: 100%; overflow-x: auto; margin: 16px 0; background: #111; border-radius: 8px; 
+                -webkit-overflow-scrolling: touch;
             }
             table { 
                 width: max-content; min-width: 100%; max-width: 100vw; 
@@ -411,16 +423,41 @@ object MarkdownRenderer {
         </script>
         """.trimIndent()
 
+        val katexInit = """
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\( ', right: ' \\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                ignoredTags: ["script", "noscript", "style", "textarea", "code", "option"],
+                throwOnError: false
+            });
+        }
+    });
+</script>
+""".trimIndent()
+
+
         return """
+        <!DOCTYPE html>
         <html>
             <head>
+                <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+                $katexLinks
                 <link rel="stylesheet" href="github-dark-dimmed.min.css">
                 $css
             </head>
             <body>
                 $htmlBody
                 $js
+                $katexInit
             </body>
         </html>
         """.trimIndent()
