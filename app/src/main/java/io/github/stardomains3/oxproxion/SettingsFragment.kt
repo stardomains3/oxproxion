@@ -24,6 +24,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val prefs = SharedPreferencesHelper(requireContext())
 
         val viewModel: ChatViewModel by activityViewModels()
+        val copyOrOpenSwitch = view.findViewById<MaterialSwitch>(R.id.copyOropenSwitch)
         val showCitationsSwitch = view.findViewById<MaterialSwitch>(R.id.showCitationsSwitch)
         val expandableInputSwitch = view.findViewById<MaterialSwitch>(R.id.expandableInputSwitch)
         val biometricsSwitch = view.findViewById<MaterialSwitch>(R.id.biometricsSwitch)
@@ -47,6 +48,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         notificationsSwitch.isChecked = prefs.getNotiPreference()
         autoDisableWebSearchSwitch.isChecked = prefs.getDisableWebSearchAfterSend()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
+        copyOrOpenSwitch.isChecked = prefs.getUseCopyButton()
         scrollButtonsSwitch.isChecked = viewModel.isScrollersEnabled.value ?: false
         expandableInputSwitch.isChecked = viewModel.isExpandableInputEnabled.value ?: false
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
@@ -77,6 +79,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         viewModel.isPresetsExtendedEnabled.observe(viewLifecycleOwner) { enabled ->
             presetsExtendedSwitch.isChecked = enabled
+        }
+        copyOrOpenSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveUseCopyButton(isChecked)  // true = Copy button, false = Open button
         }
         autoDisableWebSearchSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveDisableWebSearchAfterSend(isChecked)
@@ -161,6 +166,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.extendedDockSwitch,
             R.id.notificationsSwitch,
             R.id.presetsExtendedSwitch,
+            R.id.copyOropenSwitch,
             R.id.autoDisableWebSearchSwitch,
             R.id.extendedTopBarSwitch,
             R.id.openRouterTransformsSwitch,

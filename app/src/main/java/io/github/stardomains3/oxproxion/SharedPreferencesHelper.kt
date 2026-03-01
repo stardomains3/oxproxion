@@ -51,6 +51,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_LAST_AI_RESPONSE_CHANNEL = "last_ai_response_channel_"
         const val LAN_PROVIDER_LLAMA_CPP = "llama_cpp"
         private const val KEY_FONT_SIZEC = "font_sizec"
+        private const val KEY_USE_COPY_BUTTON = "use_copy_button"
         const val LAN_PROVIDER_OLLAMA = "ollama"
         private const val KEY_WEB_SEARCH_ENGINE = "web_search_engine"
         private const val KEY_WEB_SEARCH_ENABLED = "web_search_enabled"
@@ -157,6 +158,12 @@ class SharedPreferencesHelper(context: Context) {
     fun saveCustomPrompts(prompts: List<Prompt>) {
         val jsonString = json.encodeToString(prompts)
         mainPrefs.edit { putString(KEY_CUSTOM_PROMPTS, jsonString) }
+    }
+    fun getUseCopyButton(): Boolean {
+        return mainPrefs.getBoolean(KEY_USE_COPY_BUTTON, false)  // false = Open, true = Copy
+    }
+    fun saveUseCopyButton(useCopy: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_USE_COPY_BUTTON, useCopy) }
     }
     private fun migrateSelectedSystemMessage() {
         val oldJson = mainPrefs.getString(KEY_SELECTED_SYSTEM_MESSAGE, null)

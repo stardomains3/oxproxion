@@ -1,0 +1,7 @@
+New Notification Button Option:
+
+- New setting to choose between "Open" or "Copy" button in AI response notifications
+- "Copy" instantly copies the spoken text (markdown-stripped) to clipboard and dismisses the notification
+- Toggle found in Settings → choose your preferred quick action when receiving AI responses
+- If you use the Copy option, you can still open the app from the notification by tapping anywhere on it other than one of the buttons.
+- Copy button is especially helpful if you are using oxproxion for spelling/grammar correction from a share to it from another app.

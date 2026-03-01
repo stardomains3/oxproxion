@@ -6,6 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ClipboardManager
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -25,6 +27,7 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
 
     private val TOGGLE_TTS_ACTION = "TOGGLE_TTS_CHANNEL_2"
     private val DISMISS_ACTION = "DISMISS_CHANNEL_2"
+    private val COPY_ACTION = "COPY_CHANNEL_2"
 
     private var tts: TextToSpeech? = null
     private var isTtsActive = false
@@ -141,6 +144,11 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
                     isTtsActive = false
                     return START_NOT_STICKY
                 }
+                COPY_ACTION -> {
+                    copyLastResponseToClipboard()
+                    getSystemService(NotificationManager::class.java).cancel(2)
+                    return START_NOT_STICKY
+                }
             }
         }
 
@@ -236,6 +244,16 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
             return text.replace(Regex("\\*\\*|__|`|\\[|\\]"), "")
         }
     }
+
+    private fun copyLastResponseToClipboard() {
+        val lastResponse = getLastAiResponseForChannel(2) ?: return
+        val cleanText = stripMarkdownWithCommonMark(lastResponse)
+
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("AI Response", cleanText)
+        clipboard.setPrimaryClip(clip)
+    }
+
     private fun isAppInForeground(): Boolean {
         val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val appProcesses = activityManager.runningAppProcesses ?: return false
@@ -299,6 +317,15 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // NEW COPY BUTTON CODE - PendingIntent for copy action
+        val copyIntent = Intent(this, ForegroundService::class.java).apply {
+            action = COPY_ACTION
+        }
+        val copyPendingIntent = PendingIntent.getService(
+            this, 12, copyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(contentText)
@@ -319,7 +346,18 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
                 builder.addAction(android.R.drawable.ic_media_pause, "Stop", togglePendingIntent)
             }
             builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
-            builder.addAction(android.R.drawable.ic_menu_info_details, "Open", pendingIntent)
+
+            // Check preference for Copy vs Open button
+            val mainPrefs = getSharedPreferences("MainAppPrefs", Context.MODE_PRIVATE)
+            val useCopyButton = mainPrefs.getBoolean("use_copy_button", false)
+
+            if (useCopyButton) {
+                // NEW COPY BUTTON CODE - Copies the same text that TTS speaks
+                builder.addAction(android.R.drawable.ic_input_get, "Copy", copyPendingIntent)
+            } else {
+                // OLD OPEN BUTTON CODE - Opens the app when tapped
+                builder.addAction(android.R.drawable.ic_menu_info_details, "Open", pendingIntent)
+            }
 
             if (isTtsUpdate) {
                 builder.setSilent(true)
