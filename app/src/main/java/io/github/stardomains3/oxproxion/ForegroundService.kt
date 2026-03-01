@@ -345,11 +345,20 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
             } else {
                 builder.addAction(android.R.drawable.ic_media_pause, "Stop", togglePendingIntent)
             }
-            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+           // builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
 
             // Check preference for Copy vs Open button
             val mainPrefs = getSharedPreferences("MainAppPrefs", Context.MODE_PRIVATE)
             val useCopyButton = mainPrefs.getBoolean("use_copy_button", false)
+            val useCopyButton2 = mainPrefs.getBoolean("use_copy_button2", false)
+
+            if (useCopyButton2) {
+                // NEW COPY BUTTON CODE for second slot - Copies the same text that TTS speaks
+                builder.addAction(android.R.drawable.ic_input_get, "Copy", copyPendingIntent)
+            } else {
+                // OLD DISMISS BUTTON CODE - Just dismisses the notification
+                builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+            }
 
             if (useCopyButton) {
                 // NEW COPY BUTTON CODE - Copies the same text that TTS speaks

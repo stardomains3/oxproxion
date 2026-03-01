@@ -905,6 +905,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 homeButton.visibility = View.GONE
                 backButton.visibility = View.VISIBLE
                 isShare = true
+                if(sharedPreferencesHelper.getAutoBack()){
+                    activity?.moveTaskToBack(true)
+                }
             }
         }
 

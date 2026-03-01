@@ -1,0 +1,9 @@
+- Added a setting preference: Auto Back after receiving a Share. If on, when you share text to a share target of the app, it will automatically take you back to the app you shared it from.
+
+New Notification Button Option:
+
+- New setting to choose between "Open" or "Dismiss" button in AI response notifications
+- "Copy" instantly copies the response text (markdown-stripped) to clipboard and dismisses the notification
+- Toggle found in Settings → choose your preferred quick action when receiving AI responses
+- If you use the Copy option, you can still dismiss the app from the notification by swiping it away.
+- Copy button is especially helpful if you are using oxproxion for spelling/grammar correction from a share to it from another app.

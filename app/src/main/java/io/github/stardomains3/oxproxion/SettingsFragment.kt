@@ -27,6 +27,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val copyOrOpenSwitch = view.findViewById<MaterialSwitch>(R.id.copyOropenSwitch)
         val showCitationsSwitch = view.findViewById<MaterialSwitch>(R.id.showCitationsSwitch)
         val expandableInputSwitch = view.findViewById<MaterialSwitch>(R.id.expandableInputSwitch)
+        val autoBackSwitch = view.findViewById<MaterialSwitch>(R.id.autoBackSwitch)
+        val copyOrDismissSwitch = view.findViewById<MaterialSwitch>(R.id.copyOrdismissSwitch)
         val biometricsSwitch = view.findViewById<MaterialSwitch>(R.id.biometricsSwitch)
         val autoDisableWebSearchSwitch = view.findViewById<MaterialSwitch>(R.id.autoDisableWebSearchSwitch)
         val notificationsSwitch = view.findViewById<MaterialSwitch>(R.id.notificationsSwitch)
@@ -50,6 +52,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
         copyOrOpenSwitch.isChecked = prefs.getUseCopyButton()
         scrollButtonsSwitch.isChecked = viewModel.isScrollersEnabled.value ?: false
+        autoBackSwitch.isChecked = prefs.getAutoBack()
+        copyOrDismissSwitch.isChecked = prefs.getUseCopyButton2()
         expandableInputSwitch.isChecked = viewModel.isExpandableInputEnabled.value ?: false
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
         presetsExtendedSwitch.isChecked = viewModel.isPresetsExtendedEnabled.value ?: false
@@ -76,6 +80,12 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         presetsExtendedSwitch.setOnCheckedChangeListener { _, isChecked ->
             viewModel.togglePresetsExtended()  // VM saves + notifies Chat
+        }
+        autoBackSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveAutoBack(isChecked)
+        }
+        copyOrDismissSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveUseCopyButton2(isChecked)  // true = Copy button, false = Dismiss button
         }
         viewModel.isPresetsExtendedEnabled.observe(viewLifecycleOwner) { enabled ->
             presetsExtendedSwitch.isChecked = enabled
@@ -169,6 +179,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.copyOropenSwitch,
             R.id.autoDisableWebSearchSwitch,
             R.id.extendedTopBarSwitch,
+            R.id.autoBackSwitch,
+            R.id.copyOrdismissSwitch,
             R.id.openRouterTransformsSwitch,
             R.id.showCitationsSwitch
         ).forEach { id ->

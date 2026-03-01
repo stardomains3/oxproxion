@@ -263,6 +263,9 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key. **Long-press** to check your remaining credits.
             *   **OpenRouter Transforms** : To help with prompts that exceed the maximum context size of a model, OpenRouter supports a custom parameter called transforms. https://openrouter.ai/docs/guides/features/message-transforms
             *   **Extended Top Bar** : Allows the reasoning, web search, streaming, conversation, presets, and setting buttons to be on chat screen all the time below the top bar for convenient access. Also includes a Home button to bring to Android Home screen.
+            *   **Auto Back after receiving a Share** : If on, when you share text to a share target of the app, it will automatically take you back to the app you shared it from.
+            *   **Copy Button on Notification** : If on it will replace the standard button with a Copy button on the notification which will copy the last AI response and dismiss the notification.
+            
             ---
 
             ## 📂 App Screens

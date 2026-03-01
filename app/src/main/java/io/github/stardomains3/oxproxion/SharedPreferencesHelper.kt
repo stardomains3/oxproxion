@@ -33,6 +33,9 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
+        private const val KEY_AUTO_BACK = "auto_back_enabled"
+        private const val KEY_USE_COPY_BUTTON2 = "use_copy_button2"
+
         private const val KEY_SHOW_CITATIONS = "show_citations"
         private const val KEY_EXTENDED_TOP_BAR = "extended_top_bar_enabled"
         private const val KEY_OPENROUTER_TRANSFORMS_ENABLED = "openrouter_transforms_enabled"
@@ -248,7 +251,18 @@ class SharedPreferencesHelper(context: Context) {
         val sortOrderName = mainPrefs.getString(KEY_SORT_ORDER, SortOrder.ALPHABETICAL.name)
         return SortOrder.valueOf(sortOrderName ?: SortOrder.ALPHABETICAL.name)
     }
-
+    fun getUseCopyButton2(): Boolean {
+        return mainPrefs.getBoolean(KEY_USE_COPY_BUTTON2, false)  // false = Dismiss, true = Copy
+    }
+    fun saveUseCopyButton2(useCopy: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_USE_COPY_BUTTON2, useCopy) }
+    }
+    fun getAutoBack(): Boolean {
+        return mainPrefs.getBoolean(KEY_AUTO_BACK, false)
+    }
+    fun saveAutoBack(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_AUTO_BACK, enabled) }
+    }
     fun setOpenRouterInfoDismissed(dismissed: Boolean) {
         mainPrefs.edit { putBoolean(KEY_INFO_BAR_DISMISSED, dismissed) }
     }
