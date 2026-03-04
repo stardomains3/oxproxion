@@ -129,7 +129,7 @@ To build and run the project, follow these steps:
 
 ## ⚙️ Configuration
 
-This application requires an API key from [OpenRouter.ai](https://openrouter.ai/) to function. You will need to create an account, add credits, and obtain your API key.
+This application requires an API key from [OpenRouter.ai](https://openrouter.ai/) to use non-local models. You will need to create an account, add credits, and obtain your API key.
 
 Once you have your key, you can add it to the app where prompted.
 
