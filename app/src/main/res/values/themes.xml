@@ -155,4 +155,13 @@
         <item name="fontFamily">@font/vendsans_regular</item>
     </style>
     <style name="Theme.Oxproxion" parent="Base.Theme.Oxproxion" />
+    <style name="Theme.Oxproxion.AIFix" parent="Base.Theme.Oxproxion">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item> <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+    </style>
 </resources>

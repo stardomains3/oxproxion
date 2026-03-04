@@ -1574,6 +1574,127 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    suspend fun getAIFixContent(input: String): String? {
+        if (input.isBlank()) return null
+
+        // Check if we're using a LAN model
+        val isLanModel = activeModelIsLan()
+
+        // For LAN models, check if endpoint is configured instead of API key
+        if (!isLanModel) {
+            if (activeChatApiKey.isBlank()) return null
+        } else {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint.isNullOrBlank()) return null
+        }
+
+        return try {
+            withTimeout(30000) { // 30 second timeout for text correction
+                withContext(Dispatchers.IO) {
+                    val localClient = createHttpClient()
+
+                    // Determine the correct model to use
+                    val modelToUse = _activeChatModel.value ?: return@withContext null
+
+                    /*  if (isLanModel) {
+                      // For LAN models, use the active model identifier
+                      _activeChatModel.value ?: return@withContext null
+                  } else {
+                      // For non-LAN models, use a fast/cheap model for text correction
+                      // You can change this to any model you prefer
+                      "qwen/qwen3-30b-a3b-instruct-2507"
+                  }*/
+
+                    // Ensure we have the correct endpoint and API key set
+                    val (endpoint, apiKey) = if (isLanModel) {
+                        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+                        if (lanEndpoint.isNullOrBlank()) {
+                            localClient.close()
+                            return@withContext null
+                        }
+                        val lanKey = sharedPreferencesHelper.getLanApiKey()
+                        Pair(
+                            "$lanEndpoint/v1/chat/completions",
+                            if (lanKey.isNullOrBlank()) "any-non-empty-string" else lanKey
+                        )
+                    } else {
+                        Pair(
+                            "https://openrouter.ai/api/v1/chat/completions",
+                            sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
+                        )
+                    }
+
+                    // Build raw JSON payload
+                    val requestBody = buildJsonObject {
+                        put("model", JsonPrimitive(modelToUse))
+                        put("top_p", JsonPrimitive(1.0))
+                        put("temperature", JsonPrimitive(0.1)) // Low temperature for consistency
+                        putJsonArray("messages") {
+                            add(buildJsonObject {
+                                put("role", JsonPrimitive("system"))
+                                put(
+                                    "content",
+                                    JsonPrimitive(
+                                        "You are a precise text‑correction utility.\n" +
+                                                "Correct **only** the following issues in the user’s input:\n" +
+                                                "\n" +
+                                                "* Spelling mistakes (including homophone errors such as “to” vs. “too”, “their” vs. “there”).\n" +
+                                                "* Grammar errors (subject‑verb agreement, verb tense, article usage, etc.).\n" +
+                                                "* Capitalization errors.\n" +
+                                                "* Punctuation errors (missing, extra, or misplaced punctuation marks).\n" +
+                                                "\n" +
+                                                "**Do not**:\n" +
+                                                "\n" +
+                                                "* Rewrite sentences, rephrase, or improve overall clarity.\n" +
+                                                "* Change the user’s tone, style, or word choice beyond the errors listed above.\n" +
+                                                "* Add explanations, quotations, or any surrounding text.\n" +
+                                                "\n" +
+                                                "If the input contains no errors, return it **exactly** as received.\n" +
+                                                "Output **only** the corrected text—no headings, notes, or extra characters."
+                                    )
+                                )
+
+                            })
+                            add(buildJsonObject {
+                                put("role", JsonPrimitive("user"))
+                                put("content", JsonPrimitive(input))
+                            })
+                        }
+                        put("stream", JsonPrimitive(false))
+                        put("max_tokens", JsonPrimitive(4000))
+                    }
+
+                    val response = localClient.post(endpoint) {
+                        header("Authorization", "Bearer $apiKey")
+                        contentType(ContentType.Application.Json)
+                        setBody(requestBody)
+                    }
+
+                    localClient.close() // Clean up immediately after use
+
+                    if (!response.status.isSuccess()) {
+                        val errorBody = try {
+                            response.bodyAsText()
+                        } catch (ex: Exception) {
+                            "No details"
+                        }
+                        throw Exception("API Error: ${response.status} - $errorBody")
+                    }
+
+                    val chatResponse = response.body<JsonObject>()
+                    val choices = chatResponse["choices"]?.jsonArray
+                    val message = choices?.firstOrNull()?.jsonObject?.get("message")?.jsonObject
+                    val result = message?.get("content")?.jsonPrimitive?.content
+
+                    // Clean up the response - remove any quotes that the model might add
+                    result?.trim()?.removeSurrounding("\"")?.removeSurrounding("'")
+                }
+            }
+        } catch (e: Throwable) {
+           // Log.e("ChatViewModel", "AI Fix failed", e)
+            null
+        }
+    }
     suspend fun correctText(input: String): String? {
         if (input.isBlank()) return null
 

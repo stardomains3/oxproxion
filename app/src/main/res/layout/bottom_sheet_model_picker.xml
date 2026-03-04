@@ -17,7 +17,7 @@
         app:menu="@menu/bottom_sheet_model_picker_menu"
         app:navigationIcon="@drawable/is_backarrow" />
 
-    <!-- NEW: ConstraintLayout for filter bars -->
+    <!-- ConstraintLayout for filter bars -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -96,7 +96,7 @@
                 app:strokeColor="@color/chestnut"/>
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Cost Filter Bar (UPDATED: Added LAN button) -->
+        <!-- Cost Filter Bar (3 buttons: All, Free, Paid) -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/costFilterBar"
             android:layout_width="0dp"
@@ -136,10 +136,31 @@
                 style="?attr/materialButtonOutlinedStyle"
                 app:backgroundTint="@color/toggle_background_selector"
                 app:strokeColor="@color/chestnut"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <!-- NEW: LAN Button -->
+        <!-- NEW: Source Filter Bar (4th bar: All, LAN, Cloud) -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/sourceFilterBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/costFilterBar"
+            android:layout_marginTop="8dp"
+            app:singleSelection="true">
+
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/costFilterLanButton"
+                android:id="@+id/sourceFilterAllButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="All"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sourceFilterLanButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -147,10 +168,20 @@
                 style="?attr/materialButtonOutlinedStyle"
                 app:backgroundTint="@color/toggle_background_selector"
                 app:strokeColor="@color/chestnut"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sourceFilterCloudButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Cloud"
+                style="?attr/materialButtonOutlinedStyle"
+                app:backgroundTint="@color/toggle_background_selector"
+                app:strokeColor="@color/chestnut"/>
         </com.google.android.material.button.MaterialButtonToggleGroup>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Changed from LinearLayout to CoordinatorLayout -->
+    <!-- CoordinatorLayout for RecyclerView and FAB -->
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">

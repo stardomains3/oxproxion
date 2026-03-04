@@ -5,13 +5,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.widget.SearchView  // NEW: Import for SearchView
+import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButtonToggleGroup  // NEW: Import for toggle groups
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -19,27 +19,35 @@ class BotModelPickerFragment : Fragment() {
 
     var onModelSelected: ((String) -> Unit)? = null
     private lateinit var adapter: BotModelAdapter
-    private var models = mutableListOf<LlmModel>()  // Full list (existing)
+    private var models = mutableListOf<LlmModel>()
     private lateinit var chatViewModel: ChatViewModel
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
-    private lateinit var searchView: SearchView  // NEW: Reference to SearchView
-    private var filteredModels: MutableList<LlmModel> = mutableListOf()  // NEW: Filtered list
-    // NEW: References to toggle groups
+    private lateinit var searchView: SearchView
+    private var filteredModels: MutableList<LlmModel> = mutableListOf()
+    // Filter bar references
     private lateinit var sortBar: MaterialButtonToggleGroup
     private lateinit var filterBar: MaterialButtonToggleGroup
     private lateinit var costFilterBar: MaterialButtonToggleGroup
-    // NEW: Filter and sort state
+    private lateinit var sourceFilterBar: MaterialButtonToggleGroup  // NEW: Fourth filter bar
+    // Filter and sort state
     private var currentFilterType: FilterType = FilterType.ALL
     private var currentCostFilter: CostFilter = CostFilter.ALL
-    private var currentSortOrder: SortOrder = SortOrder.ALPHABETICAL  // NEW: Track sort order
+    private var currentSourceFilter: SourceFilter = SourceFilter.ALL  // NEW: Track source filter
+    private var currentSortOrder: SortOrder = SortOrder.ALPHABETICAL
 
-    // NEW: Enums for filters
+    // Enums for filters
     enum class FilterType {
         ALL, VISION, IMAGE_GEN
     }
 
+    // UPDATED: Removed LAN from CostFilter
     enum class CostFilter {
-        ALL, FREE, PAID, LAN  // UPDATED: Added LAN
+        ALL, FREE, PAID
+    }
+
+    // NEW: Enum for source filtering (LAN vs Cloud)
+    enum class SourceFilter {
+        ALL, LAN, CLOUD
     }
 
     enum class SortOrder {
@@ -75,10 +83,11 @@ class BotModelPickerFragment : Fragment() {
         val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerViewModels)
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         val fabAddModel = view.findViewById<FloatingActionButton>(R.id.fabAddModel)
-        // NEW: Initialize toggle groups
+        // Initialize toggle groups
         sortBar = view.findViewById(R.id.sortBar)
         filterBar = view.findViewById(R.id.filterBar)
         costFilterBar = view.findViewById(R.id.costFilterBar)
+        sourceFilterBar = view.findViewById(R.id.sourceFilterBar)  // NEW: Initialize fourth bar
 
         toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
@@ -86,7 +95,6 @@ class BotModelPickerFragment : Fragment() {
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_lan_models -> {
-                    // NEW: Open LAN Models fragment
                     parentFragmentManager.beginTransaction()
                         .replace(android.R.id.content, LanModelsFragment())
                         .addToBackStack(null)
@@ -101,14 +109,13 @@ class BotModelPickerFragment : Fragment() {
                     true
                 }
                 R.id.action_search -> {
-                    // NEW: Handle search expansion (optional, as SearchView handles it automatically)
                     true
                 }
                 else -> false
             }
         }
 
-        // NEW: Initialize SearchView from the menu
+        // Initialize SearchView from the menu
         val searchItem = toolbar.menu.findItem(R.id.action_search)
         if (searchItem != null) {
             searchView = searchItem.actionView as SearchView
@@ -119,7 +126,7 @@ class BotModelPickerFragment : Fragment() {
                 }
 
                 override fun onQueryTextChange(newText: String?): Boolean {
-                    filterAndSortModels(newText ?: "")  // NEW: Use combined filter/sort function
+                    filterAndSortModels(newText ?: "")
                     return true
                 }
             })
@@ -136,13 +143,13 @@ class BotModelPickerFragment : Fragment() {
                     R.id.sortDateButton -> SortOrder.BY_DATE
                     else -> SortOrder.ALPHABETICAL
                 }
-                sharedPreferencesHelper.saveBotModelPickerSortOrder(currentSortOrder)  // NEW: Save to prefs
-                filterAndSortModels(searchView.query.toString())  // Re-filter and sort
+                sharedPreferencesHelper.saveBotModelPickerSortOrder(currentSortOrder)
+                filterAndSortModels(searchView.query.toString())
             }
         }
 
-        // NEW: Set up type filter bar
-        filterBar.check(R.id.filterAllButton)  // Default to All
+        // Set up type filter bar
+        filterBar.check(R.id.filterAllButton)
         filterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
                 currentFilterType = when (checkedId) {
@@ -151,26 +158,39 @@ class BotModelPickerFragment : Fragment() {
                     R.id.filterImageGenButton -> FilterType.IMAGE_GEN
                     else -> FilterType.ALL
                 }
-                filterAndSortModels(searchView.query.toString())  // Re-filter and sort
+                filterAndSortModels(searchView.query.toString())
             }
         }
 
-        // NEW: Set up cost filter bar
-        costFilterBar.check(R.id.costFilterAllButton)  // Default to All
+        // Set up cost filter bar (UPDATED: Removed LAN handling)
+        costFilterBar.check(R.id.costFilterAllButton)
         costFilterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
                 currentCostFilter = when (checkedId) {
                     R.id.costFilterAllButton -> CostFilter.ALL
                     R.id.costFilterFreeButton -> CostFilter.FREE
                     R.id.costFilterPaidButton -> CostFilter.PAID
-                    R.id.costFilterLanButton -> CostFilter.LAN  // NEW: Handle LAN button
                     else -> CostFilter.ALL
                 }
-                filterAndSortModels(searchView.query.toString())  // Re-filter and sort
+                filterAndSortModels(searchView.query.toString())
             }
         }
 
-        adapter = BotModelAdapter(filteredModels, sharedPreferencesHelper.getPreferenceModelnew(),  // NEW: Use filtered list
+        // NEW: Set up source filter bar (fourth bar)
+        sourceFilterBar.check(R.id.sourceFilterAllButton)
+        sourceFilterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                currentSourceFilter = when (checkedId) {
+                    R.id.sourceFilterAllButton -> SourceFilter.ALL
+                    R.id.sourceFilterLanButton -> SourceFilter.LAN
+                    R.id.sourceFilterCloudButton -> SourceFilter.CLOUD
+                    else -> SourceFilter.ALL
+                }
+                filterAndSortModels(searchView.query.toString())
+            }
+        }
+
+        adapter = BotModelAdapter(filteredModels, sharedPreferencesHelper.getPreferenceModelnew(),
             onItemClicked = { selectedModel ->
                 onModelSelected?.invoke(selectedModel.apiIdentifier)
                 parentFragmentManager.popBackStack()
@@ -197,10 +217,10 @@ class BotModelPickerFragment : Fragment() {
         models.clear()
         models.addAll(builtInModels)
         models.addAll(customModels)
-        filterAndSortModels(searchView.query.toString())  // NEW: Apply filters and sort after loading
+        filterAndSortModels(searchView.query.toString())
     }
 
-    // NEW: Combined function for filtering and sorting
+    // UPDATED: Combined function for filtering and sorting with new cost/source logic
     private fun filterAndSortModels(query: String) {
         var tempFiltered = models.toMutableList()
 
@@ -211,12 +231,24 @@ class BotModelPickerFragment : Fragment() {
             FilterType.IMAGE_GEN -> tempFiltered.filter { it.isImageGenerationCapable }.toMutableList()
         }
 
-        // Apply cost filter (UPDATED: Added LAN case)
+        // Apply cost filter (UPDATED: New logic)
+        // FREE = LAN models (free) + free OpenRouter models
+        // PAID = paid OpenRouter models only
         tempFiltered = when (currentCostFilter) {
             CostFilter.ALL -> tempFiltered
-            CostFilter.FREE -> tempFiltered.filter { it.isFree }.toMutableList()
-            CostFilter.PAID -> tempFiltered.filter { !it.isFree }.toMutableList()
-            CostFilter.LAN -> tempFiltered.filter { it.isLANModel }.toMutableList()  // NEW: Filter by LAN models
+            CostFilter.FREE -> tempFiltered.filter {
+                it.isLANModel || (!it.isLANModel && it.isFree)
+            }.toMutableList()
+            CostFilter.PAID -> tempFiltered.filter {
+                !it.isLANModel && !it.isFree
+            }.toMutableList()
+        }
+
+        // NEW: Apply source filter (LAN vs Cloud/OpenRouter)
+        tempFiltered = when (currentSourceFilter) {
+            SourceFilter.ALL -> tempFiltered
+            SourceFilter.LAN -> tempFiltered.filter { it.isLANModel }.toMutableList()
+            SourceFilter.CLOUD -> tempFiltered.filter { !it.isLANModel }.toMutableList()
         }
 
         // Apply search filter
@@ -239,7 +271,6 @@ class BotModelPickerFragment : Fragment() {
         adapter.updateModels(filteredModels)
     }
 
-    // Rest of your existing methods remain unchanged, but update calls to use filterAndSortModels
     private fun showAddModelDialog() {
         val dialog = EditModelDialogFragment()
         dialog.onModelAdded = { model ->
@@ -283,7 +314,7 @@ class BotModelPickerFragment : Fragment() {
         } else {
             models.add(model)
             saveCustomModels()
-            filterAndSortModels(searchView.query.toString())  // NEW: Re-filter and sort after adding
+            filterAndSortModels(searchView.query.toString())
             adapter.notifyDataSetChanged()
             Toast.makeText(context, "Model added: ${model.displayName}", Toast.LENGTH_SHORT).show()
         }
@@ -304,8 +335,8 @@ class BotModelPickerFragment : Fragment() {
             }
             models[index] = newModel
             saveCustomModels()
-            filterAndSortModels(searchView.query.toString())  // NEW: Re-filter and sort after updating
-            adapter.notifyDataSetChanged() // To re-sort and update colors
+            filterAndSortModels(searchView.query.toString())
+            adapter.notifyDataSetChanged()
             Toast.makeText(context, "Model updated: ${newModel.displayName}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -320,7 +351,7 @@ class BotModelPickerFragment : Fragment() {
         }
         models.remove(model)
         saveCustomModels()
-        filterAndSortModels(searchView.query.toString())  // NEW: Re-filter and sort after deleting
+        filterAndSortModels(searchView.query.toString())
         adapter.notifyDataSetChanged()
         Toast.makeText(context, "Model deleted: ${model.displayName}", Toast.LENGTH_SHORT).show()
     }
@@ -331,23 +362,20 @@ class BotModelPickerFragment : Fragment() {
         sharedPreferencesHelper.saveCustomModels(customModels)
     }
 
-    // REMOVED: Old sortModels() - now handled in filterAndSortModels()
-
     private fun getModelsList(): List<LlmModel> {
         return listOf(
             LlmModel("Meta: Llama 4 Maverick", "meta-llama/llama-4-maverick", true)
         )
     }
+
     private fun updateSortButtons(sortOrder: SortOrder) {
         when (sortOrder) {
             SortOrder.ALPHABETICAL -> {
                 sortBar.check(R.id.sortAlphabeticalButton)
             }
-
             SortOrder.BY_DATE -> {
                 sortBar.check(R.id.sortDateButton)
             }
         }
     }
-
 }

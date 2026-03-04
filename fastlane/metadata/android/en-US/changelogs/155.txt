@@ -1,0 +1,3 @@
+- Updated the `ktorClientAndroid` dependency.
+- Added the “Fix with oxproxion” function. This option appears in the overflow menu of other apps (that allow it) when text is selected. It sends the selected text to your currently chosen model for grammar, spelling, punctuation, and capitalization corrections, then replaces the original text with the corrected version.
+- Edited and expanded the filter bars on the model‑selection list screen to provide finer granularity when narrowing down models.
