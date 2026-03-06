@@ -129,9 +129,23 @@ To build and run the project, follow these steps:
 
 ## ⚙️ Configuration
 
-This application requires an API key from [OpenRouter.ai](https://openrouter.ai/) to function. You will need to create an account, add credits, and obtain your API key.
+To use with OpenRouter models, this application requires an API key from [OpenRouter.ai](https://openrouter.ai/) to function. You will need to create an account, add credits, and obtain your API key.
 
-Once you have your key, you can add it to the app where prompted.
+Once you have your key, you can add it to the app's settings by pressing the "OpenRouter API Key" button.
+
+Alternatively, you can run this locally with Ollama, LM Studio, llama.cpp, or MLX LM.
+
+To use these, you must host the model servers on your own LAN. Note: This application does not provide setup guidance for local infrastructure. You will need to configure the following yourself:
+
+Server Setup: Read the official documentation for your chosen server to configure it correctly.
+
+    💡 Tip: Don't know where to start? Ask an AI to generate the specific configuration steps for your OS and hardware.
+
+Network Configuration: Adjust your network environment, including firewall rules, router settings, and port forwarding.
+
+Connection: Ensure your LAN allows traffic between the app and the model server.
+
+Once you have your properly configured LAN endpoint for the server enter it at Settings->"LAN Settings" button.
 
 **Disclaimer:** This project is not affiliated with, endorsed by, or sponsored by OpenRouter.ai in any way.
 *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.

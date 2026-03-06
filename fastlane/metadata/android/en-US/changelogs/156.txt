@@ -1,0 +1,2 @@
+- Added an indicator near the model name on the main chat screen to indicate if the model is LAN or cloud based.
+- Updated README.md to clarify oxproxion can be used with local models served on a LAN.

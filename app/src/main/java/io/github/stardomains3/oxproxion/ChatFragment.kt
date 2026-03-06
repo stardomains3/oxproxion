@@ -673,6 +673,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
             // Update button visibility based on current model and preference
             updateExtendedTopBarVisibility(sharedPreferencesHelper.getExtendedTopBarEnabled())
+            updateModelSourceIndicator()
         }
 
 
@@ -1110,6 +1111,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         chatRecyclerView.post { updateScrollProgress() }
 
         updateExtendedTopBarVisibility(sharedPreferencesHelper.getExtendedTopBarEnabled())
+        updateModelSourceIndicator()
         val savedScale = sharedPreferencesHelper.getFontSizeCh()
         chatAdapter.updateFontSize(savedScale)
         // end onviewcreated
@@ -2684,6 +2686,20 @@ $cleanContent
         } catch (e: Exception) {
             // Log.e("ChatFragment", "Failed to stop foreground service", e)
         }
+    }
+    private fun updateModelSourceIndicator() {
+        val isLan = viewModel.activeModelIsLan()
+        val iconRes = if (isLan) R.drawable.ic_lan2 else R.drawable.ic_cloudnew2
+        val description = if (isLan) "LAN Model" else "Cloud Model"
+
+        modelNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+
+            null,  // start
+            null,  // top
+            ContextCompat.getDrawable(requireContext(), iconRes),  // end
+            null   // bottom
+        )
+        modelNameTextView.contentDescription = description
     }
     private fun updateReasoningButtonAppearance() {
         // Use .value to get the current state from LiveData
