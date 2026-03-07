@@ -1,0 +1,2 @@
+- Added long-press function to both "Back to App Button" and "Copy/Back to App Button". This will clear the chat before returning to the previous app.
+- Added a Save to File button for the AI response bubble. Press it and a dialog will appear asking for the name and extension of file to be saved. Good for if you ask the AI to return ONLY the code and no explanation for HTML, JavaScript, Kotlin, etc. Works even if AI responds with the code in a code block.

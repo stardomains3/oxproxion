@@ -1459,6 +1459,54 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             out.write(content.toByteArray())
         } ?: throw Exception("Cannot open output stream")
     }
+    fun saveFileWithName(fileName: String, extension: String, content: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val cleanName = fileName.trim().replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                val cleanExtension = extension.trim().removePrefix(".")
+
+                if (cleanName.isEmpty() || cleanExtension.isEmpty()) {
+                    _toolUiEvent.postValue(Event("❌ File name and extension required"))
+                    return@launch
+                }
+
+                // Strip markdown code fences if present (e.g., ```js ... ```)
+                val cleanContent = content.replace(Regex("""^```[a-zA-Z0-9]*\n?|\n?```$"""), "").trim()
+
+                val fullFileName = "$cleanName.$cleanExtension"
+
+                val mimeType = when (cleanExtension.lowercase()) {
+                    "txt" -> "text/plain"
+                    "md", "markdown" -> "text/markdown"
+                    "html", "htm" -> "text/html"
+                    "json" -> "application/json"
+                    "xml" -> "application/xml"
+                    "js", "javascript" -> "application/javascript"
+                    "kt", "kotlin" -> "text/x-kotlin"
+                    "java" -> "text/x-java-source"
+                    "py", "python" -> "text/x-python"
+                    "css" -> "text/css"
+                    "csv" -> "text/csv"
+                    "yaml", "yml" -> "application/x-yaml"
+                    "sql" -> "application/sql"
+                    "sh", "bash" -> "application/x-sh"
+                    "c", "cpp", "h", "hpp" -> "text/x-c"
+                    "cs" -> "text/x-csharp"
+                    "go" -> "text/x-go"
+                    "rs", "rust" -> "text/x-rust"
+                    "swift" -> "text/x-swift"
+                    "php" -> "application/x-php"
+                    "rb", "ruby" -> "text/x-ruby"
+                    else -> "text/plain"
+                }
+
+                saveFileToDownloads(fullFileName, cleanContent, mimeType)
+                _toolUiEvent.postValue(Event("✅ Saved: $fullFileName"))
+            } catch (e: Exception) {
+                _toolUiEvent.postValue(Event("❌ Save failed: ${e.message}"))
+            }
+        }
+    }
     fun saveBitmapToDownloads(bitmap: Bitmap, format: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

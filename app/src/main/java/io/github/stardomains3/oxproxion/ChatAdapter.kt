@@ -52,7 +52,8 @@ class ChatAdapter(
     private val onShowMarkdown: (String) -> Unit,
     private val onSaveHtml: (String) -> Unit,
     private val onSaveText: (Int, String) -> Unit,
-    private val onCollapse: () -> Unit
+    private val onCollapse: () -> Unit,
+    private val onSaveAsFile: (String) -> Unit
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -508,6 +509,7 @@ class ChatAdapter(
         private var bgColorAnimator: ObjectAnimator? = null
         private val htmlButton: ImageButton = itemView.findViewById(R.id.htmlButton)
         private val collapseToggleButton: ImageButton = itemView.findViewById(R.id.collapseToggleButton)
+        private val saveFileButton: ImageButton = itemView.findViewById(R.id.saveFileButton)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
         // Configuration for "Long Message" detection
         private val CHAR_THRESHOLD = 350
@@ -781,6 +783,10 @@ class ChatAdapter(
             markdownButton.setOnLongClickListener {
                 onSaveText(bindingAdapterPosition, messageTextView.text.toString())
                 true
+            }
+            saveFileButton.setOnClickListener {
+                //  onSaveAsFile.invoke(messageTextView.text.toString())
+                onSaveAsFile.invoke(text)
             }
         }
 

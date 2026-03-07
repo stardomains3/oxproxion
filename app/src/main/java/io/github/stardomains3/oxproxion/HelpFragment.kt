@@ -199,6 +199,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Speak AI Response**: Tap the **speaker icon** to speak out loud the AI's response(Up to 3900 characters.) Will not display if your device's text-to-speech engine isn't available. Long-press to save an audio wav file of the AI's response to your downloads folder. (Made on device using Android tools. Generation usually done in seconds.)
             *   **Create PDF of Response**: Tap the **pdf icon** to save just that response as a PDF in your device's Downloads folder. Long-press for .jpg.
             *   **Create Markdown File of Response**: Tap the **Markdown icon** to save just that response as a .md file in your device's Downloads folder. Long-press to save a .txt file in your device's Downloads folder.
+            *   **Save File of Response**: Tap the **Save File icon** to save just that response as a file in your device's Downloads folder. A dialog will appear asking for the name and extension of the file to be saved.
             *   **Create PNG File of Response**: Tap the **PNG icon** to save just that response as a .png file in your device's Downloads folder. Long-press for .webp. 
             *   **View HTML of Response**: Tap the **HTML icon** to view the AI response in HTML in an Android Webview. This makes code blocks easier to read, allows one tap copy of them and other view improvements. A print option appears in the screen too.
             *   **Save HTML of Response**: Long-Press the **HTML icon** to save the AI response as an HTML file in your device's Downloads folder.
@@ -245,8 +246,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Settings Button** {{ic_settings}} : Opens the Settings screen.
             *   **Paste Button** {{ic_paste}} : Pastes the contents of your clipboard to the prompt box; When long-pressed, pastes the clipboard to the prompt box and auto-sends it to your selected model. (This button only appears when extended dock is on.)
             *   **Speech-to-Text Button** {{ic_mic}} : Appears when the prompt box is empty, or a Clear Prompt button when the prompt box has some text. (This button only appears when extended dock is on.)
-            *   **Back to App Button** {{backtoapp}} : Returns to the previous app. Appears when notification clicked or text shared to Preset target.
-            *   **Copy/Back to App Button** {{backcopy}} : Copies last response and returns to the previous app.  Appears when notification clicked or text shared to Preset target.
+            *   **Back to App Button** {{backtoapp}} : Returns to the previous app. Appears when notification clicked or text shared to Preset target. Long-press: clears chat and returns to the previous app.
+            *   **Copy/Back to App Button** {{backcopy}} : Copies last response and returns to the previous app.  Appears when notification clicked or text shared to Preset target. Long-press: copies response, clears chat and returns to the previous app.
            
             ### Settings Screen
             *   **Extended Dock** {{ic_extend}} : Toggles extended dock on or off. If on, an extra row is added to the bottom dock.

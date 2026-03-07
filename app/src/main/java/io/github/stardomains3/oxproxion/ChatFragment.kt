@@ -1389,6 +1389,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         scrollToTopButton.visibility = if (canScrollUp) View.VISIBLE else View.INVISIBLE
                         scrollToBottomButton.visibility = if (canScrollDown) View.VISIBLE else View.INVISIBLE
                     }
+            },
+            onSaveAsFile = { content ->
+                showSaveFileDialog(content)
             }
 
         )
@@ -1866,6 +1869,38 @@ $cleanContent
             } else {
                 Toast.makeText(requireContext(), "Nothing to Copy", Toast.LENGTH_SHORT).show()
             }
+        }
+        backButton.setOnLongClickListener {
+            backButton.visibility = View.GONE
+            backcopyButton.visibility = View.GONE
+            updateHomeButtonVisibility()
+            viewModel.startNewChat()
+            currentTempImageFile?.delete()
+            currentTempImageFile = null
+            previewImageView.setImageBitmap(null)
+            // Add to reset logic
+            pendingFiles.clear()
+            updateAttachmentButton()
+            chatAdapter.clearCache()
+            activity?.moveTaskToBack(true) ?: false
+            true
+        }
+
+        backcopyButton.setOnLongClickListener {
+            copyLatestMessage()
+            backButton.visibility = View.GONE
+            backcopyButton.visibility = View.GONE
+            updateHomeButtonVisibility()
+            viewModel.startNewChat()
+            currentTempImageFile?.delete()
+            currentTempImageFile = null
+            previewImageView.setImageBitmap(null)
+            // Add to reset logic
+            pendingFiles.clear()
+            updateAttachmentButton()
+            chatAdapter.clearCache()
+            activity?.moveTaskToBack(true) ?: false
+            true
         }
         backcopyButton.setOnClickListener {
             copyLatestMessage()
@@ -2460,6 +2495,88 @@ $cleanContent
             }
             textToSpeech.speak(safeText, TextToSpeech.QUEUE_FLUSH, null, "tts_utterance")
         }
+    }
+    private fun showSaveFileDialog(content: String) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_save_file, null)
+        val fileNameInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.fileNameInput)
+        val fileExtensionInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.fileExtensionInput)
+
+        // Smart extension detection from content
+        val detectedExt = when {
+            // === PRIORITY 1: Markdown code fences (explicit language tags) ===
+            content.contains("```html", ignoreCase = true) ||
+                    content.contains("```htm", ignoreCase = true) -> "html"
+
+            content.contains("```kotlin", ignoreCase = true) ||
+                    content.contains("```kt", ignoreCase = true) -> "kt"
+
+            content.contains("```javascript", ignoreCase = true) ||
+                    content.contains("```js", ignoreCase = true) -> "js"
+
+            content.contains("```python", ignoreCase = true) ||
+                    content.contains("```py", ignoreCase = true) -> "py"
+
+            content.contains("```css", ignoreCase = true) -> "css"
+            content.contains("```json", ignoreCase = true) -> "json"
+            content.contains("```java", ignoreCase = true) -> "java"
+            content.contains("```xml", ignoreCase = true) -> "xml"
+            content.contains("```sql", ignoreCase = true) -> "sql"
+            content.contains("```cpp", ignoreCase = true) ||
+                    content.contains("```c++", ignoreCase = true) -> "cpp"
+
+            // === PRIORITY 2: Content-based detection (plain text without fences) ===
+            // HTML FIRST (before JS) because HTML files often contain <script> tags with const/let
+            content.contains("<!DOCTYPE html>", ignoreCase = true) ||
+                    content.contains("<html", ignoreCase = true) -> "html"
+
+            // Kotlin
+            content.contains(" fun ", ignoreCase = true) ||
+                    (content.contains("class ", ignoreCase = true) && content.contains("{")) -> "kt"
+
+            // JavaScript - only if NOT HTML (avoid matching const/let inside <script> tags)
+            !content.contains("<html", ignoreCase = true) &&
+                    (content.contains("const ", ignoreCase = true) || content.contains("let ", ignoreCase = true)) &&
+                    content.contains("{") -> "js"
+
+            // Python
+            content.contains("def ", ignoreCase = true) ||
+                    content.contains("import ", ignoreCase = true) && content.contains(":") -> "py"
+
+            else -> "txt"
+        }
+        fileExtensionInput.setText(detectedExt)
+
+        val dialog = MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Save As File")
+            .setView(dialogView)
+            .setPositiveButton("Save") { _, _ ->
+                val fileName = fileNameInput.text?.toString()?.trim() ?: ""
+                val extension = fileExtensionInput.text?.toString()?.trim() ?: ""
+
+                if (fileName.isNotEmpty() && extension.isNotEmpty()) {
+                    viewModel.saveFileWithName(fileName, extension, content)
+                } else {
+                    Toast.makeText(context, "Please enter both file name and extension", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+
+        // Apply dim amount like your other dialog
+        dialog.window?.setDimAmount(0.8f)
+
+        // Optional: Make the Save button disabled until text is entered
+        val saveButton = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+        fileNameInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                saveButton.isEnabled = !s.isNullOrBlank()
+            }
+        })
+        saveButton.isEnabled = false
     }
     private fun updateIconDirectlyOrNotify(position: Int, @DrawableRes iconRes: Int) {
         val lm = chatRecyclerView.layoutManager as? LinearLayoutManager ?: return
