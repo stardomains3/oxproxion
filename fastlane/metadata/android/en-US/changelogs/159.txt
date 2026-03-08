@@ -1,0 +1,2 @@
+- Enhancements so that OpenRouter image generation models named with bytedance, black-forest-labs, and sourceful can work with the app.
+- If the user has Fossify File Manager installed, any function that creates a file in the Download folder will now show a Snackbar (instead of a toast) with a button that opens the folder directly in Fossify File Manager.

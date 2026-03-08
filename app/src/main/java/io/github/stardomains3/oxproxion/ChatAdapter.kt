@@ -5,9 +5,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.os.Environment
+import android.os.StrictMode
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +25,7 @@ import androidx.core.net.toUri
 import androidx.recyclerview.widget.RecyclerView
 import coil.ImageLoader
 import coil.request.ImageRequest
+import com.google.android.material.snackbar.Snackbar
 import io.noties.markwon.Markwon
 import io.noties.markwon.utils.NoCopySpannableFactory
 import kotlinx.coroutines.CoroutineScope
@@ -754,7 +759,48 @@ class ChatAdapter(
                         }
                     }
                     if (pdfUri != null) {
-                        Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                        val context = itemView.context
+                        val fossifyPackage = "org.fossify.filemanager"
+
+                        // 1. Check if Fossify is installed
+                        val isInstalled = try {
+                            context.packageManager.getPackageInfo(fossifyPackage, 0)
+                            true
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            false
+                        }
+
+                        if (isInstalled) {
+                            // 2. Installed: Show Snackbar with Open Action
+                            // We use 'itemView' as the anchor for the Snackbar
+                            Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
+                                .setAction("Open Folder") {
+                                    val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                    val intent = Intent(Intent.ACTION_VIEW)
+                                    intent.setPackage(fossifyPackage)
+                                    intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+
+                                    // Flags to open as separate app
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+                                    // StrictMode Hack for file:// URI
+                                    try {
+                                        val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                                        m.invoke(null)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+
+                                    // Launch using the ItemView's context
+                                    context.startActivity(intent)
+                                }
+                                .show()
+                        } else {
+                            // 3. Not Installed: Fallback to standard Toast
+                            Toast.makeText(context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                        }
+                       // Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
                     }

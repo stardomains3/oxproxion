@@ -828,12 +828,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     null
                 },
                 plugins = buildWebSearchPlugin(),
-                modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
-                imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image") ||
-                    modelForRequest.startsWith("google/gemini-3-pro-image-preview")) {
+                modalities = if (isImageGenerationModel(modelForRequest)) {
+                    if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
+                        modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
+                        modelForRequest.contains("sourceful/riverflow", ignoreCase = true)) {
+                        listOf("image")
+                    } else {
+                        listOf("image", "text")
+                    }
+                } else null,
+                imageConfig = if (isImageGenerationModel(modelForRequest) &&
+                    modelForRequest.contains("google", ignoreCase = true) &&
+                    modelForRequest.contains("gemini", ignoreCase = true) &&
+                    modelForRequest.contains("image", ignoreCase = true)) {
                     val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
                     ImageConfig(aspectRatio = aspectRatio)
-                } else null
+                } else null,
 
             )
 
@@ -1091,12 +1101,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         null
                     },
                     plugins = buildWebSearchPlugin(),
-                    modalities = if (isImageGenerationModel(modelForRequest)) listOf("image", "text") else null,
-                    imageConfig = if (modelForRequest.startsWith("google/gemini-2.5-flash-image") ||
-                        modelForRequest.startsWith("google/gemini-3-pro-image-preview")) {
+                    modalities = if (isImageGenerationModel(modelForRequest)) {
+                        if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
+                            modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
+                            modelForRequest.contains("sourceful/riverflow", ignoreCase = true)) {
+                            listOf("image")
+                        } else {
+                            listOf("image", "text")
+                        }
+                    } else null,
+                    imageConfig = if (isImageGenerationModel(modelForRequest) &&
+                        modelForRequest.contains("google", ignoreCase = true) &&
+                        modelForRequest.contains("gemini", ignoreCase = true) &&
+                        modelForRequest.contains("image", ignoreCase = true)) {
                         val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
                         ImageConfig(aspectRatio = aspectRatio)
-                    } else null
+                    } else null,
                 )
 
                 val response = httpClient.post(activeChatUrl) {

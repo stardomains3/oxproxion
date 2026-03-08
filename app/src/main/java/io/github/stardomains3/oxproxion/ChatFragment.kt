@@ -28,6 +28,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.StrictMode
 import android.print.PrintManager
 import android.provider.MediaStore
 import android.provider.Settings
@@ -77,6 +78,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.LinkResolverDef
 import io.noties.markwon.Markwon
@@ -996,7 +998,50 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         viewModel.toolUiEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { message ->
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+
+                val fossifyPackage = "org.fossify.filemanager"
+                val packageManager = requireContext().packageManager
+
+                // 1. Check if app is installed
+                val isInstalled = try {
+                    packageManager.getPackageInfo(fossifyPackage, 0)
+                    true
+                } catch (e: PackageManager.NameNotFoundException) {
+                    false
+                }
+
+                if (isInstalled) {
+                    // 2. App found: Show Snackbar with Action
+                    Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
+                        .setAction("Open Folder") {
+
+                            val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                            val intent = Intent(Intent.ACTION_VIEW)
+                            intent.setPackage(fossifyPackage)
+                            intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+
+                            // --- THIS IS THE FIX ---
+                            // This forces the app to open in its own stack/window
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            // Optional: Clears the file manager if it was already open, so it refreshes to this folder
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            // -----------------------
+
+                            // Disable StrictMode check for file:// URI
+                            try {
+                                val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                                m.invoke(null)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+
+                            startActivity(intent)
+                        }
+                        .show()
+                } else {
+                    // 3. App not found: Just show the Toast
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
         viewModel.presetAppliedEvent.observe(viewLifecycleOwner) { event ->
@@ -1599,8 +1644,16 @@ $cleanContent
         }
         genButton.setOnClickListener {
             val model = viewModel.activeChatModel.value ?: return@setOnClickListener
-            if (!model.contains("google", true) || !model.contains("image", true)) {
-                Toast.makeText(requireContext(), "Image generation parameters not supported for this model", Toast.LENGTH_SHORT).show()
+
+            val isGoogleImageModel = model.startsWith("google/", ignoreCase = true) &&
+                    model.contains("image", ignoreCase = true)
+
+            if (!isGoogleImageModel) {
+                Toast.makeText(
+                    requireContext(),
+                    "Image generation parameters only supported for Google image models",
+                    Toast.LENGTH_SHORT
+                ).show()
                 return@setOnClickListener
             }
 
@@ -1822,7 +1875,49 @@ $cleanContent
 
                 withContext(Dispatchers.Main) {
                     if (filePath != null) {
-                        Toast.makeText(requireContext(), "PDF Created", Toast.LENGTH_SHORT).show()
+                        val rootView = requireView()
+                        val context = rootView.context
+                        val fossifyPackage = "org.fossify.filemanager"
+
+                        // 1. Check if Fossify is installed
+                        val isInstalled = try {
+                            context.packageManager.getPackageInfo(fossifyPackage, 0)
+                            true
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            false
+                        }
+
+                        if (isInstalled) {
+                            // 2. Installed: Show Snackbar with Open Action
+                            // We use 'itemView' as the anchor for the Snackbar
+                            Snackbar.make(rootView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
+                                .setAction("Open Folder") {
+                                    val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                    val intent = Intent(Intent.ACTION_VIEW)
+                                    intent.setPackage(fossifyPackage)
+                                    intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+
+                                    // Flags to open as separate app
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+                                    // StrictMode Hack for file:// URI
+                                    try {
+                                        val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                                        m.invoke(null)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+
+                                    // Launch using the ItemView's context
+                                    context.startActivity(intent)
+                                }
+                                .show()
+                        } else {
+                            // 3. Not Installed: Fallback to standard Toast
+                            Toast.makeText(context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                        }
+                        //Toast.makeText(requireContext(), "PDF Created", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(requireContext(), "PDF Failed", Toast.LENGTH_SHORT).show()
                     }
