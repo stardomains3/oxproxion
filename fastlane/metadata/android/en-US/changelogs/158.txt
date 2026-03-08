@@ -1,0 +1,2 @@
+- Fixed new Nano Banana not having the aspect ratio options available for generated images.
+- Enhanced the "Fix with oxproxion" function in overflow menu on selected text so you can approve/disapprove the fixed text before it is replaced.

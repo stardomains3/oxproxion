@@ -1598,12 +1598,11 @@ $cleanContent
             }
         }
         genButton.setOnClickListener {
-            val model = viewModel.activeChatModel.value
-            if (model !in listOf("google/gemini-2.5-flash-image", "google/gemini-2.5-flash-image-preview","google/gemini-3-pro-image-preview")) {
+            val model = viewModel.activeChatModel.value ?: return@setOnClickListener
+            if (!model.contains("google", true) || !model.contains("image", true)) {
                 Toast.makeText(requireContext(), "Image generation parameters not supported for this model", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
 
             // Dialog options (match docs: 1:1, 16:9, etc.)
             val aspectRatios = arrayOf("1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9")
