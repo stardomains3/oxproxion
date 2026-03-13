@@ -455,7 +455,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                                         val contentValues = ContentValues().apply {
                                             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
                                             put(MediaStore.MediaColumns.MIME_TYPE, "audio/wav")
-                                            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                                          //  put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                                            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/oxproxion")
                                             put(MediaStore.MediaColumns.IS_PENDING, 1)
                                         }
 
@@ -1014,11 +1015,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     // 2. App found: Show Snackbar with Action
                     Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
                         .setAction("Open Folder") {
-
-                            val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                            val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"oxproxion")
+                            //val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                             val intent = Intent(Intent.ACTION_VIEW)
                             intent.setPackage(fossifyPackage)
-                            intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+                            intent.setDataAndType("file://${path.absolutePath}".toUri(), "resource/folder")
+                           // intent.setDataAndType(Uri.fromFile(path), "resource/folder")
 
                             // --- THIS IS THE FIX ---
                             // This forces the app to open in its own stack/window
@@ -1892,10 +1894,12 @@ $cleanContent
                             // We use 'itemView' as the anchor for the Snackbar
                             Snackbar.make(rootView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
                                 .setAction("Open Folder") {
-                                    val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                    val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"oxproxion")
+                                   // val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                                     val intent = Intent(Intent.ACTION_VIEW)
                                     intent.setPackage(fossifyPackage)
-                                    intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+                                    //intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+                                    intent.setDataAndType("file://${path.absolutePath}".toUri(), "resource/folder")
 
                                     // Flags to open as separate app
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -2988,7 +2992,7 @@ $cleanContent
     }
     private fun launchCamera() {
         val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "OpenChat_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.DISPLAY_NAME, "oxproxion_${System.currentTimeMillis()}.jpg")
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/Camera")
         }

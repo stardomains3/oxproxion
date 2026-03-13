@@ -149,6 +149,10 @@ Once you have your properly configured LAN endpoint for the server enter it at S
 
 **Disclaimer:** This project is not affiliated with, endorsed by, or sponsored by OpenRouter.ai in any way.
 *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
+*   Review OpenRouter's and its model providers' pricing, privacy, and logging policies on their websites.
+*   oxproxion app does not have trackers, analytics, nor ads.
+*   This app is intended for use by person 18 and over.
+*   Chats are stored unencrypted on device only.
 
 If you find this app useful, please consider supporting its developer: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕
 

@@ -41,6 +41,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.File
 
 class ChatAdapter(
     private val scope: CoroutineScope,
@@ -775,7 +776,8 @@ class ChatAdapter(
                             // We use 'itemView' as the anchor for the Snackbar
                             Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
                                 .setAction("Open Folder") {
-                                    val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                   // val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                    val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"oxproxion")
                                     val intent = Intent(Intent.ACTION_VIEW)
                                     intent.setPackage(fossifyPackage)
                                     intent.setDataAndType(Uri.fromFile(path), "resource/folder")

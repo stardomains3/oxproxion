@@ -339,12 +339,14 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   An internet connection is required.
             *   If you want the app to work well while backgrounded, turn off battery optimization and allow background data usage in the system's settings for the app; Android Settings->Apps->oxproxion->App battery usage->Allow Background usage->Unrestricted and Android Settings->Apps->oxproxion->Mobile data usage->enable background data
             *   Review OpenRouter's and its model providers' pricing, privacy, and logging policies on their websites.
+            *   oxproxion app does not have trackers, analytics, nor ads.
+            *   This app is intended for use by person 18 and over.
+            *   Chats are stored unencrypted on device only.
             *   The app is licensed under the Apache License 2.0.
             *   This app is not affiliated with OpenRouter.ai.
             *   Pasting in to the prompt box strips any unnecessary rich text formatting automatically.
             *   Costs are incurred with using OpenRouter models. Familiarize yourself with model costs at [https://openrouter.ai/models/](https://openrouter.ai/models/)
             *   Markdown content is well-supported in AI response chat messages.
-            *   oxproxion app does not have trackers, analytics, nor ads.
             *   If you want to save your saved chats and/or System Messages, be sure to export them before you uninstall the app, otherwise they will be gone for good.
             *   Imports are programmed to not overwrite: System Messages skip duplicates by title, while Saved Chats add new entries even when titles match, leaving all existing items intact.
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.

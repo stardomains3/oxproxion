@@ -219,7 +219,8 @@ class PdfGenerator(private val context: Context) {
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, "${System.currentTimeMillis()}.pdf")
                 put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/oxproxion")
+               // put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             }
             val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
             if (uri == null) {
@@ -333,7 +334,8 @@ class PdfGenerator(private val context: Context) {
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, "${System.currentTimeMillis()}.pdf")
                 put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/oxproxion")
+                //put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             }
             val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
             if (uri == null) {
@@ -375,10 +377,20 @@ class PdfGenerator(private val context: Context) {
         modelName: String,
         generatedImages: Map<Int, String>
     ): String? {
-        val file = File(
+        // 1. Define the oxproxion subfolder
+        val parentDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+
+        // 2. Ensure the folder exists (creates it if it doesn't)
+        if (!parentDir.exists()) {
+            parentDir.mkdirs()
+        }
+
+        // 3. Create the file inside that folder
+        val file = File(parentDir, "chat_${System.currentTimeMillis()}.pdf")
+        /*val file = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             "chat_${System.currentTimeMillis()}.pdf"
-        )
+        )*/
         val userIconDrawable: Drawable? = AppCompatResources.getDrawable(context, R.drawable.ic_person3)
         val aiIconDrawable: Drawable? = AppCompatResources.getDrawable(context, R.drawable.ic_tune3)
 
@@ -518,10 +530,20 @@ class PdfGenerator(private val context: Context) {
     }
 
     private fun generatePdf(messages: List<FlexibleMessage>, modelName: String): String? {
-        val file = File(
+        // 1. Define the oxproxion subfolder
+        val parentDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+
+        // 2. Ensure the folder exists (creates it if it doesn't)
+        if (!parentDir.exists()) {
+            parentDir.mkdirs()
+        }
+
+        // 3. Create the file inside that folder
+        val file = File(parentDir, "chat_${System.currentTimeMillis()}.pdf")
+       /* val file = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             "chat_${System.currentTimeMillis()}.pdf"
-        )
+        )*/
         //val userIconDrawable: Drawable? = context.getDrawable(R.drawable.ic_person)
         //val aiIconDrawable: Drawable? = context.getDrawable(R.drawable.ic_tune)
         val userIconDrawable: Drawable? = AppCompatResources.getDrawable(context,R.drawable.ic_person3)

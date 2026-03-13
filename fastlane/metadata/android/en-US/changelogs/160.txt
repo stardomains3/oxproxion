@@ -1,0 +1,3 @@
+- Updated coreKtx and activityKtx dependency.
+- Fixed a bug where edits to a model weren't saving its capabilities correctly.
+- In the interest of keeping the users Download folder tidy, files created by the app are now still in Download folder, but in their own folder entitled "oxproxion" there.

@@ -105,8 +105,10 @@ class EditModelDialogFragment : DialogFragment() {
                         id.endsWith(":floor",  ignoreCase = true) ||
                         existingModel?.isLANModel == true
 
-                val vision    = if (isSpecial) switchVision.isChecked  else false
-                val reasoning = if (isSpecial) switchReason.isChecked else false
+                //val vision    = if (isSpecial) switchVision.isChecked  else false
+                val vision = if (isSpecial) switchVision.isChecked else (existingModel?.isVisionCapable ?: false)
+              //  val reasoning = if (isSpecial) switchReason.isChecked else false
+                val reasoning = if (isSpecial) switchReason.isChecked else (existingModel?.isReasoningCapable ?: false)
 
                 val createdTimestamp = existingModel?.created ?: (System.currentTimeMillis() / 1000)
                 val isFreeValue = existingModel?.isFree ?: id.endsWith(":free")
