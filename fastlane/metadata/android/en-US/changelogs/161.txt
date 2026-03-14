@@ -1,0 +1,1 @@
+- Behavior Change of Snackbar after making a file in Download folder: It will now present the user with a choice of apps capable of showing the file in the folder.

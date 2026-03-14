@@ -759,51 +759,37 @@ class ChatAdapter(
                             null
                         }
                     }
+
                     if (pdfUri != null) {
                         val context = itemView.context
-                        val fossifyPackage = "org.fossify.filemanager"
 
-                        // 1. Check if Fossify is installed
-                        val isInstalled = try {
-                            context.packageManager.getPackageInfo(fossifyPackage, 0)
-                            true
-                        } catch (e: PackageManager.NameNotFoundException) {
-                            false
+                        // Disable StrictMode check for file:// URI
+                        try {
+                            val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                            m.invoke(null)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
 
-                        if (isInstalled) {
-                            // 2. Installed: Show Snackbar with Open Action
-                            // We use 'itemView' as the anchor for the Snackbar
-                            Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
-                                .setAction("Open Folder") {
-                                   // val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                    val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"oxproxion")
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setPackage(fossifyPackage)
-                                    intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+                        // Define the target folder path (keeping 'oxproxion')
+                        val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
 
-                                    // Flags to open as separate app
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        // Create intent to view the folder
+                        val intent = Intent(Intent.ACTION_VIEW)
+                        intent.setDataAndType(Uri.fromFile(path), "resource/folder")
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-                                    // StrictMode Hack for file:// URI
-                                    try {
-                                        val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
-                                        m.invoke(null)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
+                        // Create the system chooser intent
+                        val chooserIntent = Intent.createChooser(intent, "Open Folder")
 
-                                    // Launch using the ItemView's context
-                                    context.startActivity(intent)
-                                }
-                                .show()
-                        } else {
-                            // 3. Not Installed: Fallback to standard Toast
-                            Toast.makeText(context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
-                        }
-                       // Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                        // Show Snackbar with the action
+                        Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
+                            .setAction("Open Folder") {
+                                context.startActivity(chooserIntent)
+                            }
+                            .show()
                     } else {
+                        // Keep the failure toast as it provides immediate error feedback
                         Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
                     }
                 }

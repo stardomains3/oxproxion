@@ -1000,6 +1000,33 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewModel.toolUiEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { message ->
 
+                Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
+                    .setAction("Open Folder") {
+
+                        val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+                        val intent = Intent(Intent.ACTION_VIEW)
+
+                        // Disable StrictMode check for file:// URI
+                        try {
+                            val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                            m.invoke(null)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+
+                        intent.setDataAndType("file://${path.absolutePath}".toUri(), "resource/folder")
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                        // Always show system chooser
+                        val chooserIntent = Intent.createChooser(intent, "Open with File Manager")
+                        startActivity(chooserIntent)
+                    }
+                    .show()
+            }
+        }
+       /* viewModel.toolUiEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+
                 val fossifyPackage = "org.fossify.filemanager"
                 val packageManager = requireContext().packageManager
 
@@ -1045,7 +1072,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                 }
             }
-        }
+        }*/
         viewModel.presetAppliedEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
                 updateSystemMessageButtonState()
@@ -1835,6 +1862,7 @@ $cleanContent
                 Toast.makeText(requireContext(), "No chat history to export", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
             pdfChatButton.setIconResource(R.drawable.ic_check)
             Handler(Looper.getMainLooper()).postDelayed({
                 hideMenu()
@@ -1842,35 +1870,31 @@ $cleanContent
             }, 500)
 
             lifecycleScope.launch {
-                // Toast.makeText(requireContext(), "Generating PDF...", Toast.LENGTH_SHORT).show()
                 val modelIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
                 val modelName = viewModel.getModelDisplayName(modelIdentifier)
+
                 val filePath = withContext(Dispatchers.IO) {
                     try {
                         val messages = viewModel.chatMessages.value ?: emptyList()
                         val generatedImagesMap = mutableMapOf<Int, String>()
                         messages.forEachIndexed { index, message ->
                             if (message.role == "assistant" && !message.imageUri.isNullOrEmpty()) {
-                                generatedImagesMap[index] = message.imageUri  // Direct string (no parse)
+                                generatedImagesMap[index] = message.imageUri
                             }
                         }
                         when {
                             generatedImagesMap.isNotEmpty() -> {
-                                // Case #3: Generated images (URIs from messages)
                                 pdfGenerator.generateStyledChatPdfWithGeneratedImages(requireContext(), messages, modelName, generatedImagesMap)
                             }
                             viewModel.hasImagesInChat() -> {
-                                // First case: Uploaded images (base64 in content)
                                 pdfGenerator.generateStyledChatPdfWithImages(requireContext(), messages, modelName)
                             }
                             else -> {
-                                // Second case: No images
                                 val markdownText = viewModel.getFormattedChatHistory()
                                 pdfGenerator.generateStyledChatPdf(requireContext(), markdownText, modelName)
                             }
                         }
                     } catch (e: Exception) {
-                      //  Log.e("ChatFragment", "PDF generation failed", e)
                         null
                     }
                 }
@@ -1879,49 +1903,32 @@ $cleanContent
                     if (filePath != null) {
                         val rootView = requireView()
                         val context = rootView.context
-                        val fossifyPackage = "org.fossify.filemanager"
 
-                        // 1. Check if Fossify is installed
-                        val isInstalled = try {
-                            context.packageManager.getPackageInfo(fossifyPackage, 0)
-                            true
-                        } catch (e: PackageManager.NameNotFoundException) {
-                            false
+                        // Disable StrictMode check for file:// URI
+                        try {
+                            val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                            m.invoke(null)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
 
-                        if (isInstalled) {
-                            // 2. Installed: Show Snackbar with Open Action
-                            // We use 'itemView' as the anchor for the Snackbar
-                            Snackbar.make(rootView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
-                                .setAction("Open Folder") {
-                                    val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"oxproxion")
-                                   // val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setPackage(fossifyPackage)
-                                    //intent.setDataAndType(Uri.fromFile(path), "resource/folder")
-                                    intent.setDataAndType("file://${path.absolutePath}".toUri(), "resource/folder")
+                        // Define the target folder path (keeping 'oxproxion')
+                        val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
 
-                                    // Flags to open as separate app
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        // Create intent to view the folder
+                        val intent = Intent(Intent.ACTION_VIEW)
+                        intent.setDataAndType("file://${path.absolutePath}".toUri(), "resource/folder")
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-                                    // StrictMode Hack for file:// URI
-                                    try {
-                                        val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
-                                        m.invoke(null)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
+                        // Create the system chooser intent
+                        val chooserIntent = Intent.createChooser(intent, "Open Folder")
 
-                                    // Launch using the ItemView's context
-                                    context.startActivity(intent)
-                                }
-                                .show()
-                        } else {
-                            // 3. Not Installed: Fallback to standard Toast
-                            Toast.makeText(context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
-                        }
-                        //Toast.makeText(requireContext(), "PDF Created", Toast.LENGTH_SHORT).show()
+                        // Show Snackbar with the action
+                        Snackbar.make(rootView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
+                            .setAction("Open Folder") {
+                                context.startActivity(chooserIntent)
+                            }
+                            .show()
                     } else {
                         Toast.makeText(requireContext(), "PDF Failed", Toast.LENGTH_SHORT).show()
                     }
