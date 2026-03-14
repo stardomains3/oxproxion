@@ -34,6 +34,9 @@ class SharedPreferencesHelper(context: Context) {
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
         private const val KEY_AUTO_BACK = "auto_back_enabled"
+        private const val KEY_ENABLED_TOOLS = "enabled_tools"
+        private const val KEY_TOOLS_ENABLED = "tools_enabled_preference"
+        private const val SAF_FOLDER_URI = "saffolderuri"
         private const val KEY_USE_COPY_BUTTON2 = "use_copy_button2"
 
         private const val KEY_SHOW_CITATIONS = "show_citations"
@@ -237,7 +240,50 @@ class SharedPreferencesHelper(context: Context) {
         mainPrefs.edit { putString(KEY_SORT_ORDER, sortOrder.name) }
     }
     fun getTimeoutMinutes(): Int = mainPrefs.getInt(KEY_TIMEOUT_MINUTES, 5)
+    fun saveToolsPreference(isEnabled: Boolean) {
+        mainPrefs.edit {
+            putBoolean(KEY_TOOLS_ENABLED, isEnabled)
+        }
+    }
 
+    fun getToolsPreference(): Boolean {
+        return mainPrefs.getBoolean(KEY_TOOLS_ENABLED, false)
+    }
+    fun getEnabledTools(): Set<String> {
+        val jsonStr = mainPrefs.getString(KEY_ENABLED_TOOLS, null)
+        return if (jsonStr != null && jsonStr.isNotEmpty()) {
+            try {
+                json.decodeFromString<Set<String>>(jsonStr)
+            } catch (e: Exception) {
+                //Log.w("SharedPreferencesHelper", "Failed to parse enabled tools, falling back to all enabled", e)
+                emptySet()  // Safe fallback: enables all tools
+            }
+        } else {
+            emptySet()  // First use: enables all tools
+        }
+    }
+    fun hasEnabledToolsStored(): Boolean {
+        return mainPrefs.contains(KEY_ENABLED_TOOLS)
+    }
+    fun saveEnabledTools(tools: Set<String>) {
+        try {
+            val jsonStr = json.encodeToString(tools)
+            mainPrefs.edit {
+                putString(KEY_ENABLED_TOOLS, jsonStr)
+            }  // Async save (efficient, non-blocking)
+            // Log.d("SharedPreferencesHelper", "Saved enabled tools: $tools")
+        } catch (e: Exception) {
+            //  Log.e("SharedPreferencesHelper", "Failed to save enabled tools: $tools", e)
+            // Optional: You could add a user-facing error (e.g., Toast) here if needed
+        }
+    }
+    fun saveSafFolderUri(uri: String) {
+        mainPrefs.edit { putString(SAF_FOLDER_URI, uri) }
+    }
+
+    fun getSafFolderUri(): String? {
+        return mainPrefs.getString(SAF_FOLDER_URI, null)
+    }
     fun saveTimeoutMinutes(minutes: Int) {
         mainPrefs.edit { putInt(KEY_TIMEOUT_MINUTES, minutes) }
         // Notify the listener if it exists

@@ -24,6 +24,7 @@ class PresetEditFragment : Fragment() {
     private lateinit var toolbar: MaterialToolbar
 
     private var editingPreset: Preset? = null
+    private lateinit var toolsSwitch: MaterialSwitch
 
     private lateinit var webSearchSwitch: MaterialSwitch
     private lateinit var titleInput: TextInputEditText
@@ -87,7 +88,7 @@ class PresetEditFragment : Fragment() {
             )
         )
 
-        listOf(streamingSwitch, reasoningSwitch, conversationSwitch, webSearchSwitch).forEach { switch ->
+        listOf(streamingSwitch, reasoningSwitch, conversationSwitch, toolsSwitch, webSearchSwitch).forEach { switch ->
             switch.trackTintList = trackTintSelector
             switch.thumbTintList = thumbTintSelector
             switch.thumbTintMode = PorterDuff.Mode.SRC_ATOP
@@ -111,6 +112,7 @@ class PresetEditFragment : Fragment() {
     }
 
     private fun initViews(view: View) {
+        toolsSwitch = view.findViewById(R.id.switchTools)
         toolbar = view.findViewById(R.id.toolbar)
         titleInput = view.findViewById(R.id.editPresetTitle)
         webSearchSwitch = view.findViewById(R.id.switchWebSearch)
@@ -121,7 +123,7 @@ class PresetEditFragment : Fragment() {
         conversationSwitch = view.findViewById(R.id.switchConversation)
         saveBtn = view.findViewById(R.id.buttonSave)
         cancelBtn = view.findViewById(R.id.buttonCancel)
-
+        toolsSwitch.isChecked = false
         streamingSwitch.isChecked = false // default: off
         reasoningSwitch.isChecked = true // default: on
         conversationSwitch.isChecked = false // default: off
@@ -181,6 +183,7 @@ class PresetEditFragment : Fragment() {
         systemMessageAutoComplete.setText(systemMessageTitle, false)
 
         // Set toggles
+        toolsSwitch.isChecked = preset.tools
         webSearchSwitch.isChecked = preset.webSearch
         streamingSwitch.isChecked = preset.streaming
         reasoningSwitch.isChecked = preset.reasoning
@@ -261,6 +264,7 @@ class PresetEditFragment : Fragment() {
         val streaming = streamingSwitch.isChecked
         val reasoning = if (reasoningSwitch.isVisible) reasoningSwitch.isChecked else false
         val conversationMode = conversationSwitch.isChecked
+        val tools = toolsSwitch.isChecked
         val webSearch = webSearchSwitch.isChecked
         val preset = Preset(
             id = editingPreset?.id ?: java.util.UUID.randomUUID().toString(),
@@ -270,6 +274,7 @@ class PresetEditFragment : Fragment() {
             streaming = streaming,
             reasoning = reasoning,
             conversationMode = conversationMode,
+            tools = tools,
             webSearch = webSearch
         )
 

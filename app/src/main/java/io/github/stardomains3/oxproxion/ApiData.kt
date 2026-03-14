@@ -57,6 +57,7 @@ data class FlexibleMessage(
     val toolCallId: String? = null,
     val toolsUsed: Boolean = false,  // NEW: Flag for visual indication (true if tools were involved in this
     val reasoning: String? = null,
+    val thinking: String? = null,
     @SerialName("image_uri")  // NEW: String for serialization (parse to Uri later)
     val imageUri: String? = null  // For user/generated images (original Uri.toString())
 )
@@ -136,6 +137,7 @@ data class MessageResponse(
     val annotations: List<Annotation>? = null,
     val images: List<ImageResponse>? = null,
     val reasoning: String? = null,
+    val thinking: String? = null,
     val reasoning_details: List<ReasoningDetail>? = null
 )
 @Serializable

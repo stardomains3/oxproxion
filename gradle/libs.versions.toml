@@ -29,6 +29,7 @@ coil = "2.7.0"
 prism4j = "2.0.0"
 biometric = "1.1.0"
 commonmark = "0.27.1"
+documentfile = "1.1.0"
 [libraries]
 markwon-simple = { module = "io.noties.markwon:simple-ext", version.ref = "markwon"}
 biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
@@ -79,6 +80,7 @@ commonmark-autolink = { group = "org.commonmark", name = "commonmark-ext-autolin
 commonmark-footnotes = { group = "org.commonmark", name = "commonmark-ext-footnotes", version.ref = "commonmark" }
 commonmark-heading-anchor = { group = "org.commonmark", name = "commonmark-ext-heading-anchor", version.ref = "commonmark" }
 commonmark-ext-ins = { group = "org.commonmark", name = "commonmark-ext-ins", version.ref = "commonmark" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 
 
 [plugins]

@@ -3,12 +3,17 @@ package io.github.stardomains3.oxproxion
 import android.app.Application
 import android.content.ContentResolver
 import android.content.ContentValues
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
+import android.provider.AlarmClock
+import android.provider.CalendarContract
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -50,14 +55,18 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.CompressionInterceptor
 import okhttp3.Gzip
 import okhttp3.brotli.BrotliInterceptor
@@ -70,6 +79,7 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.text.SimpleDateFormat
 import java.util.Base64
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -77,6 +87,8 @@ import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.collections.addAll
+import kotlin.collections.get
 import kotlin.coroutines.cancellation.CancellationException
 
 @Serializable
@@ -225,6 +237,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val scrollToBottomEvent: LiveData<Event<Unit>> = _scrollToBottomEvent
     private val _toolUiEvent = MutableLiveData<Event<String>>()
     val toolUiEvent: LiveData<Event<String>> = _toolUiEvent
+    private val _toastUiEvent = MutableLiveData<Event<String>>()
+    val toastUiEvent: LiveData<Event<String>> = _toastUiEvent
     private val _isChatLoading = MutableLiveData(false)
     val isChatLoading: LiveData<Boolean> = _isChatLoading
     private val _isExtendedDockEnabled = MutableLiveData<Boolean>()
@@ -236,6 +250,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val autosendEvent: LiveData<Event<Unit>> = _autosendEvent
     private val _userScrolledDuringStream = MutableLiveData(false)
     val userScrolledDuringStream: LiveData<Boolean> = _userScrolledDuringStream
+    val _isToolsEnabled = MutableLiveData(false)
+    val isToolsEnabled: LiveData<Boolean> = _isToolsEnabled
     private val _presetAppliedEvent = MutableLiveData<Event<Unit>>()
     val presetAppliedEvent: LiveData<Event<Unit>> = _presetAppliedEvent
     private val _isScrollProgressEnabled = MutableLiveData<Boolean>()
@@ -290,6 +306,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isExpandableInputEnabled.value = newValue
         sharedPreferencesHelper.saveExpandableInput(newValue)
     }
+    fun toggleToolsEnabled() {
+        val newValue = !(_isToolsEnabled.value ?: false)
+        _isToolsEnabled.value = newValue
+        sharedPreferencesHelper.saveToolsPreference(newValue)
+    }
     fun toggleReasoning() {
         val newValue = !(_isReasoningEnabled.value ?: false)
         _isReasoningEnabled.value = newValue
@@ -342,6 +363,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isReasoningEnabled.value = sharedPreferencesHelper.getReasoningPreference()
         _isAdvancedReasoningOn.value = sharedPreferencesHelper.getAdvancedReasoningEnabled()
         _isScrollersEnabled.value = sharedPreferencesHelper.getScrollersPreference()
+        _isToolsEnabled.value = sharedPreferencesHelper.getToolsPreference()
         _isWebSearchEnabled.value = sharedPreferencesHelper.getWebSearchBoolean()
         _isExtendedDockEnabled.value = sharedPreferencesHelper.getExtPreference()
         _isExtendedTopBarEnabled.value = sharedPreferencesHelper.getExtendedTopBarEnabled()
@@ -612,11 +634,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         networkJob?.cancel()
         lanFetchJob?.cancel()
     }
-
+    private var toolCallsHandledForTurn = false
+    private var toolRecursionDepth = 0
     fun sendUserMessage(
         userContent: JsonElement,
         systemMessage: String? = null
     ) {
+        toolCallsHandledForTurn = false
+        toolRecursionDepth = 0
         var userMessage = FlexibleMessage(role = "user", content = userContent)
         pendingUserImageUri?.let { uriStr ->
             userMessage = userMessage.copy(imageUri = uriStr)  // Embed string
@@ -762,7 +787,517 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    private fun buildTools(): List<Tool> {
+        val allTools = listOf(
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "make_file",
+                    description = "Creates a text file (e.g., .txt, .md, .html,.json) and saves it to the public Downloads folder. Content should be plain text or structured text like JSON/YAML. **Important:** Use RAW, UNESCAPED content in the 'content' parameter - it gets written directly to disk as-is via OutputStream. No HTML entities, no escaping needed. Only use when the user specifically asks for a file to be made.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("filename") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "The name of the text file to create, including extension (e.g., summary.txt, data.json)."
+                                )
+                            }
+                            putJsonObject("content") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "The plain text content for the file (e.g., summary or JSON data)."
+                                )
+                            }
+                            putJsonObject("mimetype") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "MIME type for the text file, e.g., text/plain, application/json, text/markdown."
+                                )
+                            }
+                        }
+                        putJsonArray("required") {
+                            add(JsonPrimitive("filename"))
+                            add(JsonPrimitive("content"))
+                            add(JsonPrimitive("mimetype"))
+                        }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "set_timer",
+                    description = "Set a timer for a duration specified in minutes. Optionally provide a title to label the timer.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("minutes") {
+                                put("type", "integer")
+                                put(
+                                    "description",
+                                    "The total duration of the timer in minutes (e.g., 5 for '5 minutes', 142 for '2 hours and 22 minutes')."
+                                )
+                            }
+                            putJsonObject("title") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Optional title or label for the timer (e.g., 'Pomodoro', 'Workout'). If not provided, defaults to 'Timer'."
+                                )
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("minutes")) }
+                    }
+                )
+            ),
 
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "set_alarm",
+                    description = "Sets an alarm for a specific time. If no am or pm is indicated by the user, set for nearest one.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("hour") {
+                                put("type", "integer")
+                                put(
+                                    "description",
+                                    "The hour for the alarm, in 24-hour format (0-23)."
+                                )
+                            }
+                            putJsonObject("minutes") {
+                                put("type", "integer")
+                                put("description", "The minute for the alarm (0-59).")
+                            }
+                            putJsonObject("message") {
+                                put("type", "string")
+                                put("description", "An optional message for the alarm.")
+                            }
+                        }
+                        putJsonArray("required") {
+                            add(JsonPrimitive("hour"))
+                            add(JsonPrimitive("minutes"))
+                        }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "add_calendar_event",
+                    description = "Adds an event to the user's calendar. Provide a title and start date/time; the AI will populate optional fields like location, description, all-day status, and end time as needed (e.g., default end to 1 hour after start for timed events, or next day for all-day). Dates/times should be in ISO 8601 format (e.g., '2023-10-05T14:30:00' for Oct 5, 2023 at 2:30 PM). Current time/date this was sent is: ${
+                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(
+                            Date()
+                        )
+                    }",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("title") {
+                                put("type", "string")
+                                put("description", "The title of the calendar event.")
+                            }
+                            putJsonObject("location") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Optional location for the event (e.g., 'Office' or 'Online'). AI can populate if not provided."
+                                )
+                            }
+                            putJsonObject("description") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Optional description or notes for the event. AI can populate if not provided."
+                                )
+                            }
+                            putJsonObject("allDay") {
+                                put("type", "boolean")
+                                put(
+                                    "description",
+                                    "Whether the event is all-day (true) or timed (false, default). If true, ignores specific times in date/time strings."
+                                )
+                            }
+                            putJsonObject("startDateTime") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Start date and time in ISO 8601 format (e.g., '2023-10-05T14:30:00'). Required; AI can infer/populate if user provides partial info."
+                                )
+                            }
+                            putJsonObject("endDateTime") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Optional end date and time in ISO 8601 format. If not provided, defaults to 1 hour after start (timed events) or next day (all-day events). AI can populate."
+                                )
+                            }
+                        }
+                        putJsonArray("required") {
+                            add(JsonPrimitive("title"))
+                            add(JsonPrimitive("startDateTime"))
+                        }
+                    }
+                )
+            ),
+
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "list_oxproxion_files",
+                    description = "Lists all files in the Download/oxproxion folder. Returns a list of filenames that can be read using the read_oxproxion_file tool.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {}
+                        putJsonArray("required") {}
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "read_oxproxion_file",
+                    description = "Reads the contents of a single text file from the Download/oxproxion folder. Only reads text-based files (e.g., .txt, .md, .json, .html). Use list_oxproxion_files first to see available files.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("filename") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "The name of the file to read (e.g., 'notes.txt', 'data.json'). Just the filename, not the full path."
+                                )
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("filename")) }
+                    }
+                )
+            )
+            // Add more tools here as your app grows – the filtering logic below stays the same!
+        )
+
+        // Handle prefs for enabling/disabling tools
+        val hasStoredPrefs = sharedPreferencesHelper.hasEnabledToolsStored()
+
+
+        // If no prefs stored yet (first use), enable all tools
+        if (!hasStoredPrefs) return allTools
+
+        // Otherwise, load and filter by user's explicit choices (empty stored set → no tools)
+        val enabledToolNames = sharedPreferencesHelper.getEnabledTools()
+        return allTools.filter { tool ->
+            tool.function?.name in enabledToolNames
+        }
+    }
+    private suspend fun handleToolCalls(
+        toolCalls: List<ToolCall>,
+        thinkingMessage: FlexibleMessage?
+    ) {
+        if (toolCallsHandledForTurn) {
+
+            return  // Guard: Skip if already handled in this turn
+        }
+        toolCallsHandledForTurn = true
+        toolRecursionDepth++
+
+        if (toolRecursionDepth > 8) {  // Prevent infinite recursion
+
+            return
+        }
+
+        // Deduplicate tool calls: Group by name + arguments and execute only once per unique combo
+        val uniqueToolCalls = toolCalls.groupBy { "${it.function.name}:${it.function.arguments}" }
+            .map { it.value.first() }
+        /*  Log.d("ToolCalls", "Received ${toolCalls.size} tool calls; deduplicated to ${uniqueToolCalls.size}")
+        withContext(Dispatchers.Main) {
+            val toolNames = uniqueToolCalls.map { it.function.name }.distinct().joinToString(", ")
+            Toast.makeText(
+                getApplication<Application>().applicationContext,
+                "Handling ${uniqueToolCalls.size} tool calls: $toolNames",
+                Toast.LENGTH_SHORT
+            ).show()
+        }*/
+        val toolResults = mutableListOf<FlexibleMessage>()
+
+        for (toolCall in uniqueToolCalls) {  // Now looping over uniques only
+            val result: String = when (toolCall.function.name) {
+                "set_timer" -> {
+                    try {
+                        val arguments =
+                            json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val minutes = arguments["minutes"]?.jsonPrimitive?.intOrNull
+                        val title = arguments["title"]?.jsonPrimitive?.contentOrNull
+
+                        if (minutes != null && minutes > 0) {
+                            val context = getApplication<Application>().applicationContext
+                            val intent = Intent(AlarmClock.ACTION_SET_TIMER).apply {
+                                putExtra(AlarmClock.EXTRA_LENGTH, minutes * 60)
+                                putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                                putExtra(
+                                    AlarmClock.EXTRA_MESSAGE,
+                                    title ?: "Timer"
+                                )  // Use custom title or default
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            val displayTitle = title ?: "Timer"
+                            _toastUiEvent.postValue(Event("Timer '$displayTitle' set for $minutes minutes."))
+                            "Timer '$displayTitle' was set successfully for $minutes minutes."
+                        } else {
+                            val error = "Failed to set timer: Invalid minutes value."
+                            _toastUiEvent.postValue(Event(error))
+                            error
+                        }
+                    } catch (e: Exception) {
+                        //   Log.e("ToolCall", "Error executing set_timer", e)
+                        val error = "Failed to set timer: Error parsing arguments."
+                        _toastUiEvent.postValue(Event(error))
+                        error
+                    }
+                }
+
+                "set_alarm" -> {
+                    try {
+                        val arguments =
+                            json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val hour = arguments["hour"]?.jsonPrimitive?.intOrNull
+                        val minutes = arguments["minutes"]?.jsonPrimitive?.intOrNull
+                        val message = arguments["message"]?.jsonPrimitive?.content
+
+                        if (hour != null && hour in 0..23 && minutes != null && minutes in 0..59) {
+                            val context = getApplication<Application>().applicationContext
+                            val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+                                putExtra(AlarmClock.EXTRA_HOUR, hour)
+                                putExtra(AlarmClock.EXTRA_MINUTES, minutes)
+                                message?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) }
+                                putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            "Alarm was set successfully for $hour:$minutes."
+                        } else {
+                            val error = "Failed to set alarm: Invalid hour or minutes."
+                            error
+                        }
+                    } catch (e: Exception) {
+                        //   Log.e("ToolCall", "Error executing set_alarm", e)
+                        val error = "Failed to set alarm: Error parsing arguments."
+                        error
+                    }
+                }
+
+                "add_calendar_event" -> {
+                    try {
+                        val arguments =
+                            json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val title = arguments["title"]?.jsonPrimitive?.content ?: ""
+                        val location = arguments["location"]?.jsonPrimitive?.content ?: ""
+                        val description = arguments["description"]?.jsonPrimitive?.content ?: ""
+                        val allDay = arguments["allDay"]?.jsonPrimitive?.booleanOrNull ?: false
+                        val startDateTimeStr =
+                            arguments["startDateTime"]?.jsonPrimitive?.content ?: ""
+                        val endDateTimeStr = arguments["endDateTime"]?.jsonPrimitive?.content
+
+                        if (title.isBlank() || startDateTimeStr.isBlank()) {
+                            val error =
+                                "Failed to add calendar event: Title and start date/time are required."
+                            _toastUiEvent.postValue(Event(error))
+                            error
+                        } else {
+                            val dateFormat =
+                                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                            val startMillis = try {
+                                dateFormat.parse(startDateTimeStr)?.time
+                                    ?: throw Exception("Invalid start date/time format")
+                            } catch (e: Exception) {
+                                throw Exception("Failed to parse start date/time: ${e.message}")
+                            }
+
+                            val calendar = Calendar.getInstance()
+                            calendar.timeInMillis = startMillis
+
+                            val (dtStart, dtEnd) = if (allDay) {
+                                // For all-day: Set to start of day, end to end of day (or next day if no end provided)
+                                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                                calendar.set(Calendar.MINUTE, 0)
+                                calendar.set(Calendar.SECOND, 0)
+                                calendar.set(Calendar.MILLISECOND, 0)
+                                val start = calendar.timeInMillis
+                                val end = if (endDateTimeStr != null) {
+                                    val endMillis = try {
+                                        dateFormat.parse(endDateTimeStr)?.time
+                                            ?: throw Exception("Invalid end date/time format")
+                                    } catch (e: Exception) {
+                                        throw Exception("Failed to parse end date/time: ${e.message}")
+                                    }
+                                    val endCal = Calendar.getInstance()
+                                    endCal.timeInMillis = endMillis
+                                    endCal.set(Calendar.HOUR_OF_DAY, 0)
+                                    endCal.set(Calendar.MINUTE, 0)
+                                    endCal.set(Calendar.SECOND, 0)
+                                    endCal.set(Calendar.MILLISECOND, 0)
+                                    endCal.timeInMillis
+                                } else {
+                                    start + (24 * 60 * 60 * 1000)  // Next day
+                                }
+                                Pair(start, end)
+                            } else {
+                                // For timed: Use exact times, default end to 1 hour after start
+                                val start = calendar.timeInMillis
+                                val end = if (endDateTimeStr != null) {
+                                    try {
+                                        dateFormat.parse(endDateTimeStr)?.time
+                                            ?: throw Exception("Invalid end date/time format")
+                                    } catch (e: Exception) {
+                                        throw Exception("Failed to parse end date/time: ${e.message}")
+                                    }
+                                } else {
+                                    start + (60 * 60 * 1000)  // 1 hour later
+                                }
+                                Pair(start, end)
+                            }
+
+                            val context = getApplication<Application>().applicationContext
+                            val intent = Intent(Intent.ACTION_INSERT).apply {
+                                data = CalendarContract.Events.CONTENT_URI
+                                putExtra(CalendarContract.Events.TITLE, title)
+                                if (location.isNotBlank()) putExtra(
+                                    CalendarContract.Events.EVENT_LOCATION,
+                                    location
+                                )
+                                if (description.isNotBlank()) putExtra(
+                                    CalendarContract.Events.DESCRIPTION,
+                                    description
+                                )
+                                putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, allDay)
+                                putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, dtStart)
+                                putExtra(CalendarContract.EXTRA_EVENT_END_TIME, dtEnd)
+
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            val eventSummary =
+                                "Event '$title' added to calendar (${if (allDay) "all-day" else "timed"})."
+                            _toastUiEvent.postValue(Event(eventSummary))
+                            eventSummary
+                        }
+                    } catch (e: Exception) {
+                        val error = "Failed to add calendar event: ${e.message}"
+                        _toastUiEvent.postValue(Event(error))
+                        error
+                    }
+                }
+
+                "make_file" -> {
+                    try {
+                        val args = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val filename = args["filename"]?.jsonPrimitive?.content ?: ""
+                        val content = args["content"]?.jsonPrimitive?.content ?: ""
+                        val mimeType = args["mimetype"]?.jsonPrimitive?.content ?: "text/plain"
+
+                        if (filename.isBlank() || content.isBlank()) {
+                            "Error: filename or content empty."
+                        } else {
+                            saveFileToDownloads(filename, content, mimeType)
+                            _toolUiEvent.postValue(Event("File saved to Downloads: $filename"))
+                            "File “$filename” successfully created in Downloads."
+                        }
+                    } catch (e: Exception) {
+
+                        "Error creating file: ${e.message}"
+                    }
+                }
+
+
+                "list_oxproxion_files" -> {
+                    try {
+                        listOpenChatFilesViaSaf()
+                    } catch (e: Exception) {
+                        "Error listing files: ${e.message}"
+                    }
+                }
+
+                "read_oxproxion_file" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val filename = arguments["filename"]?.jsonPrimitive?.content
+                        if (filename != null) {
+                            readOpenChatFileViaSaf(filename)
+                        } else {
+                            "Error: No filename provided."
+                        }
+                    } catch (e: Exception) {
+                        "Error reading file: ${e.message}"
+                    }
+                }
+
+
+                /* "generate_pdf" -> {
+                     try {
+                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                         val content = arguments["content"]?.jsonPrimitive?.content ?: ""
+                         val filename = arguments["filename"]?.jsonPrimitive?.content
+                         pdfToolHandler.handleGeneratePdf(content, filename)
+                     } catch (e: Exception) {
+                         Log.e("ToolCall", "Error executing generate_pdf", e)
+                         "Error: Could not generate PDF."
+                     }
+                 }*/
+
+
+                else -> "Error: Unknown tool call"
+            }
+            toolResults.add(
+                FlexibleMessage(
+                    role = "tool",
+                    content = JsonPrimitive(result),
+                    toolCallId = toolCall.id
+                )
+            )
+        }
+
+        // All tool calls now continue the conversation to report their status.
+        val messagesForApi = _chatMessages.value?.toMutableList() ?: mutableListOf()
+        val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
+        if (messagesForApi.isEmpty() || messagesForApi[0].role != "system") {
+            messagesForApi.add(
+                0,
+                FlexibleMessage(role = "system", content = JsonPrimitive(systemMessage))
+            )
+            // Log.d("ToolDebug", "Re-added system message to continuation payload")
+        }
+        messagesForApi.addAll(toolResults)
+        continueConversation(messagesForApi)
+    }
+    private fun continueConversation(messages: List<FlexibleMessage>) {
+        if (toolRecursionDepth > 8) {
+
+            return
+        }
+        toolCallsHandledForTurn = false
+
+        networkJob = viewModelScope.launch {
+            _isAwaitingResponse.postValue(true)
+            try {
+                val modelForRequest =
+                    _activeChatModel.value ?: throw IllegalStateException("No active chat model")
+                // Use non-streaming for the follow-up for simplicity.
+                // Pass `null` for thinkingMessage because we're not replacing the initial prompt,
+                // but the *last* message in the list.
+                handleNonStreamedResponse(modelForRequest, messages, null)
+            } catch (e: Throwable) {
+                handleError(e, null)
+            } finally {
+                _isAwaitingResponse.postValue(false)
+                _scrollToBottomEvent.postValue(Event(Unit))
+            }
+        }
+    }
     private fun formatCitations(annotations: List<Annotation>?): String {
         if (annotations.isNullOrEmpty()) return ""
 
@@ -827,6 +1362,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     null
                 },
+                tools = if (_isToolsEnabled.value == true) buildTools() else null,
+                toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
                 plugins = buildWebSearchPlugin(),
                 modalities = if (isImageGenerationModel(modelForRequest)) {
                     if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
@@ -845,7 +1382,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     ImageConfig(aspectRatio = aspectRatio)
                 } else null,
 
-            )
+                )
 
             try {
                 httpClient.preparePost(activeChatUrl) {
@@ -868,6 +1405,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     var reasoningStarted = false
                     var finish_reason: String? = null
                     var lastChoice: StreamedChoice? = null
+                    val toolCallBuffer = mutableListOf<ToolCall>()
                     val accumulatedAnnotations = mutableListOf<Annotation>()
                     val accumulatedImages = mutableListOf<String>()
 
@@ -875,7 +1413,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val line = channel.readLine() ?: continue
                         if (line.startsWith("data:")) {
                             val jsonString = line.substring(5).trim()
-                          //  if (jsonString == "[DONE]") break
+                            //  if (jsonString == "[DONE]") break
                             if (jsonString == "[DONE]") {
                                 // ==== NEW: read the final payload that may contain citations ====
                                 // OpenRouter occasionally sends one more delta *after* [DONE]
@@ -903,7 +1441,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 val delta = choice?.delta
                                 delta?.annotations?.forEach { accumulatedAnnotations.add(it)}
 
-                                    var contentChanged = false
+                                var contentChanged = false
                                 var reasoningChanged = false
 
                                 if (!delta?.content.isNullOrEmpty()) {
@@ -965,10 +1503,36 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                     }
                                 }
 
+                                delta?.toolCalls?.forEach { deltaTc ->
+                                    val index = deltaTc.index
+                                    if (index >= toolCallBuffer.size) {
+                                        toolCallBuffer.add(
+                                            ToolCall(
+                                                id = deltaTc.id ?: "",
+                                                type = deltaTc.type ?: "function",
+                                                function = FunctionCall(
+                                                    name = deltaTc.function?.name ?: "",
+                                                    arguments = deltaTc.function?.arguments ?: ""
+                                                )
+                                            )
+                                        )
+                                    } else {
+                                        val existing = toolCallBuffer[index]
+                                        toolCallBuffer[index] = existing.copy(
+                                            function = existing.function.copy(
+                                                name = existing.function.name + (deltaTc.function?.name
+                                                    ?: ""),
+                                                arguments = existing.function.arguments + (deltaTc.function?.arguments
+                                                    ?: "")
+                                            )
+                                        )
+                                    }
+                                }
+
                                 accumulatedAnnotations.addAll(delta?.annotations ?: emptyList())
                                 delta?.images?.forEach { accumulatedImages.add(it.image_url.url) }
                             } catch (e: Exception) {
-                               // Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
+                                // Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
                             }
                         }
                     }
@@ -995,11 +1559,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         "length" -> {
                             Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
                         }
-                        "stop", null -> {
+                        "tool_calls", "stop", null -> {
                             // Normal cases
                         }
                         else -> {
-                           // Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
+                            // Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
                         }
                     }
 
@@ -1008,21 +1572,40 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         accumulatedReasoning += "\n\n---\n\n"
                     }
 
-                    //OLD val citationsMarkdown = formatCitations(accumulatedAnnotations)
-                    val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
-                        formatCitations(accumulatedAnnotations)
-                    } else ""
-                    val finalContent = (accumulatedResponse + citationsMarkdown).takeIf { it.isNotBlank() } ?: "No response received."
+                    val hadToolCalls = toolCallBuffer.isNotEmpty()
+                    if (hadToolCalls && !toolCallsHandledForTurn) {
+                        val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+                            formatCitations(accumulatedAnnotations)
+                        } else ""
+                        val assistantMessage = FlexibleMessage(
+                            role = "assistant",
+                            content = JsonPrimitive(accumulatedResponse + citationsMarkdown),
+                            toolCalls = toolCallBuffer,
+                            imageUri = downloadedUris.firstOrNull()
+                        )
+                        withContext(Dispatchers.Main) {
+                            updateMessages {
+                                val last = it.last()
+                                it[it.size - 1] = assistantMessage
+                            }
+                        }
+                        handleToolCalls(toolCallBuffer, thinkingMessage)
+                    } else {
+                        val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+                            formatCitations(accumulatedAnnotations)
+                        } else ""
+                        val finalContent = (accumulatedResponse + citationsMarkdown).takeIf { it.isNotBlank() } ?: "No response received."
 
-                    withContext(Dispatchers.Main) {
-                        updateMessages { list ->
-                            if (list.isNotEmpty()) {
-                                val last = list.last()
-                                list[list.size - 1] = last.copy(
-                                    content = JsonPrimitive(finalContent),
-                                    reasoning = accumulatedReasoning,
-                                    imageUri = downloadedUris.firstOrNull()
-                                )
+                        withContext(Dispatchers.Main) {
+                            updateMessages { list ->
+                                if (list.isNotEmpty()) {
+                                    val last = list.last()
+                                    list[list.size - 1] = last.copy(
+                                        content = JsonPrimitive(finalContent),
+                                        reasoning = accumulatedReasoning,
+                                        imageUri = downloadedUris.firstOrNull()
+                                    )
+                                }
                             }
                         }
                     }
@@ -1058,7 +1641,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
 
 
-    private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
+    private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage?) {
         withTimeout(sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L) {
             withContext(Dispatchers.IO) {
                 val sharedPreferencesHelper = SharedPreferencesHelper( getApplication<Application>().applicationContext)
@@ -1100,6 +1683,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         null
                     },
+                    tools = if (_isToolsEnabled.value == true) buildTools() else null,
+                    toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
                     plugins = buildWebSearchPlugin(),
                     modalities = if (isImageGenerationModel(modelForRequest)) {
                         if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
@@ -1149,40 +1734,66 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     errorHandled = true  // Flag to skip when block
                 }
                 if (!errorHandled) {
-                when (finishReason) {
-                    "error" -> {
-                        val errorMsg = "**Error:** The model encountered an error while generating the response. Please try again."
-                        handleError(Exception(errorMsg), thinkingMessage)
-                        return@let  // or return@execute for streamed
-                    }
-                    "content_filter" -> {
-                        val errorMsg = "**Error:** The response was filtered due to content policies. Please rephrase your query."
-                        handleError(Exception(errorMsg), thinkingMessage)
-                        return@let  // or return@execute for streamed
-                    }
-                    "length" -> {
-                        // Show Toast for truncation
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_LONG).show()
+                    when (finishReason) {
+                        "error" -> {
+                            val errorMsg = "**Error:** The model encountered an error while generating the response. Please try again."
+                            handleError(Exception(errorMsg), thinkingMessage)
+                            return@let  // or return@execute for streamed
                         }
-                        // Still proceed to display the response
-                    }
-                    "stop", null -> {
-                        // Normal cases: Proceed as usual
-                    }
-                    else -> {
-                        // Unknown reason: Log for debugging
-                     //   Log.w("ChatViewModel", "Unknown finish_reason: $finishReason (native: ${choice.native_finish_reason})")
+                        "content_filter" -> {
+                            val errorMsg = "**Error:** The response was filtered due to content policies. Please rephrase your query."
+                            handleError(Exception(errorMsg), thinkingMessage)
+                            return@let  // or return@execute for streamed
+                        }
+                        "length" -> {
+                            // Show Toast for truncation
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_LONG).show()
+                            }
+                            // Still proceed to display the response
+                        }
+                        "tool_calls", "stop", null -> {
+                            // Normal cases: Proceed as usual
+                        }
+                        else -> {
+                            // Unknown reason: Log for debugging
+                            //   Log.w("ChatViewModel", "Unknown finish_reason: $finishReason (native: ${choice.native_finish_reason})")
+                        }
                     }
                 }
-                    }
-                // Download images if present
-                val downloadedUris = choice?.message?.images?.let { images ->
-                    val imageUrls = images.map { it.image_url.url }
-                    downloadImages(imageUrls)
-                } ?: emptyList()
 
-                handleSuccessResponse(chatResponse, thinkingMessage, downloadedUris)  // NEW: Pass Uris
+                // Trust the presence of tool calls over the finish_reason for robustness.
+                if (choice?.message?.toolCalls?.isNotEmpty() == true && !toolCallsHandledForTurn && _isToolsEnabled.value == true) {
+                    val toolCalls = choice.message.toolCalls
+                    // Create the complete assistant message from the response
+                    val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+                        formatCitations(choice.message.annotations)
+                    } else {
+                        ""
+                    }
+                    val assistantMessage = FlexibleMessage(
+                        role = "assistant",
+                        content = JsonPrimitive(choice.message.content ?: ("" + citationsMarkdown)),
+                        toolCalls = toolCalls
+                    )
+                    updateMessages { list ->
+                        if (thinkingMessage != null) {
+                            val index = list.indexOf(thinkingMessage)
+                            if (index != -1) list[index] = assistantMessage
+                        } else {
+                            list.add(assistantMessage)  // Continuation: Add new bubble (fixes invisible)
+                        }
+                    }
+                    handleToolCalls(toolCalls, thinkingMessage)
+                } else {
+                    // Download images if present
+                    val downloadedUris = choice?.message?.images?.let { images ->
+                        val imageUrls = images.map { it.image_url.url }
+                        downloadImages(imageUrls)
+                    } ?: emptyList()
+
+                    handleSuccessResponse(chatResponse, thinkingMessage, downloadedUris)  // NEW: Pass Uris
+                }
             }
         }
     }
@@ -1193,7 +1804,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     private fun handleSuccessResponse(
         chatResponse: ChatResponse,
-        thinkingMessage: FlexibleMessage,
+        thinkingMessage: FlexibleMessage?,
         downloadedUris: List<String> = emptyList()
     ) {
         val message = chatResponse.choices.firstOrNull()?.message ?: throw IllegalStateException("No message")
@@ -1202,11 +1813,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val reasoningForDisplay = message.reasoning_details
             ?.firstOrNull { it.type == "reasoning.text" }
             ?.let { "```\n${it.text}\n```" }
+            ?: message.thinking?.let { "```\n$it\n```" }
             ?: message.reasoning?.let { "```\n$it\n```" }
             ?: ""
 
         val separator = if (reasoningForDisplay.isNotBlank()) "\n\n---\n\n" else ""
-       //OLD  val citationsMarkdown = formatCitations(message.annotations)
         val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
             formatCitations(message.annotations)
         } else {
@@ -1218,26 +1829,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         var finalAiMessage = FlexibleMessage(
             role = "assistant",
             content = JsonPrimitive(finalContent),
+            toolsUsed = thinkingMessage == null,
             reasoning = reasoningForDisplay + separator
         )
         if (downloadedUris.isNotEmpty()) {
-            finalAiMessage = finalAiMessage.copy(imageUri = downloadedUris.first())  // Or join for multiple
+            finalAiMessage = finalAiMessage.copy(imageUri = downloadedUris.first())
         }
         updateMessages { list ->
-            val index = list.indexOf(thinkingMessage)
-            if (index != -1) list[index] = finalAiMessage
-        }
-
-        if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-            val apiIdentifier = activeChatModel.value ?: "Unknown Model"
-            val displayName = getModelDisplayName(apiIdentifier)
-            val truncatedResponse = if (finalContent.length > 3900) {
-                finalContent.take(3900) + "..."
+            if (thinkingMessage != null) {
+                val index = list.indexOf(thinkingMessage)
+                if (index != -1) list[index] = finalAiMessage
             } else {
-                finalContent
+                list.add(finalAiMessage)
             }
-            sharedPreferencesHelper.saveLastAiResponseForChannel(2, truncatedResponse)//#ttsnoti
-            ForegroundService.updateNotificationStatus(displayName, "Response Received.")
+
+            if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
+                val apiIdentifier = activeChatModel.value ?: "Unknown Model"
+                val displayName = getModelDisplayName(apiIdentifier)
+                val truncatedResponse = if (finalContent.length > 3900) {
+                    finalContent.take(3900) + "..."
+                } else {
+                    finalContent
+                }
+                sharedPreferencesHelper.saveLastAiResponseForChannel(2, truncatedResponse)
+                ForegroundService.updateNotificationStatus(displayName, "Response Received.")
+            }
         }
     }
 
@@ -2419,12 +3035,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) {
                 if (e is TimeoutCancellationException) {  // Timeout: Show specific error
                     _lanModels.value = emptyList()
-                    _toolUiEvent.value = Event("LAN models timeout (10s, $provider). Check server/endpoint.")
+                    _toastUiEvent.value = Event("LAN models timeout (10s, $provider). Check server/endpoint.")
                 }
                 // else: Silent user-cancel (back/refresh)
             } catch (e: Exception) {
                 _lanModels.value = emptyList()
-                _toolUiEvent.value = Event("LAN fetch failed ($provider): ${e.message}")
+                _toastUiEvent.value = Event("LAN fetch failed ($provider): ${e.message}")
             }
         }
     }
@@ -3035,6 +3651,74 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     $copyJs
 </body></html>
     """.trimIndent()
+    }
+    private suspend fun listOpenChatFilesViaSaf(): String {
+        return withContext(Dispatchers.IO) {
+            val uriString = sharedPreferencesHelper.getSafFolderUri()
+                ?: return@withContext "Error: App does not have permission to read the folder yet. Tell the user to tap the 'Select Folder' button in the app settings to grant access."
+
+            try {
+                val context = getApplication<Application>().applicationContext
+                val treeUri = uriString.toUri()
+                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+
+                if (documentFile == null || !documentFile.canRead()) {
+                    return@withContext "Error: Lost access to the folder. Ask the user to re-select it."
+                }
+
+                val fileList = documentFile.listFiles()
+                    .filter { it.isFile && it.name != null }
+                    .map { it.name!! }
+
+                if (fileList.isEmpty()) {
+                    "No files found in the selected folder."
+                } else {
+                    "Files available to read:\n${fileList.joinToString("\n")}"
+                }
+            } catch (e: Exception) {
+                "Error accessing folder: ${e.message}"
+            }
+        }
+    }
+
+    private suspend fun readOpenChatFileViaSaf(filename: String): String {
+        return withContext(Dispatchers.IO) {
+            if (filename.contains("/") || filename.contains("\\") || filename.contains("..")) {
+                return@withContext "Error: Invalid filename. Path separators not allowed."
+            }
+
+            val uriString = sharedPreferencesHelper.getSafFolderUri()
+                ?: return@withContext "Error: Folder permission not granted. Ask the user to grant folder access."
+
+            try {
+                val context = getApplication<Application>().applicationContext
+                val treeUri = uriString.toUri()
+                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+
+                // Find the specific file
+                val targetFile = documentFile?.listFiles()?.find { it.name == filename && it.isFile }
+                    ?: return@withContext "Error: File '$filename' not found."
+
+                // Limit size to ~10MB
+                if (targetFile.length() > 10 * 1024 * 1024) {
+                    return@withContext "Error: File is too large (max 10MB)."
+                }
+
+                context.contentResolver.openInputStream(targetFile.uri)?.use { inputStream ->
+                    val content = inputStream.bufferedReader().readText()
+
+                    // Check for binary by looking for null bytes
+                    if (content.contains('\u0000')) {
+                        return@withContext "Error: Binary files cannot be read. Only text files are supported."
+                    }
+
+                    return@withContext "File: $filename\n\n$content"
+                } ?: return@withContext "Error: Could not open input stream."
+
+            } catch (e: Exception) {
+                return@withContext "Error reading file: ${e.message}"
+            }
+        }
     }
 
 

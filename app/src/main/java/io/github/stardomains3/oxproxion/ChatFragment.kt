@@ -12,6 +12,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -40,6 +41,7 @@ import android.text.util.Linkify
 import android.util.Base64
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -48,11 +50,13 @@ import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -112,6 +116,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.text.get
+import kotlin.text.set
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
    // private var isFontUpdate = false
@@ -149,6 +155,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var printButton: MaterialButton
     private var originalSendIcon: Drawable? = null
     private lateinit var webSearchButton: MaterialButton
+    private lateinit var toolsButton: MaterialButton
     private val viewModel: ChatViewModel by activityViewModels()
     private lateinit var modelNameTextView: TextView
     private lateinit var chatRecyclerView: RecyclerView
@@ -201,6 +208,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private var currentCameraUri: Uri? = null
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var imagePicker: ActivityResultLauncher<Intent>  // Renamed for clarity (gallery picker)
+    private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
     private lateinit var layoutManager: LinearLayoutManager
     private lateinit var pdfPicker: ActivityResultLauncher<Array<String>>
     private var currentTempImageFile: File? = null  // Tracks PDF PNG temp file
@@ -305,7 +313,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             currentCameraUri = null  // Always reset after callback
         }
 
+        folderPickerLauncher = registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+        ) { uri ->
+            if (uri != null) {
+                // Take persistable permissions so it survives app restarts
+                val takeFlags: Int = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
 
+                // Save via your helper
+                sharedPreferencesHelper.saveSafFolderUri(uri.toString())
+
+                Toast.makeText(requireContext(), "Folder access granted! You can now use file tools.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
         imagePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 val uri: Uri? = result.data?.data
@@ -373,6 +394,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         streamButton = view.findViewById(R.id.streamButton)
         reasoningButton = view.findViewById(R.id.reasoningButton)
         webSearchButton = view.findViewById(R.id.webSearchButton)
+        toolsButton = view.findViewById(R.id.toolsButton)
         fontsButton = view.findViewById(R.id.fontsButton)
         fontSizeButton = view.findViewById(R.id.fontSizeButton)
         scrollToBottomButton = view.findViewById(R.id.scrollToBottomButton)
@@ -931,6 +953,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             webSearchButton.isSelected = isEnabled
             topWebSearchButton.isSelected = isEnabled
         }
+        viewModel.isToolsEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            toolsButton.isSelected = isEnabled
+        }
         viewModel.isExpandableInputEnabled.observe(viewLifecycleOwner) { isEnabled ->
             if (isEnabled) {
                 attachExpandableInputListeners()
@@ -997,12 +1022,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
 
         }
+        viewModel.toastUiEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+            }
+        }
         viewModel.toolUiEvent.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { message ->
 
                 Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
                     .setAction("Open Folder") {
-
+                        val folderPath = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+                        if (!folderPath.exists()) folderPath.mkdirs()
                         val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
                         val intent = Intent(Intent.ACTION_VIEW)
 
@@ -1556,6 +1587,34 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         webSearchButton.setOnLongClickListener {
             showWebSearchEngineDialog()
             true
+        }
+        toolsButton.setOnLongClickListener {
+            if (!hasFolderPermission()) {
+                val folderPath = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+                if (!folderPath.exists()) folderPath.mkdirs()
+                android.widget.Toast.makeText(requireContext(), "Please select the Download/oxproxion folder first.", android.widget.Toast.LENGTH_LONG).show()
+                folderPickerLauncher.launch(null)
+            } else {
+                val folderPath = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+                if (!folderPath.exists()) folderPath.mkdirs()
+                hideMenu()
+                showToolsSelectionDialog()
+            }
+            true   // consume the long‑click
+        }
+
+        toolsButton.setOnClickListener {
+            if (!hasFolderPermission()) {
+                val folderPath = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+                if (!folderPath.exists()) folderPath.mkdirs()
+                android.widget.Toast.makeText(requireContext(), "Please select the Download/oxproxion folder first.", android.widget.Toast.LENGTH_LONG).show()
+                folderPickerLauncher.launch(null)
+            } else {
+                val folderPath = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+                if (!folderPath.exists()) folderPath.mkdirs()
+                // hideMenu()
+                viewModel.toggleToolsEnabled()
+            }
         }
         sendChatButton.setOnClickListener {
             if (viewModel.isAwaitingResponse.value == true) {
@@ -3309,7 +3368,100 @@ $cleanContent
         // Apply dim amount of 0.8f
         dialog.window?.setDimAmount(0.8f)
     }
+    private fun showToolsSelectionDialog() {
+        // 1️⃣ Load current state from SharedPreferences
+        val enabledTools = sharedPreferencesHelper.getEnabledTools()
+        val hasStoredPrefs = sharedPreferencesHelper.hasEnabledToolsStored()
 
+        // 2️⃣ Compute effective enabled set for display (all enabled if first use)
+        val effectiveEnabledSet = if (!hasStoredPrefs) {
+            // First use: treat all as enabled for dialog visuals
+            ToolItem.getAllToolItems(emptySet()).map { it.name }.toSet()
+        } else {
+            enabledTools  // Use stored set (could be empty/partial)
+        }
+
+        // 3️⃣ Build the list of items using effective set (shows correct checkboxes)
+        val allItems = ToolItem.getAllToolItems(effectiveEnabledSet)
+
+        // 4️⃣ Create a mutable copy we’ll edit while the user toggles switches
+        val mutableItems = allItems.toMutableList()
+
+        // 5️⃣ Create the dialog (centered, dimmed background – same style you used for fonts)
+        val dialog = MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Enable / Disable Tools")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                // 5a️⃣ When the user taps “Save”, persist the new set
+                val newEnabledSet = mutableItems
+                    .filter { it.isEnabled }
+                    .map { it.name }
+                    .toSet()
+                sharedPreferencesHelper.saveEnabledTools(newEnabledSet)
+                // Optional: if you need to refresh the tool list used by the LLM immediately:
+                // chatViewModel.refreshToolsIfNeeded()   <-- add this method to your VM if you want
+            }
+            .create()
+
+        // 6️⃣ Build ScrollView + LinearLayout container (replaces RecyclerView)
+        val scrollView = ScrollView(requireContext()).apply {
+            // Optional: Add light padding for better feel
+            setPadding(1.dpToPx(), 1.dpToPx(), 1.dpToPx(), 1.dpToPx())
+        }
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        // 7️⃣ Dynamically add a row for each tool (stable index capture for listeners)
+        for ((index, item) in mutableItems.withIndex()) {
+            val row = LayoutInflater.from(requireContext()).inflate(
+                R.layout.item_tool_toggle,
+                container,
+                false
+            )
+
+            // Bind data
+            val checkBox = row.findViewById<CheckBox>(R.id.checkbox_tool)
+            val titleTv = row.findViewById<TextView>(R.id.text_tool_title)
+            val descTv = row.findViewById<TextView>(R.id.text_tool_desc)
+
+            titleTv.text = item.displayName
+            descTv.text = item.description
+            checkBox.isChecked = item.isEnabled
+
+            // ✅ Row click: Toggle with STABLE index capture
+            val stableIndex = index
+            row.setOnClickListener {
+                val currentItem = mutableItems[stableIndex]
+                val newState = !currentItem.isEnabled
+                mutableItems[stableIndex] = currentItem.copy(isEnabled = newState)
+                checkBox.isChecked = newState
+            }
+
+            // ✅ Checkbox listener: Update list with STABLE index capture
+            checkBox.setOnCheckedChangeListener { _, isChecked ->
+                mutableItems[stableIndex] = mutableItems[stableIndex].copy(isEnabled = isChecked)
+            }
+
+            // Optional: Add small bottom margin for spacing between rows
+            val layoutParams = row.layoutParams as LinearLayout.LayoutParams
+            layoutParams.bottomMargin = 1.dpToPx()
+            row.layoutParams = layoutParams
+
+            container.addView(row)
+        }
+
+        scrollView.addView(container)
+        dialog.setView(scrollView)
+        dialog.window?.setDimAmount(0.8f)
+        dialog.show()
+
+        // 8️⃣ Underline the title (same as your font dialog)
+        val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
+        titleView?.paintFlags = titleView.paintFlags.or(Paint.UNDERLINE_TEXT_FLAG) ?: 0
+    }
     private fun showWebSearchEngineDialog() {
         val engines = listOf(
             "default" to "Default (Native if available, fallback Exa)",
@@ -3350,6 +3502,7 @@ $cleanContent
             else -> String.format("%.1fMB", bytes / 1024f / 1024f)
         }
     }
+    fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
     fun TextView.animateColor(from: Int, to: Int, dur: Long): ValueAnimator? =
         ValueAnimator.ofArgb(from, to).apply {
             duration = dur
@@ -3597,5 +3750,13 @@ $cleanContent
 
             loadDataWithBaseURL(null, fullHtml, "text/html", "UTF-8", null)
         }
+    }
+    private fun hasFolderPermission(): Boolean {
+        val uriString = sharedPreferencesHelper.getSafFolderUri() ?: return false
+
+        // Verify the permission is actually still held by the OS
+        val treeUri = uriString.toUri()
+        val persistedUriPermissions = requireContext().contentResolver.persistedUriPermissions
+        return persistedUriPermissions.any { it.uri == treeUri && it.isReadPermission }
     }
 }

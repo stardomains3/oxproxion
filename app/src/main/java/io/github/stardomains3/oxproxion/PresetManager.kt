@@ -17,6 +17,8 @@ object PresetManager {
         prefs.saveStreamingPreference(preset.streaming)
         prefs.saveReasoningPreference(preset.reasoning)
         prefs.saveConversationModeEnabled(preset.conversationMode)
+        prefs.saveToolsPreference(preset.tools)
+        viewModel._isToolsEnabled.value = preset.tools
         viewModel._isStreamingEnabled.value = preset.streaming
         viewModel._isReasoningEnabled.value = preset.reasoning
         prefs.saveWebSearchEnabled(preset.webSearch)

@@ -58,6 +58,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             "ic_print" to R.drawable.ic_print,
             "ic_pdfnew" to R.drawable.ic_pdfnew,
             "ic_stream" to R.drawable.ic_stream,
+             "ic_tools" to R.drawable.ic_tools,
             "ic_reasoning" to R.drawable.ic_reasoning,
             "ic_ruler" to R.drawable.ic_ruler,
             "ic_key" to R.drawable.ic_key,
@@ -239,6 +240,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Reasoning Button** {{ic_reasoning}} : Appears only for models that support reasoning. Toggles reasoning on or off. When enabled, the model uses deeper thinking for more thoughtful responses. When disabled, it explicitly instructs the model not to use reasoning. Reasoning traces are not returned in the response. Defaults to medium effort. If you long-press on the button if it is selected, you can enable Advanced Reasoning settings(see below). 
             *   **Web Search Button** {{ic_websearch}} : Enables web search(model gets web search information) for **one response only** (auto-off unless overrided with setting, OpenRouter models only). Long-press to choose engine: [**Default** (native if available, else Exa), **Native only**, **Exa only**].  **Note**: Exa is OpenRouter's search provider. Native is server-side of provider(OpenAI, xAI, Anthropic, etc.) Check OpenRouter/provider's docs for pricing — can be expensive!
             *   **Stream Button** {{ic_stream}} : Toggles streaming responses on or off.
+            *   **Tools Button**  {{ic_tools}} : **Experimental, use at own risk!**. Many models do not run tools well/correctly. Exit app by swiping upwards if model misuses/repeats etc tools. Toggles tools on/off. Long press to see available tools: There you can toggle which tools you want available to the model. Available tools are: create file, set timer, set alarm, add calendar event, list file in folder, read file in folder. Not all models support tool use. It is recommended to have tools on only when wanted as if adds to your input token count. When you first press this button it will ask which folder to use for reading and listing files; It is recommended you select oxproxion folder that is in Download folder as that where create file tool makes sends created files. For now only 9 tool uses can be used sequentially.
             *   **Conversation Button** {{ic_convo}} : Toggles "Audio Conversation" mode on or off. When enabled, Speech-to-Text automatically sends recognized prompts to the model, and responses are automatically read aloud via Text-to-Speech.
             *   **Fonts Button** {{ic_fonts}} : Opens the fonts dialog where you can choose one of many different fonts for the main chat screen.
             *   **Font Size Button** {{ic_format}} : Makes visible the font resizing buttons for to change the size of the font in the main chat screen.

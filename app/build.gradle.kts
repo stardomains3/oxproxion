@@ -24,8 +24,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 161
-        versionName = "2.1.51"
+        versionCode = 162
+        versionName = "2.1.52"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -94,6 +94,7 @@ dependencies {
     implementation(libs.markwon.strikethrough)
     implementation(libs.markwon.syntax.highlight)
     implementation(libs.prism4j.core)
+    implementation(libs.androidx.documentfile)
     kapt(libs.prism4j.bundler)
     implementation(libs.biometric)
     implementation(libs.coil.kt)

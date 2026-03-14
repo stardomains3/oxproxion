@@ -1,0 +1,4 @@
+Added Tools:
+- Button is in the menu area.
+- **Experimental, use at own risk!**. Many models do not run tools well/correctly. Exit app by swiping upwards if model misuses/repeats etc tools. Toggles tools on/off. Long press to see available tools: There you can toggle which tools you want available to the model. Available tools are: create file, set timer, set alarm, add calendar event, list file in folder, read file in folder. Not all models support tool use. It is recommended to have tools on only when wanted as if adds to your input token count. When you first press this button it will ask which folder to use for reading and listing files; It is recommended you select oxproxion folder that is in Download folder as that where create file tool makes sends created files. For now only 9 tool uses can be used sequentially.
+- Presets can be configured to use tools.

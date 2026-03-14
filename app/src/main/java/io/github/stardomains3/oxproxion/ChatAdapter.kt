@@ -246,8 +246,13 @@ class ChatAdapter(
             return renderCache[message]!!
         }
 
-        // 2. Extract Text
-        val text = getMessageText(message.content)
+        // 2. Extract Text (JSON Logic)
+        val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
+            "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+        } else {
+            getMessageText(message.content)
+        }
+
         val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
         val rawText = reasoningText + text
 
@@ -330,6 +335,12 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = messages[position]
+        var contentText = getMessageText(message.content)
+
+        if (message.role == "assistant" && message.toolCalls != null && contentText.isBlank()) {
+            contentText = "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+        }
+
         when (holder) {
             is UserViewHolder -> holder.bind(message)
             is AssistantViewHolder -> holder.bind(message, position, isSpeaking, currentSpeakingPosition)
@@ -537,11 +548,15 @@ class ChatAdapter(
 
             // 1. DISPLAY TEXT (Optimized: Uses Cache)
             val finalContent = getPreRenderedContent(message)
-           // messageTextView.text = finalContent
+            // messageTextView.text = finalContent
             markwon.setParsedMarkdown(messageTextView, finalContent as android.text.Spanned)
 
             // 2. LOGIC TEXT (Fast extraction)
-            val text = getMessageText(message.content)
+            val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
+                "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+            } else {
+                getMessageText(message.content)
+            }
 
             // --- NEW COLLAPSE LOGIC (INSTANT, NO POST DELAY) ---
             if (text.length > CHAR_THRESHOLD) {
@@ -580,9 +595,12 @@ class ChatAdapter(
 
             val isError = message.role == "assistant" && text.startsWith("**Error:**")
             val isThinking = text == "working..."
+            val hasActiveTools = message.toolCalls != null && message.toolCalls.isNotEmpty()
 
             if (isError) {
                 messageContainer.setBackgroundResource(R.drawable.bg_error_message)
+            } else if (hasActiveTools) {
+                messageContainer.setBackgroundResource(R.drawable.bg_ai_message_outlined)
             } else {
                 messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
             }
