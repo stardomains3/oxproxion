@@ -55,6 +55,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -859,16 +860,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "set_alarm",
-                    description = "Sets an alarm for a specific time. If no am or pm is indicated by the user, set for nearest one.",
+                    description = "Sets an alarm for a specific time. Uses 24-hour format (hour 0-23). IMPORTANT: If the user does not explicitly specify AM or PM (or morning/afternoon/evening), you MUST ask them to clarify before calling this tool. For example, if they say 'set alarm for 7:10' or 'set alarm for 7', ask 'Would you like that for 7:10 AM or 7:10 PM?' and wait for their response. Only call this tool once the time is unambiguous.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
                             putJsonObject("hour") {
                                 put("type", "integer")
-                                put(
-                                    "description",
-                                    "The hour for the alarm, in 24-hour format (0-23)."
-                                )
+                                put("description", "The hour for the alarm, in 24-hour format (0-23). Only provided after user has clarified AM/PM if it was ambiguous.")
                             }
                             putJsonObject("minutes") {
                                 put("type", "integer")
@@ -883,6 +881,49 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             add(JsonPrimitive("hour"))
                             add(JsonPrimitive("minutes"))
                         }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "delete_files",
+                    description = "Deletes one or more files from the Download/oxproxion workspace folder. Use this when the user wants to remove files they've created. Confirm with the user before deleting if they didn't explicitly ask for deletion.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("filenames") {
+                                put("type", "array")
+                                putJsonArray("items") {
+                                    addJsonObject {
+                                        put("type", "string")
+                                    }
+                                }
+                                put("description", "List of filenames to delete (e.g., ['old_notes.txt', 'draft.json']). Must be filenames only, no paths.")
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("filenames")) }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "open_file",
+                    description = "Opens an existing file from the Download/oxproxion folder using the system's default app (e.g., opens PDFs in a PDF viewer, images in gallery, etc.). Use this when the user wants to view a file they've created or that exists in the app folder.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("filename") {
+                                put("type", "string")
+                                put("description", "The name of the file to open (e.g., 'document.pdf', 'image.png'). Just the filename, not the full path.")
+                            }
+                            putJsonObject("mimetype") {
+                                put("type", "string")
+                                put("description", "Optional MIME type hint (e.g., 'application/pdf', 'image/png'). If not provided, the system will infer from file extension.")
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("filename")) }
                     }
                 )
             ),
@@ -1212,7 +1253,36 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         "Error creating file: ${e.message}"
                     }
                 }
+                "delete_files" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val filenamesJson = arguments["filenames"]?.jsonArray
 
+                        if (filenamesJson != null && filenamesJson.isNotEmpty()) {
+                            val filenames = filenamesJson.mapNotNull { it.jsonPrimitive.contentOrNull }
+                            deleteFilesViaSaf(filenames)
+                        } else {
+                            "Error: No filenames provided."
+                        }
+                    } catch (e: Exception) {
+                        "Error deleting files: ${e.message}"
+                    }
+                }
+                "open_file" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val filename = arguments["filename"]?.jsonPrimitive?.content
+                        val mimeType = arguments["mimetype"]?.jsonPrimitive?.content
+
+                        if (filename != null) {
+                            openFileViaSaf(filename, mimeType)
+                        } else {
+                            "Error: No filename provided."
+                        }
+                    } catch (e: Exception) {
+                        "Error opening file: ${e.message}"
+                    }
+                }
 
                 "list_oxproxion_files" -> {
                     try {
@@ -1274,29 +1344,37 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         messagesForApi.addAll(toolResults)
         continueConversation(messagesForApi)
     }
-    private fun continueConversation(messages: List<FlexibleMessage>) {
+    private suspend fun continueConversation(messages: List<FlexibleMessage>) { //Gemini fix
         if (toolRecursionDepth > 8) {
-
             return
         }
         toolCallsHandledForTurn = false
 
-        networkJob = viewModelScope.launch {
-            _isAwaitingResponse.postValue(true)
-            try {
-                val modelForRequest =
-                    _activeChatModel.value ?: throw IllegalStateException("No active chat model")
-                // Use non-streaming for the follow-up for simplicity.
-                // Pass `null` for thinkingMessage because we're not replacing the initial prompt,
-                // but the *last* message in the list.
-                handleNonStreamedResponse(modelForRequest, messages, null)
-            } catch (e: Throwable) {
-                handleError(e, null)
-            } finally {
-                _isAwaitingResponse.postValue(false)
-                _scrollToBottomEvent.postValue(Event(Unit))
+        // 1. Create a new "working..." message so the user sees the AI is processing the tool data
+        val toolThinkingMessage = FlexibleMessage(
+            role = "assistant",
+            content = JsonPrimitive("working...")
+        )
+
+        // 2. Safely add the new bubble to the UI on the Main thread
+        withContext(Dispatchers.Main) {
+            updateMessages { it.add(toolThinkingMessage) }
+            _scrollToBottomEvent.value = Event(Unit)
+        }
+
+        // 3. Make the next network call within the SAME coroutine.
+        // We pass our new toolThinkingMessage so it gets replaced by the AI's final answer!
+        try {
+            val modelForRequest = _activeChatModel.value ?: throw IllegalStateException("No active chat model")
+            handleNonStreamedResponse(modelForRequest, messages, toolThinkingMessage)
+        } catch (e: Throwable) {
+            withContext(Dispatchers.Main) {
+                handleError(e, toolThinkingMessage)
             }
         }
+
+        // Notice we removed the 'networkJob = viewModelScope.launch' wrapper and the 'finally' block!
+        // The original sendUserMessage coroutine's finally block will handle cleanup once the whole chain finishes.
     }
     private fun formatCitations(annotations: List<Annotation>?): String {
         if (annotations.isNullOrEmpty()) return ""
@@ -3717,6 +3795,97 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             } catch (e: Exception) {
                 return@withContext "Error reading file: ${e.message}"
+            }
+        }
+    }
+    private suspend fun openFileViaSaf(filename: String, mimeType: String?): String {
+        return withContext(Dispatchers.IO) {
+            if (filename.contains("/") || filename.contains("\\") || filename.contains("..")) {
+                return@withContext "Error: Invalid filename. Path separators not allowed."
+            }
+
+            val uriString = sharedPreferencesHelper.getSafFolderUri()
+                ?: return@withContext "Error: Folder permission not granted. Ask the user to grant folder access."
+
+            try {
+                val context = getApplication<Application>().applicationContext
+                val treeUri = uriString.toUri()
+                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+
+                val targetFile = documentFile?.listFiles()?.find { it.name == filename && it.isFile }
+                    ?: return@withContext "Error: File '$filename' not found."
+
+                // Use the DocumentFile's URI directly - SAF grants us persistent access
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(
+                        targetFile.uri,
+                        mimeType ?: targetFile.type ?: "*/*"
+                    )
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                // Check if any app can handle this
+                if (intent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(intent)
+                    "Opening '$filename'..."
+                } else {
+                    "Error: No app found to open this file type."
+                }
+
+            } catch (e: Exception) {
+                "Error opening file: ${e.message}"
+            }
+        }
+    }
+    private suspend fun deleteFilesViaSaf(filenames: List<String>): String {
+        return withContext(Dispatchers.IO) {
+            val uriString = sharedPreferencesHelper.getSafFolderUri()
+                ?: return@withContext "Error: Folder permission not granted. Ask the user to grant folder access."
+
+            try {
+                val context = getApplication<Application>().applicationContext
+                val treeUri = uriString.toUri()
+                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                    ?: return@withContext "Error: Could not access the workspace folder."
+
+                val results = mutableListOf<String>()
+
+                for (filename in filenames) {
+                    // Security check
+                    if (filename.contains("/") || filename.contains("\\") || filename.contains("..")) {
+                        results.add("❌ '$filename': Invalid filename (path separators not allowed)")
+                        continue
+                    }
+
+                    val targetFile = documentFile.listFiles().find { it.name == filename && it.isFile }
+
+                    if (targetFile == null) {
+                        results.add("❌ '$filename': File not found")
+                    } else {
+                        val deleted = targetFile.delete()
+                        if (deleted) {
+                            results.add("✅ '$filename': Deleted")
+                        } else {
+                            results.add("❌ '$filename': Delete failed")
+                        }
+                    }
+                }
+
+                val successCount = results.count { it.startsWith("✅") }
+                val failCount = results.size - successCount
+
+                val summary = if (filenames.size == 1) {
+                    results.first().removePrefix("✅ ").removePrefix("❌ ")
+                } else {
+                    "Deleted $successCount of ${filenames.size} files"
+                }
+
+                _toastUiEvent.postValue(Event(summary))
+                results.joinToString("\n")
+
+            } catch (e: Exception) {
+                "Error accessing workspace: ${e.message}"
             }
         }
     }

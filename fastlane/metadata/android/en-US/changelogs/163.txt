@@ -1,0 +1,2 @@
+- Added Delete Files and Open File as optional tools to enable.
+- When AI is doing toolwork, the stop button and a "working..." message appears allowing user to cancel it.

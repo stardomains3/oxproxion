@@ -11,8 +11,15 @@ data class ToolItem(
             ToolItem(
                 name = "make_file",
                 displayName = "Create File",
-                description = "Creates and saves a text-based file (TXT/HTML/JSON/Markdown etc.) to Downloads",
+                description = "Creates and saves a text-based file (TXT/HTML/JSON/Markdown etc.) to the Download/oxproxion folder",
                 isEnabled = "make_file" in enabledSet
+            ),
+
+            ToolItem(
+                name = "delete_files",
+                displayName = "Delete File(s)",
+                description = "Deletes existing file(s) from the Download/oxproxion folder.",
+                isEnabled = "delete_files" in enabledSet
             ),
             ToolItem(
                 name = "set_timer",
@@ -23,7 +30,7 @@ data class ToolItem(
             ToolItem(
                 name = "set_alarm",
                 displayName = "Set Alarm",
-                description = "Create a system alarm for a specific time with optional title",
+                description = "Create a system alarm for a specific time with optional title. Specify AM/PM." ,
                 isEnabled = "set_alarm" in enabledSet
             ),
 
@@ -46,6 +53,13 @@ data class ToolItem(
                 displayName = "Read oxproxion File",
                 description = "Read a single text file from Download/oxproxion folder",
                 isEnabled = "read_oxproxion_file" in enabledSet
+            )
+            ,
+            ToolItem(
+                name = "open_file",
+                displayName = "Open File",
+                description = "Opens an existing file from the Download/oxproxion folder using the system's default app. oxproxion has to be in the foreground for this tool to work.",
+                isEnabled = "open_file" in enabledSet
             )
             // Add more tools here as your app grows
         )
