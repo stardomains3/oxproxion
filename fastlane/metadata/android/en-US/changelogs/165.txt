@@ -1,0 +1,1 @@
+- Change: If a user has "Extended Top Bar" in settings on, the Tools button appears there now instead of the Conversation button. Conversation button is now in the Menu area.

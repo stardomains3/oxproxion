@@ -284,13 +284,29 @@
                     app:iconTint="#A8A8A8"
                     app:backgroundTint="@color/button_background_col"/>
 
-                <com.google.android.material.button.MaterialButton
+                <!-- <com.google.android.material.button.MaterialButton
                     android:id="@+id/topConvoButton"
                     style="@style/Widget.Material3.Button.IconButton.Filled"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginEnd="2dp"
                     app:icon="@drawable/ic_convo"
+                    app:iconGravity="textStart"
+                    app:iconSize="28dp"
+                    app:cornerRadius="24dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    app:iconTint="#A8A8A8"
+                    app:backgroundTint="@color/button_background_col"/> -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/topToolsButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="2dp"
+                    app:icon="@drawable/ic_tools"
                     app:iconGravity="textStart"
                     app:iconSize="28dp"
                     app:cornerRadius="24dp"

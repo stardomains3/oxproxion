@@ -140,7 +140,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var topStreamButton: MaterialButton
     private lateinit var topReasoningButton: MaterialButton
     private lateinit var topWebSearchButton: MaterialButton
-    private lateinit var topConvoButton: MaterialButton
+   // private lateinit var topConvoButton: MaterialButton
+    private lateinit var topToolsButton: MaterialButton
 
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
@@ -426,7 +427,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         topReasoningButton = view.findViewById(R.id.topReasoningButton)
         topWebSearchButton = view.findViewById(R.id.topWebSearchButton)
         topStreamButton = view.findViewById(R.id.topStreamButton)
-        topConvoButton = view.findViewById(R.id.topConvoButton)
+        //topConvoButton = view.findViewById(R.id.topConvoButton)
+        topToolsButton = view.findViewById(R.id.topToolsButton)
+
         topPresetsButton = view.findViewById(R.id.topPresetsButton)
         topSettingsButton = view.findViewById(R.id.topSettingsButton)
         menuButton = view.findViewById(R.id.menuButton)
@@ -955,6 +958,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         viewModel.isToolsEnabled.observe(viewLifecycleOwner) { isEnabled ->
             toolsButton.isSelected = isEnabled
+            topToolsButton.isSelected = isEnabled
         }
         viewModel.isExpandableInputEnabled.observe(viewLifecycleOwner) { isEnabled ->
             if (isEnabled) {
@@ -1861,9 +1865,14 @@ $cleanContent
         topReasoningButton.setOnClickListener { reasoningButton.performClick() }
         topWebSearchButton.setOnClickListener { webSearchButton.performClick() }
         topStreamButton.setOnClickListener { streamButton.performClick() }
-        topConvoButton.setOnClickListener { convoButton.performClick() }
+       // topConvoButton.setOnClickListener { convoButton.performClick() }
         topPresetsButton.setOnClickListener { presetsButton.performClick() }
         topSettingsButton.setOnClickListener { settingsButton.performClick() }
+        topToolsButton.setOnClickListener { toolsButton.performClick() }
+        topToolsButton.setOnLongClickListener {
+            toolsButton.performLongClick()
+            true
+        }
         btnIncreaseFont.setOnClickListener {
             val newScale = (sharedPreferencesHelper.getFontSizeCh() + 5).coerceAtMost(300)
             sharedPreferencesHelper.saveFontSizeCh(newScale)
@@ -2566,7 +2575,7 @@ $cleanContent
         }
         val hasText = !chatEditText.text.isNullOrEmpty()
         convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
-        topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
+      //  topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         utilityButton.visibility = if (isExtended) View.VISIBLE else View.GONE
 
         if (isExtended) {
@@ -3010,7 +3019,7 @@ $cleanContent
            // chatEditText.requestFocus()
             viewModel.checkAdvancedReasoningStatus()
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
-            topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
+          //  topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
         }
     }
     override fun onStop() {
@@ -3536,7 +3545,8 @@ $cleanContent
                 !isLan // Hide web search for local models
             },
             Triple(streamButton, topStreamButton) { true },
-            Triple(convoButton, topConvoButton) { true },
+            //Triple(convoButton, topConvoButton) { true },
+            Triple(toolsButton, topToolsButton) { true },
             Triple(presetsButton, topPresetsButton) { true },
             Triple(settingsButton, topSettingsButton) { true }
         )
