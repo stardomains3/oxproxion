@@ -450,6 +450,22 @@ class SharedPreferencesHelper(context: Context) {
             else -> BotModelPickerFragment.SortOrder.ALPHABETICAL
         }
     }
+    // --- OpenRouterModelsFragment Filters ---
+    fun saveOpenRouterFilterType(type: String) = mainPrefs.edit { putString("open_router_filter_type", type) }
+    fun getOpenRouterFilterType(): String = mainPrefs.getString("open_router_filter_type", "ALL") ?: "ALL"
+
+    fun saveOpenRouterCostFilter(cost: String) = mainPrefs.edit { putString("open_router_cost_filter", cost) }
+    fun getOpenRouterCostFilter(): String = mainPrefs.getString("open_router_cost_filter", "ALL") ?: "ALL"
+
+    // --- BotModelPickerFragment Filters ---
+    fun saveBotPickerFilterType(type: String) = mainPrefs.edit { putString("bot_picker_filter_type", type) }
+    fun getBotPickerFilterType(): String = mainPrefs.getString("bot_picker_filter_type", "ALL") ?: "ALL"
+
+    fun saveBotPickerCostFilter(cost: String) = mainPrefs.edit { putString("bot_picker_cost_filter", cost) }
+    fun getBotPickerCostFilter(): String = mainPrefs.getString("bot_picker_cost_filter", "ALL") ?: "ALL"
+
+    fun saveBotPickerSourceFilter(source: String) = mainPrefs.edit { putString("bot_picker_source_filter", source) }
+    fun getBotPickerSourceFilter(): String = mainPrefs.getString("bot_picker_source_filter", "ALL") ?: "ALL"
     fun getGeminiAspectRatio(): String? = mainPrefs.getString("gemini_aspect_ratio", null)
 
     fun saveGeminiAspectRatio(ratio: String) {

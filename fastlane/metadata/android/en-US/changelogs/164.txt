@@ -1,0 +1,1 @@
+- All sort and filter bars on models screens are now saved as the user last had them.

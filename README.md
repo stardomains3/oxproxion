@@ -18,6 +18,19 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 
 🖼️ Chat with Images: With models that support it!
 
+🛠️ Tools:
+
+Long-Press the **Tools** button in the options menu to enable/disable specific functionality:
+
+*   **Read File**
+*   **Make File**
+*   **List Files in Workspace**
+*   **Make Timer**
+*   **Make Alarm**
+*   **Delete Files**
+*   **Make Calendar Event**
+
+
 🎨 Image Generation: With models that support it!
 
 ✍️ System Message Customization: Create, edit, and manage a library of system messages to guide the AI's behavior and persona.
@@ -151,7 +164,7 @@ Once you have your properly configured LAN endpoint for the server enter it at S
 *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
 *   Review OpenRouter's and its model providers' pricing, privacy, and logging policies on their websites.
 *   oxproxion app does not have trackers, analytics, nor ads.
-*   This app is intended for use by person 18 and over.
+*   This app is intended for use by persons 18 and over.
 *   Chats are stored unencrypted on device only.
 
 If you find this app useful, please consider supporting its developer: [Buy Me a Coffee](https://www.buymeacoffee.com/oxproxion) ☕

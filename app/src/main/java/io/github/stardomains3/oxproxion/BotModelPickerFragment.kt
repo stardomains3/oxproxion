@@ -24,35 +24,21 @@ class BotModelPickerFragment : Fragment() {
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private lateinit var searchView: SearchView
     private var filteredModels: MutableList<LlmModel> = mutableListOf()
-    // Filter bar references
+
     private lateinit var sortBar: MaterialButtonToggleGroup
     private lateinit var filterBar: MaterialButtonToggleGroup
     private lateinit var costFilterBar: MaterialButtonToggleGroup
-    private lateinit var sourceFilterBar: MaterialButtonToggleGroup  // NEW: Fourth filter bar
-    // Filter and sort state
+    private lateinit var sourceFilterBar: MaterialButtonToggleGroup
+
     private var currentFilterType: FilterType = FilterType.ALL
     private var currentCostFilter: CostFilter = CostFilter.ALL
-    private var currentSourceFilter: SourceFilter = SourceFilter.ALL  // NEW: Track source filter
+    private var currentSourceFilter: SourceFilter = SourceFilter.ALL
     private var currentSortOrder: SortOrder = SortOrder.ALPHABETICAL
 
-    // Enums for filters
-    enum class FilterType {
-        ALL, VISION, IMAGE_GEN
-    }
-
-    // UPDATED: Removed LAN from CostFilter
-    enum class CostFilter {
-        ALL, FREE, PAID
-    }
-
-    // NEW: Enum for source filtering (LAN vs Cloud)
-    enum class SourceFilter {
-        ALL, LAN, CLOUD
-    }
-
-    enum class SortOrder {
-        ALPHABETICAL, BY_DATE
-    }
+    enum class FilterType { ALL, VISION, IMAGE_GEN }
+    enum class CostFilter { ALL, FREE, PAID }
+    enum class SourceFilter { ALL, LAN, CLOUD }
+    enum class SortOrder { ALPHABETICAL, BY_DATE }
 
     companion object {
         const val TAG = "BotModelPickerFragment"
@@ -71,72 +57,91 @@ class BotModelPickerFragment : Fragment() {
         chatViewModel = ViewModelProvider(requireActivity())[ChatViewModel::class.java]
         sharedPreferencesHelper = SharedPreferencesHelper(requireContext())
 
-        chatViewModel.customModelsUpdated.observe(viewLifecycleOwner, Observer { event ->
-            event.getContentIfNotHandled()?.let {
-                loadModels()
-                if (::adapter.isInitialized) {
-                    adapter.notifyDataSetChanged()
-                }
-            }
-        })
-
+        // Initialize Views
         val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerViewModels)
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         val fabAddModel = view.findViewById<FloatingActionButton>(R.id.fabAddModel)
-        // Initialize toggle groups
         sortBar = view.findViewById(R.id.sortBar)
         filterBar = view.findViewById(R.id.filterBar)
         costFilterBar = view.findViewById(R.id.costFilterBar)
-        sourceFilterBar = view.findViewById(R.id.sourceFilterBar)  // NEW: Initialize fourth bar
+        sourceFilterBar = view.findViewById(R.id.sourceFilterBar)
 
-        toolbar.setNavigationOnClickListener {
-            parentFragmentManager.popBackStack()
+        // --- LOAD SAVED STATES ---
+        currentSortOrder = sharedPreferencesHelper.getBotModelPickerSortOrder()
+
+        currentFilterType = when (sharedPreferencesHelper.getBotPickerFilterType()) {
+            "VISION" -> FilterType.VISION
+            "IMAGE_GEN" -> FilterType.IMAGE_GEN
+            else -> FilterType.ALL
         }
+
+        currentCostFilter = when (sharedPreferencesHelper.getBotPickerCostFilter()) {
+            "FREE" -> CostFilter.FREE
+            "PAID" -> CostFilter.PAID
+            else -> CostFilter.ALL
+        }
+
+        currentSourceFilter = when (sharedPreferencesHelper.getBotPickerSourceFilter()) {
+            "LAN" -> SourceFilter.LAN
+            "CLOUD" -> SourceFilter.CLOUD
+            else -> SourceFilter.ALL
+        }
+
+        // --- APPLY VISUAL CHECKS ---
+        updateSortButtons(currentSortOrder)
+
+        filterBar.check(when (currentFilterType) {
+            FilterType.ALL -> R.id.filterAllButton
+            FilterType.VISION -> R.id.filterVisionButton
+            FilterType.IMAGE_GEN -> R.id.filterImageGenButton
+        })
+
+        costFilterBar.check(when (currentCostFilter) {
+            CostFilter.ALL -> R.id.costFilterAllButton
+            CostFilter.FREE -> R.id.costFilterFreeButton
+            CostFilter.PAID -> R.id.costFilterPaidButton
+        })
+
+        sourceFilterBar.check(when (currentSourceFilter) {
+            SourceFilter.ALL -> R.id.sourceFilterAllButton
+            SourceFilter.LAN -> R.id.sourceFilterLanButton
+            SourceFilter.CLOUD -> R.id.sourceFilterCloudButton
+        })
+
+        // Toolbar setup
+        toolbar.setNavigationOnClickListener { parentFragmentManager.popBackStack() }
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_lan_models -> {
                     parentFragmentManager.beginTransaction()
                         .replace(android.R.id.content, LanModelsFragment())
-                        .addToBackStack(null)
-                        .commit()
+                        .addToBackStack(null).commit()
                     true
                 }
                 R.id.action_open_router_models -> {
                     parentFragmentManager.beginTransaction()
                         .replace(android.R.id.content, OpenRouterModelsFragment())
-                        .addToBackStack(null)
-                        .commit()
-                    true
-                }
-                R.id.action_search -> {
+                        .addToBackStack(null).commit()
                     true
                 }
                 else -> false
             }
         }
 
-        // Initialize SearchView from the menu
+        // Search Setup
         val searchItem = toolbar.menu.findItem(R.id.action_search)
-        if (searchItem != null) {
-            searchView = searchItem.actionView as SearchView
-            searchView.queryHint = "Search models..."
-            searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                override fun onQueryTextSubmit(query: String?): Boolean {
-                    return true
-                }
+        searchView = searchItem.actionView as SearchView
+        searchView.queryHint = "Search models..."
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean = true
+            override fun onQueryTextChange(newText: String?): Boolean {
+                filterAndSortModels(newText ?: "")
+                return true
+            }
+        })
 
-                override fun onQueryTextChange(newText: String?): Boolean {
-                    filterAndSortModels(newText ?: "")
-                    return true
-                }
-            })
-        } else {
-            Toast.makeText(requireContext(), "Search not available", Toast.LENGTH_SHORT).show()
-        }
-
-        currentSortOrder = sharedPreferencesHelper.getBotModelPickerSortOrder()
-        updateSortButtons(currentSortOrder)
-        sortBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        // --- LISTENERS WITH PERSISTENCE ---
+        sortBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 currentSortOrder = when (checkedId) {
                     R.id.sortAlphabeticalButton -> SortOrder.ALPHABETICAL
@@ -148,9 +153,7 @@ class BotModelPickerFragment : Fragment() {
             }
         }
 
-        // Set up type filter bar
-        filterBar.check(R.id.filterAllButton)
-        filterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        filterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 currentFilterType = when (checkedId) {
                     R.id.filterAllButton -> FilterType.ALL
@@ -158,13 +161,12 @@ class BotModelPickerFragment : Fragment() {
                     R.id.filterImageGenButton -> FilterType.IMAGE_GEN
                     else -> FilterType.ALL
                 }
+                sharedPreferencesHelper.saveBotPickerFilterType(currentFilterType.name)
                 filterAndSortModels(searchView.query.toString())
             }
         }
 
-        // Set up cost filter bar (UPDATED: Removed LAN handling)
-        costFilterBar.check(R.id.costFilterAllButton)
-        costFilterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        costFilterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 currentCostFilter = when (checkedId) {
                     R.id.costFilterAllButton -> CostFilter.ALL
@@ -172,13 +174,12 @@ class BotModelPickerFragment : Fragment() {
                     R.id.costFilterPaidButton -> CostFilter.PAID
                     else -> CostFilter.ALL
                 }
+                sharedPreferencesHelper.saveBotPickerCostFilter(currentCostFilter.name)
                 filterAndSortModels(searchView.query.toString())
             }
         }
 
-        // NEW: Set up source filter bar (fourth bar)
-        sourceFilterBar.check(R.id.sourceFilterAllButton)
-        sourceFilterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        sourceFilterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 currentSourceFilter = when (checkedId) {
                     R.id.sourceFilterAllButton -> SourceFilter.ALL
@@ -186,29 +187,30 @@ class BotModelPickerFragment : Fragment() {
                     R.id.sourceFilterCloudButton -> SourceFilter.CLOUD
                     else -> SourceFilter.ALL
                 }
+                sharedPreferencesHelper.saveBotPickerSourceFilter(currentSourceFilter.name)
                 filterAndSortModels(searchView.query.toString())
             }
         }
 
+        // Adapter and Observer setup
         adapter = BotModelAdapter(filteredModels, sharedPreferencesHelper.getPreferenceModelnew(),
             onItemClicked = { selectedModel ->
                 onModelSelected?.invoke(selectedModel.apiIdentifier)
                 parentFragmentManager.popBackStack()
             },
-            onItemEdit = { modelToEdit ->
-                showEditModelDialog(modelToEdit)
-            },
-            onItemDelete = { modelToDelete ->
-                showDeleteConfirmationDialog(modelToDelete)
-            }
+            onItemEdit = { showEditModelDialog(it) },
+            onItemDelete = { showDeleteConfirmationDialog(it) }
         )
-
         recyclerView.adapter = adapter
-        loadModels()
 
-        fabAddModel.setOnClickListener {
-            showAddModelDialog()
+        chatViewModel.customModelsUpdated.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                loadModels()
+            }
         }
+
+        loadModels()
+        fabAddModel.setOnClickListener { showAddModelDialog() }
     }
 
     private fun loadModels() {
@@ -220,48 +222,33 @@ class BotModelPickerFragment : Fragment() {
         filterAndSortModels(searchView.query.toString())
     }
 
-    // UPDATED: Combined function for filtering and sorting with new cost/source logic
     private fun filterAndSortModels(query: String) {
         var tempFiltered = models.toMutableList()
 
-        // Apply type filter
         tempFiltered = when (currentFilterType) {
             FilterType.ALL -> tempFiltered
             FilterType.VISION -> tempFiltered.filter { it.isVisionCapable }.toMutableList()
             FilterType.IMAGE_GEN -> tempFiltered.filter { it.isImageGenerationCapable }.toMutableList()
         }
 
-        // Apply cost filter (UPDATED: New logic)
-        // FREE = LAN models (free) + free OpenRouter models
-        // PAID = paid OpenRouter models only
         tempFiltered = when (currentCostFilter) {
             CostFilter.ALL -> tempFiltered
-            CostFilter.FREE -> tempFiltered.filter {
-                it.isLANModel || (!it.isLANModel && it.isFree)
-            }.toMutableList()
-            CostFilter.PAID -> tempFiltered.filter {
-                !it.isLANModel && !it.isFree
-            }.toMutableList()
+            CostFilter.FREE -> tempFiltered.filter { it.isLANModel || (!it.isLANModel && it.isFree) }.toMutableList()
+            CostFilter.PAID -> tempFiltered.filter { !it.isLANModel && !it.isFree }.toMutableList()
         }
 
-        // NEW: Apply source filter (LAN vs Cloud/OpenRouter)
         tempFiltered = when (currentSourceFilter) {
             SourceFilter.ALL -> tempFiltered
             SourceFilter.LAN -> tempFiltered.filter { it.isLANModel }.toMutableList()
             SourceFilter.CLOUD -> tempFiltered.filter { !it.isLANModel }.toMutableList()
         }
 
-        // Apply search filter
-        tempFiltered = if (query.isEmpty()) {
-            tempFiltered
-        } else {
-            tempFiltered.filter { model ->
-                model.displayName.contains(query, ignoreCase = true) ||
-                        model.apiIdentifier.contains(query, ignoreCase = true)
+        if (query.isNotEmpty()) {
+            tempFiltered = tempFiltered.filter {
+                it.displayName.contains(query, ignoreCase = true) || it.apiIdentifier.contains(query, ignoreCase = true)
             }.toMutableList()
         }
 
-        // Apply sorting
         when (currentSortOrder) {
             SortOrder.ALPHABETICAL -> tempFiltered.sortBy { it.displayName.lowercase() }
             SortOrder.BY_DATE -> tempFiltered.sortByDescending { it.created }
@@ -273,27 +260,24 @@ class BotModelPickerFragment : Fragment() {
 
     private fun showAddModelDialog() {
         val dialog = EditModelDialogFragment()
-        dialog.onModelAdded = { model ->
-            addModel(model)
-        }
+        dialog.onModelAdded = { addModel(it) }
         dialog.show(parentFragmentManager, "add_model_dialog")
     }
 
     private fun showEditModelDialog(modelToEdit: LlmModel) {
-        val dialog = EditModelDialogFragment()
-        dialog.arguments = Bundle().apply {
-            putString("displayName", modelToEdit.displayName)
-            putString("apiIdentifier", modelToEdit.apiIdentifier)
-            putBoolean("isVisionCapable", modelToEdit.isVisionCapable)
-            putBoolean("isReasoningCapable", modelToEdit.isReasoningCapable)
-            putBoolean("isImageGenerationCapable", modelToEdit.isImageGenerationCapable)
-            putLong("created", modelToEdit.created)
-            putBoolean("isLANModel", modelToEdit.isLANModel)
-            putBoolean("isFree", modelToEdit.isFree)
+        val dialog = EditModelDialogFragment().apply {
+            arguments = Bundle().apply {
+                putString("displayName", modelToEdit.displayName)
+                putString("apiIdentifier", modelToEdit.apiIdentifier)
+                putBoolean("isVisionCapable", modelToEdit.isVisionCapable)
+                putBoolean("isReasoningCapable", modelToEdit.isReasoningCapable)
+                putBoolean("isImageGenerationCapable", modelToEdit.isImageGenerationCapable)
+                putLong("created", modelToEdit.created)
+                putBoolean("isLANModel", modelToEdit.isLANModel)
+                putBoolean("isFree", modelToEdit.isFree)
+            }
         }
-        dialog.onModelUpdated = { oldModel, newModel ->
-            updateModel(oldModel, newModel)
-        }
+        dialog.onModelUpdated = { old, new -> updateModel(old, new) }
         dialog.show(parentFragmentManager, "edit_model_dialog")
     }
 
@@ -301,32 +285,22 @@ class BotModelPickerFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete Model")
             .setMessage("Are you sure you want to delete '${model.displayName}'?")
-            .setPositiveButton("Delete") { _, _ ->
-                deleteModel(model)
-            }
+            .setPositiveButton("Delete") { _, _ -> deleteModel(model) }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun addModel(model: LlmModel) {
         if (models.any { it.apiIdentifier.equals(model.apiIdentifier, ignoreCase = true) }) {
-            Toast.makeText(context, "Model with this API Identifier already exists.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Model exists.", Toast.LENGTH_SHORT).show()
         } else {
             models.add(model)
             saveCustomModels()
             filterAndSortModels(searchView.query.toString())
-            adapter.notifyDataSetChanged()
-            Toast.makeText(context, "Model added: ${model.displayName}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun updateModel(oldModel: LlmModel, newModel: LlmModel) {
-        val conflictingModel = models.find { it.apiIdentifier.equals(newModel.apiIdentifier, ignoreCase = true) }
-        if (conflictingModel != null && conflictingModel.apiIdentifier != oldModel.apiIdentifier) {
-            Toast.makeText(context, "Another model with this API Identifier already exists.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         val index = models.indexOfFirst { it.apiIdentifier == oldModel.apiIdentifier }
         if (index != -1) {
             if (oldModel.apiIdentifier == sharedPreferencesHelper.getPreferenceModelnew()) {
@@ -336,46 +310,30 @@ class BotModelPickerFragment : Fragment() {
             models[index] = newModel
             saveCustomModels()
             filterAndSortModels(searchView.query.toString())
-            adapter.notifyDataSetChanged()
-            Toast.makeText(context, "Model updated: ${newModel.displayName}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun deleteModel(model: LlmModel) {
         if (model.apiIdentifier == sharedPreferencesHelper.getPreferenceModelnew()) {
-            val maverickModel = "meta-llama/llama-4-maverick"
-            sharedPreferencesHelper.savePreferenceModelnewchat(maverickModel)
-            chatViewModel.setModel(maverickModel)
-            adapter.updateCurrentModel(maverickModel)
-            Toast.makeText(context, "Active model changed to Maverick", Toast.LENGTH_SHORT).show()
+            val default = "meta-llama/llama-4-maverick"
+            sharedPreferencesHelper.savePreferenceModelnewchat(default)
+            chatViewModel.setModel(default)
+            adapter.updateCurrentModel(default)
         }
         models.remove(model)
         saveCustomModels()
         filterAndSortModels(searchView.query.toString())
-        adapter.notifyDataSetChanged()
-        Toast.makeText(context, "Model deleted: ${model.displayName}", Toast.LENGTH_SHORT).show()
     }
 
     private fun saveCustomModels() {
-        val builtInModelIds = getModelsList().map { it.apiIdentifier }
-        val customModels = models.filter { !builtInModelIds.contains(it.apiIdentifier) }
-        sharedPreferencesHelper.saveCustomModels(customModels)
+        val builtInIds = getModelsList().map { it.apiIdentifier }
+        val custom = models.filter { !builtInIds.contains(it.apiIdentifier) }
+        sharedPreferencesHelper.saveCustomModels(custom)
     }
 
-    private fun getModelsList(): List<LlmModel> {
-        return listOf(
-            LlmModel("Meta: Llama 4 Maverick", "meta-llama/llama-4-maverick", true)
-        )
-    }
+    private fun getModelsList() = listOf(LlmModel("Meta: Llama 4 Maverick", "meta-llama/llama-4-maverick", true))
 
     private fun updateSortButtons(sortOrder: SortOrder) {
-        when (sortOrder) {
-            SortOrder.ALPHABETICAL -> {
-                sortBar.check(R.id.sortAlphabeticalButton)
-            }
-            SortOrder.BY_DATE -> {
-                sortBar.check(R.id.sortDateButton)
-            }
-        }
+        sortBar.check(if (sortOrder == SortOrder.ALPHABETICAL) R.id.sortAlphabeticalButton else R.id.sortDateButton)
     }
 }

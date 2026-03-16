@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.Toast
-import androidx.appcompat.widget.SearchView  // NEW: Import for SearchView
+import androidx.appcompat.widget.SearchView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -25,13 +25,13 @@ class OpenRouterModelsFragment : Fragment() {
     private lateinit var adapter: OpenRouterModelsAdapter
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private lateinit var sortBar: MaterialButtonToggleGroup
-    private lateinit var searchView: SearchView  // NEW: Reference to SearchView
-    private lateinit var filterBar: MaterialButtonToggleGroup  // NEW: Reference to type filter bar
-    private lateinit var costFilterBar: MaterialButtonToggleGroup  // NEW: Reference to cost filter bar
-    private var allModels: List<LlmModel> = emptyList()  // NEW: Store the full unfiltered list
-    private var filteredModels: List<LlmModel> = emptyList()  // NEW: Store the filtered list
-    private var currentFilterType: FilterType = FilterType.ALL  // NEW: Track the active type filter
-    private var currentCostFilter: CostFilter = CostFilter.ALL  // NEW: Track the active cost filter
+    private lateinit var searchView: SearchView
+    private lateinit var filterBar: MaterialButtonToggleGroup
+    private lateinit var costFilterBar: MaterialButtonToggleGroup
+    private var allModels: List<LlmModel> = emptyList()
+    private var filteredModels: List<LlmModel> = emptyList()
+    private var currentFilterType: FilterType = FilterType.ALL
+    private var currentCostFilter: CostFilter = CostFilter.ALL
 
     enum class FilterType {
         ALL, VISION, IMAGE_GEN
@@ -62,6 +62,7 @@ class OpenRouterModelsFragment : Fragment() {
         toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
         }
+
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_refresh_models -> {
@@ -69,36 +70,26 @@ class OpenRouterModelsFragment : Fragment() {
                     viewModel.fetchOpenRouterModels()
                     true
                 }
-                R.id.action_search -> {
-                    // NEW: Handle search expansion (optional, as SearchView handles it automatically)
-                    true
-                }
                 else -> false
             }
         }
 
-        // NEW: Initialize SearchView from the menu
         val searchItem = toolbar.menu.findItem(R.id.action_search)
         searchView = searchItem.actionView as SearchView
-        searchView.queryHint = "Search models..."  // Hint text for users
+        searchView.queryHint = "Search models..."
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                // Optional: Handle submit (e.g., for keyboard enter), but filtering is real-time
-                return true
-            }
-
+            override fun onQueryTextSubmit(query: String?): Boolean = true
             override fun onQueryTextChange(newText: String?): Boolean {
-                filterModels(newText ?: "")  // NEW: Filter as user types
+                filterModels(newText ?: "")
                 return true
             }
         })
 
-        // Rest of your existing code...
         val infoCard = view.findViewById<CardView>(R.id.infoCard)
         val closeInfoButton = view.findViewById<ImageView>(R.id.closeInfoButton)
         sortBar = view.findViewById(R.id.sortBar)
-        filterBar = view.findViewById(R.id.filterBar)  // NEW: Initialize type filter bar
-        costFilterBar = view.findViewById(R.id.costFilterBar)  // NEW: Initialize cost filter bar
+        filterBar = view.findViewById(R.id.filterBar)
+        costFilterBar = view.findViewById(R.id.costFilterBar)
 
         if (sharedPreferencesHelper.hasDismissedOpenRouterInfo()) {
             infoCard.visibility = View.GONE
@@ -111,22 +102,44 @@ class OpenRouterModelsFragment : Fragment() {
             sharedPreferencesHelper.setOpenRouterInfoDismissed(true)
         }
 
-        sortBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        // --- Persistent Filter Logic Starts Here ---
+
+        // 1. Load saved states from SharedPreferences
+        currentFilterType = when (sharedPreferencesHelper.getOpenRouterFilterType()) {
+            "VISION" -> FilterType.VISION
+            "IMAGE_GEN" -> FilterType.IMAGE_GEN
+            else -> FilterType.ALL
+        }
+        currentCostFilter = when (sharedPreferencesHelper.getOpenRouterCostFilter()) {
+            "FREE" -> CostFilter.FREE
+            "PAID" -> CostFilter.PAID
+            else -> CostFilter.ALL
+        }
+
+        // 2. Visually check the correct buttons based on loaded state
+        filterBar.check(when (currentFilterType) {
+            FilterType.ALL -> R.id.filterAllButton
+            FilterType.VISION -> R.id.filterVisionButton
+            FilterType.IMAGE_GEN -> R.id.filterImageGenButton
+        })
+
+        costFilterBar.check(when (currentCostFilter) {
+            CostFilter.ALL -> R.id.costFilterAllButton
+            CostFilter.FREE -> R.id.costFilterFreeButton
+            CostFilter.PAID -> R.id.costFilterPaidButton
+        })
+
+        // 3. Listeners that save the new selection
+        sortBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 when (checkedId) {
-                    R.id.sortAlphabeticalButton -> {
-                        viewModel.setSortOrder(SortOrder.ALPHABETICAL)
-                    }
-                    R.id.sortDateButton -> {
-                        viewModel.setSortOrder(SortOrder.BY_DATE)
-                    }
+                    R.id.sortAlphabeticalButton -> viewModel.setSortOrder(SortOrder.ALPHABETICAL)
+                    R.id.sortDateButton -> viewModel.setSortOrder(SortOrder.BY_DATE)
                 }
             }
         }
 
-        // NEW: Set up type filter bar
-        filterBar.check(R.id.filterAllButton)  // Default to "All"
-        filterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        filterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 currentFilterType = when (checkedId) {
                     R.id.filterAllButton -> FilterType.ALL
@@ -134,13 +147,12 @@ class OpenRouterModelsFragment : Fragment() {
                     R.id.filterImageGenButton -> FilterType.IMAGE_GEN
                     else -> FilterType.ALL
                 }
-                filterModels(searchView.query.toString())  // Re-filter with current search
+                sharedPreferencesHelper.saveOpenRouterFilterType(currentFilterType.name)
+                filterModels(searchView.query.toString())
             }
         }
 
-        // NEW: Set up cost filter bar
-        costFilterBar.check(R.id.costFilterAllButton)  // Default to "All"
-        costFilterBar.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        costFilterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 currentCostFilter = when (checkedId) {
                     R.id.costFilterAllButton -> CostFilter.ALL
@@ -148,7 +160,8 @@ class OpenRouterModelsFragment : Fragment() {
                     R.id.costFilterPaidButton -> CostFilter.PAID
                     else -> CostFilter.ALL
                 }
-                filterModels(searchView.query.toString())  // Re-filter with current search
+                sharedPreferencesHelper.saveOpenRouterCostFilter(currentCostFilter.name)
+                filterModels(searchView.query.toString())
             }
         }
 
@@ -160,16 +173,14 @@ class OpenRouterModelsFragment : Fragment() {
         }
         recyclerView.adapter = adapter
 
-        // NEW: Observe the full models list and store it
         viewModel.openRouterModels.observe(viewLifecycleOwner) { models ->
-            allModels = models  // Store the full list
-            filterModels(searchView.query.toString())  // Apply current search filter
+            allModels = models
+            filterModels(searchView.query.toString())
         }
 
         lifecycleScope.launch {
             viewModel.sortOrder.collectLatest { sortOrder ->
                 updateSortButtons(sortOrder)
-                // NEW: Re-filter after sort change to maintain sort in filtered results
                 filterModels(searchView.query.toString())
             }
         }
@@ -177,25 +188,21 @@ class OpenRouterModelsFragment : Fragment() {
         viewModel.getOpenRouterModels()
     }
 
-    // NEW: Method to filter models based on query, type, and cost
     private fun filterModels(query: String) {
-        var tempFiltered = allModels  // Start with the full (sorted) list
+        var tempFiltered = allModels
 
-        // Apply type filter
         tempFiltered = when (currentFilterType) {
             FilterType.ALL -> tempFiltered
             FilterType.VISION -> tempFiltered.filter { it.isVisionCapable }
             FilterType.IMAGE_GEN -> tempFiltered.filter { it.isImageGenerationCapable }
         }
 
-        // Apply cost filter
         tempFiltered = when (currentCostFilter) {
             CostFilter.ALL -> tempFiltered
             CostFilter.FREE -> tempFiltered.filter { it.isFree }
             CostFilter.PAID -> tempFiltered.filter { !it.isFree }
         }
 
-        // Apply search filter
         tempFiltered = if (query.isEmpty()) {
             tempFiltered
         } else {
@@ -206,23 +213,19 @@ class OpenRouterModelsFragment : Fragment() {
         }
 
         filteredModels = tempFiltered
-        adapter.updateModels(filteredModels)  // Update adapter with filtered list
+        adapter.updateModels(filteredModels)
     }
 
     private fun updateSortButtons(sortOrder: SortOrder) {
         when (sortOrder) {
-            SortOrder.ALPHABETICAL -> {
-                sortBar.check(R.id.sortAlphabeticalButton)
-            }
-            SortOrder.BY_DATE -> {
-                sortBar.check(R.id.sortDateButton)
-            }
+            SortOrder.ALPHABETICAL -> sortBar.check(R.id.sortAlphabeticalButton)
+            SortOrder.BY_DATE -> sortBar.check(R.id.sortDateButton)
         }
     }
 
     private fun addModel(model: LlmModel) {
         if (viewModel.modelExists(model.apiIdentifier)) {
-            Toast.makeText(context, "Model with this API Identifier already exists.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Model already exists.", Toast.LENGTH_SHORT).show()
         } else {
             viewModel.addCustomModel(model)
             Toast.makeText(context, "Model added: ${model.displayName}", Toast.LENGTH_SHORT).show()
