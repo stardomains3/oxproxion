@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -160,6 +161,37 @@ class MainActivity : AppCompatActivity() {
         })
         startForegroundService()
        // if (sharedPreferencesHelper.getNotiPreference()) startForegroundService()
+    }
+    override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        if (currentFragment is OnKeyboardShortcutListener) {
+            // We pass the event back into handleKeyDown, but the Fragment's 'isLongPress' check
+            // will now be 'true' because the system successfully tracked it.
+            if (currentFragment.handleKeyDown(keyCode, event)) {
+                return true
+            }
+        }
+        return super.onKeyLongPress(keyCode, event)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            event?.startTracking() // Required for isLongPress to work in the Fragment!
+        }
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container) // Or however you get your current fragment
+
+        if (currentFragment is OnKeyboardShortcutListener) {
+            if (currentFragment.handleKeyDown(keyCode, event)) {
+                return true // The fragment handled the shortcut
+            }
+        }
+
+        // 2. If the fragment didn't handle it, or no fragment is active,
+        //    handle it in the Activity (for global app shortcuts)
+
+
+        // Let the system handle unhandled keys (e.g., volume, back button)
+        return super.onKeyDown(keyCode, event)
     }
 
     private fun askNotificationPermission() {

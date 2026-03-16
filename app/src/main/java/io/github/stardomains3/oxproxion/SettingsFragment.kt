@@ -30,6 +30,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val autoBackSwitch = view.findViewById<MaterialSwitch>(R.id.autoBackSwitch)
         val copyOrDismissSwitch = view.findViewById<MaterialSwitch>(R.id.copyOrdismissSwitch)
         val biometricsSwitch = view.findViewById<MaterialSwitch>(R.id.biometricsSwitch)
+        val volumeScrollSwitch = view.findViewById<MaterialSwitch>(R.id.volumeScrollSwitch)
         val autoDisableWebSearchSwitch = view.findViewById<MaterialSwitch>(R.id.autoDisableWebSearchSwitch)
         val notificationsSwitch = view.findViewById<MaterialSwitch>(R.id.notificationsSwitch)
         val extendedTopBarSwitch = view.findViewById<MaterialSwitch>(R.id.extendedTopBarSwitch)
@@ -47,6 +48,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val lanButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.lanButton)
         val openRouterTransformsSwitch = view.findViewById<MaterialSwitch>(R.id.openRouterTransformsSwitch)
         biometricsSwitch.isChecked = prefs.getBiometricEnabled()
+        volumeScrollSwitch.isChecked = viewModel.isVolumeScrollEnabled.value ?: false
         notificationsSwitch.isChecked = prefs.getNotiPreference()
         autoDisableWebSearchSwitch.isChecked = prefs.getDisableWebSearchAfterSend()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
@@ -90,6 +92,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         viewModel.isPresetsExtendedEnabled.observe(viewLifecycleOwner) { enabled ->
             presetsExtendedSwitch.isChecked = enabled
         }
+        viewModel.isVolumeScrollEnabled.observe(viewLifecycleOwner) { enabled ->
+            volumeScrollSwitch.isChecked = enabled
+        }
         copyOrOpenSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveUseCopyButton(isChecked)  // true = Copy button, false = Open button
         }
@@ -123,6 +128,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         scrollButtonsSwitch.setOnCheckedChangeListener { _, isChecked ->
             viewModel.toggleScrollers()  // 🔥 VM saves prefs + notifies Chat instantly
+        }
+        volumeScrollSwitch.setOnCheckedChangeListener { _, _ ->
+            viewModel.toggleVolumeScroll()
         }
         keepScreenOnSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveKeepScreenOnPreference(isChecked)  // Save forever
@@ -170,6 +178,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         listOf(
             R.id.scrollButtonsSwitch,
             R.id.expandableInputSwitch,
+            R.id.volumeScrollSwitch,
             R.id.scrollProgressSwitch,
             R.id.keepScreenOnSwitch,
             R.id.biometricsSwitch,

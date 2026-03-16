@@ -226,6 +226,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isExtendedTopBarEnabled: LiveData<Boolean> = _isExtendedTopBarEnabled
     val _isReasoningEnabled = MutableLiveData(false)
     val isReasoningEnabled: LiveData<Boolean> = _isReasoningEnabled
+    private val _isVolumeScrollEnabled = MutableLiveData<Boolean>()
+    val isVolumeScrollEnabled: LiveData<Boolean> = _isVolumeScrollEnabled
     private val _isAdvancedReasoningOn = MutableLiveData(false)
     val isAdvancedReasoningOn: LiveData<Boolean> = _isAdvancedReasoningOn
     val _isWebSearchEnabled = MutableLiveData<Boolean>(false)
@@ -280,6 +282,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val newValue = !(_isScrollProgressEnabled.value ?: true)  // Default true
         _isScrollProgressEnabled.value = newValue
         sharedPreferencesHelper.saveScrollProgressEnabled(newValue)
+    }
+    fun toggleVolumeScroll() {
+        val newValue = !(_isVolumeScrollEnabled.value ?: false)
+        _isVolumeScrollEnabled.value = newValue
+        sharedPreferencesHelper.saveVolumeScrollEnabled(newValue)
     }
     fun toggleExtendedDock() {
         val newValue = !(_isExtendedDockEnabled.value ?: false)
@@ -364,6 +371,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _isReasoningEnabled.value = sharedPreferencesHelper.getReasoningPreference()
         _isAdvancedReasoningOn.value = sharedPreferencesHelper.getAdvancedReasoningEnabled()
         _isScrollersEnabled.value = sharedPreferencesHelper.getScrollersPreference()
+        _isVolumeScrollEnabled.value = sharedPreferencesHelper.getVolumeScrollEnabled()
         _isToolsEnabled.value = sharedPreferencesHelper.getToolsPreference()
         _isWebSearchEnabled.value = sharedPreferencesHelper.getWebSearchBoolean()
         _isExtendedDockEnabled.value = sharedPreferencesHelper.getExtPreference()

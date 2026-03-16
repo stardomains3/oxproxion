@@ -41,6 +41,7 @@ import android.text.util.Linkify
 import android.util.Base64
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -119,7 +120,10 @@ import java.util.TimeZone
 import kotlin.text.get
 import kotlin.text.set
 
-class ChatFragment : Fragment(R.layout.fragment_chat) {
+interface OnKeyboardShortcutListener {
+    fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean
+}
+class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListener {
    // private var isFontUpdate = false
     private var menuClosedByTouch = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
@@ -145,6 +149,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
     private var selectedImageBytes: ByteArray? = null
     private var selectedImageMime: String? = null
+    private var doVolScroll: Boolean = false
     private lateinit var plusButton: MaterialButton
     private lateinit var btnDecreaseFont: MaterialButton
     private lateinit var btnIncreaseFont: MaterialButton
@@ -1015,6 +1020,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
         viewModel.isExtendedTopBarEnabled.observe(viewLifecycleOwner) { isEnabled ->
             updateExtendedTopBarVisibility(isEnabled)
+        }
+        viewModel.isVolumeScrollEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            doVolScroll = isEnabled
         }
         viewModel.isScrollProgressEnabled.observe(viewLifecycleOwner) { enabled ->
             isScrollProgressEnabled = enabled  // Cache for perf
@@ -2788,6 +2796,56 @@ $cleanContent
             clearButton.visibility = View.GONE
             speechButton.visibility = View.VISIBLE
         }
+    }
+    override fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> {
+                val hasMessages = (viewModel.chatMessages.value?.size ?: 0) > 0
+                if (doVolScroll && hasMessages) {
+                    when {
+                        event?.isLongPress == true -> {
+                            scrollToTopButton.performClick()
+                            scrollToPreviousScreen()
+                        }
+                        event?.repeatCount == 0 -> {
+                            scrollToPreviousScreen()
+                            // Find what's at the top now
+                            /*  val firstPos = layoutManager.findFirstVisibleItemPosition()
+                              if (firstPos > 0) {
+                                  // Jump to the message exactly above the current top one
+                                  layoutManager.scrollToPositionWithOffset(firstPos - 1, -12)
+                              }*/
+                        }
+                    }
+                    return true
+                }
+            }
+
+            KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                val messages = viewModel.chatMessages.value ?: emptyList()
+                if (doVolScroll && messages.isNotEmpty()) {
+                    when {
+                        event?.isLongPress == true -> {
+                            scrollToBottomButton.performClick()
+                            scrollToNextScreen()
+                        }
+                        event?.repeatCount == 0 -> {
+                            scrollToNextScreen()
+                            // Find what's at the top now
+                            /*  val firstPos = layoutManager.findFirstVisibleItemPosition()
+                              if (firstPos < messages.size - 1) {
+                                  // Jump so the next message in the list becomes the new top message
+                                  layoutManager.scrollToPositionWithOffset(firstPos + 1, -12)
+                              }*/
+                        }
+                    }
+                    return true
+                }
+            }
+
+            // Add more fragment-specific shortcuts here
+        }
+        return false // Event not handled by this fragment
     }
     private fun showMenu() {
         overlayView?.visibility = View.VISIBLE

@@ -1,0 +1,1 @@
+Added option: "Volume Keys Scroll to Top/Bottom." On the main chat screen, if this setting is enabled, single click of volume button up/down takes you one page up/down respectively. Long-click of volume button up/down takes you to chat very top/bottom respectively. If no messages are present it will work as a normal volume key.

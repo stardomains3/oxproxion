@@ -34,6 +34,7 @@ class SharedPreferencesHelper(context: Context) {
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
         private const val KEY_AUTO_BACK = "auto_back_enabled"
+        private const val KEY_VOLUME_SCROLL = "volume_scroll_enabled"
         private const val KEY_ENABLED_TOOLS = "enabled_tools"
         private const val KEY_TOOLS_ENABLED = "tools_enabled_preference"
         private const val SAF_FOLDER_URI = "saffolderuri"
@@ -236,6 +237,9 @@ class SharedPreferencesHelper(context: Context) {
     fun getFontSize(): Int {
         return mainPrefs.getInt(KEY_FONT_SIZE, 100)  // Default: 100%
     }
+    fun getVolumeScrollEnabled(): Boolean = mainPrefs.getBoolean(KEY_VOLUME_SCROLL, false)
+
+    fun saveVolumeScrollEnabled(enabled: Boolean) = mainPrefs.edit { putBoolean(KEY_VOLUME_SCROLL, enabled) }
     fun saveSortOrder(sortOrder: SortOrder) {
         mainPrefs.edit { putString(KEY_SORT_ORDER, sortOrder.name) }
     }
