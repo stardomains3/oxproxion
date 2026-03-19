@@ -206,6 +206,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private lateinit var attachmentPreviewContainer: View
     private lateinit var previewImageView: ImageView
+    private lateinit var centerWatermarkIcon: ImageView
     private lateinit var removeAttachmentButton: ImageButton
     private lateinit var headerContainer: LinearLayout
     private var overlayView: View? = null
@@ -449,6 +450,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         modelNameTextView = view.findViewById(R.id.modelNameTextView)
         attachmentPreviewContainer = view.findViewById(R.id.attachmentPreviewContainer)
         previewImageView = view.findViewById(R.id.previewImageView)
+        centerWatermarkIcon = view.findViewById(R.id.centerWatermarkIcon)
         removeAttachmentButton = view.findViewById(R.id.removeAttachmentButton)
         headerContainer = view.findViewById(R.id.headerContainer)
         settingsButton = view.findViewById(R.id.settingsButton)
@@ -731,12 +733,15 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             }
         }
 
-        viewModel.isPresetsExtendedEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            // presetsButton2.visibility = if (isEnabled) View.VISIBLE else View.GONE
-            presetsButton2.visibility = if (isEnabled) View.VISIBLE else View.GONE
+        viewModel.isPresetsExtendedEnabled.observe(viewLifecycleOwner) { isPresetsOnChatScreen ->
+            val isTopBarEnabled = sharedPreferencesHelper.getExtendedTopBarEnabled()
 
-            // Swap presetsButton
-            presetsButton.visibility = if (presetsButton2.isVisible) View.GONE else View.VISIBLE
+            // 1. The button near the Send Button (presetsButton2)
+            presetsButton2.isVisible = isPresetsOnChatScreen
+
+            // 2. The button in the Menu Area (presetsButton)
+            // ONLY show in menu if it's NOT on the chat screen AND NOT in the top bar
+            presetsButton.isVisible = !isPresetsOnChatScreen && !isTopBarEnabled
         }
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
@@ -744,6 +749,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             if(hasMessages){
                 resetChatButton.icon.alpha = 255
                 saveChatButton.icon.alpha = 255
+                centerWatermarkIcon.animate()
+                    .alpha(0f)
+                    .setDuration(1000)
+                    .withEndAction { centerWatermarkIcon.visibility = View.GONE }
+                    .start()
                 resetChatButton.isVisible = true
                 val lastMessage = messages.last()
                 if (lastMessage.role == "assistant" && lastMessage.content is JsonPrimitive) {
@@ -823,6 +833,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             {
                 resetChatButton.icon.alpha = 102
                 saveChatButton.icon.alpha = 102
+                centerWatermarkIcon.visibility = View.VISIBLE
+                centerWatermarkIcon.animate()
+                    .alpha(0.15f)
+                    .setDuration(1000)
+                    .start()
             }
             if(sharedPreferencesHelper.getScrollersPreference()){
                 chatRecyclerView.post {
@@ -1018,8 +1033,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         viewModel.isAdvancedReasoningOn.observe(viewLifecycleOwner) { isAdvanced ->
             updateReasoningButtonAppearance() // Call helper
         }
-        viewModel.isExtendedTopBarEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            updateExtendedTopBarVisibility(isEnabled)
+        viewModel.isExtendedTopBarEnabled.observe(viewLifecycleOwner) { isTopBarEnabled ->
+            updateExtendedTopBarVisibility(isTopBarEnabled)
+            val isPresetsOnChatScreen = viewModel.isPresetsExtendedEnabled.value ?: false
+            // Re-verify the menu button visibility whenever top bar changes
+            presetsButton.isVisible = !isPresetsOnChatScreen && !isTopBarEnabled
         }
         viewModel.isVolumeScrollEnabled.observe(viewLifecycleOwner) { isEnabled ->
             doVolScroll = isEnabled
@@ -3605,7 +3623,7 @@ $cleanContent
             Triple(streamButton, topStreamButton) { true },
             //Triple(convoButton, topConvoButton) { true },
             Triple(toolsButton, topToolsButton) { true },
-            Triple(presetsButton, topPresetsButton) { true },
+           // Triple(presetsButton, topPresetsButton) { true },
             Triple(settingsButton, topSettingsButton) { true }
         )
 
@@ -3621,6 +3639,19 @@ $cleanContent
             }
         }
         homeButton.visibility = if (extendedEnabled) View.VISIBLE else View.GONE
+        val isPresetsOnChatScreen = viewModel.isPresetsExtendedEnabled.value ?: false
+
+        if (extendedEnabled) {
+            // TOP BAR ON: Menu preset is ALWAYS gone. Top preset is ALWAYS visible.
+            presetsButton.visibility = View.GONE
+            topPresetsButton.visibility = View.VISIBLE
+
+        } else {
+            // TOP BAR OFF: Hide the top bar versions
+            topPresetsButton.visibility = View.GONE
+            // PRESET LOGIC: Only show in menu if it's NOT already on the chat screen
+            presetsButton.visibility = if (isPresetsOnChatScreen) View.GONE else View.VISIBLE
+        }
     }
     private fun updateHomeButtonVisibility() {
         val extendedEnabled = sharedPreferencesHelper.getExtendedTopBarEnabled()

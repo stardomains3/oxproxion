@@ -24,8 +24,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 167
-        versionName = "2.1.57"
+        versionCode = 168
+        versionName = "2.1.58"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -61,12 +61,12 @@ android {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
-        sourceSets.all {
-            languageSettings {
+        /* sourceSets.all {
+           languageSettings {
                 languageVersion = "2.2"
                 apiVersion = "2.2"
             }
-        }
+        }*/
     }
     buildFeatures {
         viewBinding = true

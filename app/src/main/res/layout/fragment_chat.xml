@@ -374,6 +374,17 @@
                 android:paddingEnd="0dp"
                 android:paddingBottom="8dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+            <ImageView
+                android:id="@+id/centerWatermarkIcon"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_iconpage"
+                android:alpha="0.15"
+                android:contentDescription="Watermark"
+                android:clickable="false"
+                android:visibility="visible"
+                android:focusable="false" />
             <View
                 android:id="@+id/dimOverlay"
                 android:layout_width="match_parent"
