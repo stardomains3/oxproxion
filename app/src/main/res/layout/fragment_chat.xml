@@ -380,7 +380,7 @@
                 android:layout_height="160dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_iconpage"
-                android:alpha="0.15"
+                android:alpha="0.50"
                 android:contentDescription="Watermark"
                 android:clickable="false"
                 android:visibility="visible"

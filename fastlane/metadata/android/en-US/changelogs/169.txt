@@ -1,0 +1,2 @@
+- Added a little color to new chat screen icon.
+- Even if user has the volume keys to scroll setting on, when TTS is playing, the volume buttons will work for setting volume.

@@ -751,7 +751,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 saveChatButton.icon.alpha = 255
                 centerWatermarkIcon.animate()
                     .alpha(0f)
-                    .setDuration(1000)
+                    .setDuration(800)
                     .withEndAction { centerWatermarkIcon.visibility = View.GONE }
                     .start()
                 resetChatButton.isVisible = true
@@ -835,8 +835,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 saveChatButton.icon.alpha = 102
                 centerWatermarkIcon.visibility = View.VISIBLE
                 centerWatermarkIcon.animate()
-                    .alpha(0.15f)
-                    .setDuration(1000)
+                    .alpha(0.50f)
+                    .setDuration(800)
                     .start()
             }
             if(sharedPreferencesHelper.getScrollersPreference()){
@@ -2819,6 +2819,9 @@ $cleanContent
         when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
                 val hasMessages = (viewModel.chatMessages.value?.size ?: 0) > 0
+                if (isSpeaking) {
+                    return false // Let the system handle Volume Up
+                }
                 if (doVolScroll && hasMessages) {
                     when {
                         event?.isLongPress == true -> {
@@ -2841,6 +2844,9 @@ $cleanContent
 
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
                 val messages = viewModel.chatMessages.value ?: emptyList()
+                if (isSpeaking) {
+                    return false // Let the system handle Volume Down
+                }
                 if (doVolScroll && messages.isNotEmpty()) {
                     when {
                         event?.isLongPress == true -> {
