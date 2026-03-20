@@ -9,23 +9,25 @@ plugins {
 configurations.all {
     exclude(group = "org.jetbrains", module = "annotations-java5")
 }
+
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "com.atlassian.commonmark") {
+            useTarget("org.commonmark:${requested.name}:0.27.1")
+            because("The library moved from com.atlassian.commonmark to org.commonmark, causing duplicate classes")
+        }
+    }
+}
 android {
     namespace = "io.github.stardomains3.oxproxion"
     compileSdk = 36
-    configurations.all {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "com.atlassian.commonmark") {
-                useTarget("org.commonmark:${requested.name}:0.27.1")
-                because("The library moved from com.atlassian.commonmark to org.commonmark, causing duplicate classes")
-            }
-        }
-    }
+
     defaultConfig {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 169
-        versionName = "2.1.59"
+        versionCode = 170
+        versionName = "2.1.60"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -46,7 +48,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-           // signingConfig = signingConfigs.getByName("debug")
 
         }
         getByName("debug") {
@@ -61,12 +62,6 @@ android {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
-        /* sourceSets.all {
-           languageSettings {
-                languageVersion = "2.2"
-                apiVersion = "2.2"
-            }
-        }*/
     }
     buildFeatures {
         viewBinding = true

@@ -86,6 +86,7 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
                         handleTtsFinished()
                     }
                 }
+                @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) {
                     if (utteranceId == "fg_tts") {
                         handleTtsFinished()

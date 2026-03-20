@@ -36,6 +36,7 @@ import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.text.method.LinkMovementMethod
 import android.text.style.BackgroundColorSpan
 import android.text.util.Linkify
 import android.util.Base64
@@ -533,6 +534,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                             requireActivity().runOnUiThread { onSpeechFinished() }  // Run on main thread
                         }
                     }
+                    @Deprecated("Deprecated in Java")
                     override fun onError(utteranceId: String?) {
                         if (utteranceId?.startsWith("TTS_SAVE_") == true) {
                             Toast.makeText(requireContext(), "❌ TTS synthesis error", Toast.LENGTH_SHORT).show()
@@ -590,7 +592,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             .usePlugin(CoilImagesPlugin.create(requireContext()))
 
             // Movement method LAST (after table/images)
-            .usePlugin(MovementMethodPlugin.create())
+           // .usePlugin(MovementMethodPlugin.create())
+            .usePlugin(MovementMethodPlugin.create(LinkMovementMethod.getInstance()))
+
 
             // Custom plugins
             .usePlugin(object : AbstractMarkwonPlugin() {
@@ -2032,15 +2036,13 @@ $cleanContent
         chatEditText.setOnReceiveContentListener(
             arrayOf("text/*")
         ) { view, payload ->
-            if (payload.clip != null) {
+            run {
                 val text = payload.clip.getItemAt(0).text?.toString() ?: ""
                 val editable = chatEditText.editableText
                 val start = chatEditText.selectionStart
                 val end = chatEditText.selectionEnd
                 editable.replace(start, end, text)
                 null
-            } else {
-                payload
             }
         }
 
@@ -3201,14 +3203,14 @@ $cleanContent
                     tempPdfFile = File(cacheDir, "temp_pdf_${System.currentTimeMillis()}.pdf")
                     withContext(Dispatchers.IO) {
                         inputStream.use { input ->
-                            FileOutputStream(tempPdfFile!!).use { output ->
+                            FileOutputStream(tempPdfFile).use { output ->
                                 input.copyTo(output)
                             }
                         }
                     }
                     inputStream.close()
 
-                    ParcelFileDescriptor.open(tempPdfFile!!, ParcelFileDescriptor.MODE_READ_ONLY)
+                    ParcelFileDescriptor.open(tempPdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
                 }
 
                 if (parcelFd == null) {
@@ -3551,7 +3553,7 @@ $cleanContent
 
         // 8️⃣ Underline the title (same as your font dialog)
         val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
-        titleView?.paintFlags = titleView.paintFlags.or(Paint.UNDERLINE_TEXT_FLAG) ?: 0
+        titleView?.paintFlags = titleView.paintFlags.or(Paint.UNDERLINE_TEXT_FLAG)
     }
     private fun showWebSearchEngineDialog() {
         val engines = listOf(
@@ -3658,6 +3660,8 @@ $cleanContent
             // PRESET LOGIC: Only show in menu if it's NOT already on the chat screen
             presetsButton.visibility = if (isPresetsOnChatScreen) View.GONE else View.VISIBLE
         }
+        // ---> NEW: Clean up the empty rows here! <---
+        updateMenuRowVisibilities()
     }
     private fun updateHomeButtonVisibility() {
         val extendedEnabled = sharedPreferencesHelper.getExtendedTopBarEnabled()
@@ -3689,6 +3693,48 @@ $cleanContent
         homeButton.visibility = View.GONE
         backButton.visibility = View.VISIBLE
         backcopyButton.visibility = View.VISIBLE
+    }
+    private fun updateMenuRowVisibilities() {
+        // Grab the rows in order (excluding buttonsRow2 as we discussed)
+        val rows = listOf(
+            view?.findViewById<LinearLayout>(R.id.buttonsRow1),
+            view?.findViewById<LinearLayout>(R.id.buttonsRow3),
+            view?.findViewById<LinearLayout>(R.id.buttonsRowAux)
+        )
+
+        var isFirstVisibleRow = true
+
+        rows.forEach { row ->
+            if (row != null) {
+                var hasVisibleChild = false
+                // Check every child inside this row
+                for (i in 0 until row.childCount) {
+                    if (row.getChildAt(i).isVisible) {
+                        hasVisibleChild = true
+                        break
+                    }
+                }
+
+                if (hasVisibleChild) {
+                    row.visibility = View.VISIBLE
+
+                    // Dynamically fix the margins!
+                    val params = row.layoutParams as LinearLayout.LayoutParams
+                    val marginDp = if (isFirstVisibleRow) 0 else 12 // 0 for the top row, 12 for the rest
+                    val marginPx = (marginDp * resources.displayMetrics.density).toInt()
+
+                    if (params.topMargin != marginPx) {
+                        params.topMargin = marginPx
+                        row.layoutParams = params
+                    }
+
+                    // We found the first row, so the next ones are no longer first
+                    isFirstVisibleRow = false
+                } else {
+                    row.visibility = View.GONE
+                }
+            }
+        }
     }
     private fun substituteVariables(input: String): String {
         if (!input.contains("{{ox")) return input  // 🔥 EARLY EXIT: Instant if no vars (99% cases)

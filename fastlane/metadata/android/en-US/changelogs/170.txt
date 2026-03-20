@@ -1,0 +1,2 @@
+- Got rid of some code/build warnings/issues.
+- Added code to clean up button spacing in the menu area.

@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.CheckBox
 import android.widget.TextView
-import androidx.core.os.bundleOf
+
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
 import androidx.lifecycle.ViewModelProvider
@@ -56,20 +56,26 @@ class SaveChatDialogFragment : DialogFragment() {
             val title = editTextTitle.text.toString()
             if (title.isNotBlank()) {
                 val currentSessionId = chatViewModel.getCurrentSessionId()
-                val bundle = bundleOf(BUNDLE_KEY_TITLE to title)
-                // NEW: Always include save_as_new (default false)
-                bundle.putBoolean("save_as_new", checkboxSaveAsNew.isChecked)
-                if (currentSessionId != null && !checkboxSaveAsNew.isChecked) {
-                    // Backward compatible: only include for overwrite mode
-                    bundle.putLong("session_id", currentSessionId)
-                    bundle.putBoolean("is_update", true)
+
+                // NEW WAY: Explicitly create the Bundle and put the correctly typed values in
+                val bundle = Bundle().apply {
+                    putString(BUNDLE_KEY_TITLE, title)
+                    putBoolean("save_as_new", checkboxSaveAsNew.isChecked)
+
+                    if (currentSessionId != null && !checkboxSaveAsNew.isChecked) {
+                        // Backward compatible: only include for overwrite mode
+                        putLong("session_id", currentSessionId)
+                        putBoolean("is_update", true)
+                    }
                 }
+
                 setFragmentResult(REQUEST_KEY, bundle)
                 dismiss()
             } else {
                 editTextTitle.error = "Title cannot be empty"
             }
         }
+
         buttonLlmSuggestName.setOnClickListener {
             buttonLlmSuggestName.isEnabled = false
             editTextTitle.setText("Generating title...")
