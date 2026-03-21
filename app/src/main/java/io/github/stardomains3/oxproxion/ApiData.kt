@@ -29,7 +29,9 @@ data class ChatRequest(
     val think: Boolean? = null,
     @SerialName("image_config")  // NEW: Optional for Gemini
     val imageConfig: ImageConfig? = null,
-    val plugins: List<Plugin>? = null
+    val plugins: List<Plugin>? = null,
+    @SerialName("web_search_options")
+    val webSearchOptions: WebSearchOptions? = null
 )
 
 @Serializable
@@ -65,9 +67,17 @@ data class FlexibleMessage(
 @Serializable
 data class Plugin(
     val id: String,
-    val engine: String? = null
+    val engine: String? = null,
+    @SerialName("max_results")
+    val maxResults: Int? = null
     // Add other plugin fields as needed based on OpenRouter docs
 )
+@Serializable
+data class WebSearchOptions(
+    @SerialName("search_context_size")
+    val searchContextSize: String
+)
+
 @Serializable
 data class UsageRequest(
     val include: Boolean

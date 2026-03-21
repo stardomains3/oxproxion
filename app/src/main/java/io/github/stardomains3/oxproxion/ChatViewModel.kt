@@ -1399,6 +1399,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun handleStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
         withContext(Dispatchers.IO) {
             val sharedPreferencesHelper = SharedPreferencesHelper(getApplication<Application>().applicationContext)
+            val webSearchOpts = if (sharedPreferencesHelper.getWebSearchBoolean() && !activeModelIsLan()) {
+                WebSearchOptions(
+                    searchContextSize = sharedPreferencesHelper.getWebSearchContextSize()
+                )
+            } else null
             val maxTokens = try {
                 sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
             } catch (e: Exception) {
@@ -1447,6 +1452,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 tools = if (_isToolsEnabled.value == true) buildTools() else null,
                 toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
                 plugins = buildWebSearchPlugin(),
+                webSearchOptions = webSearchOpts,
                 modalities = if (isImageGenerationModel(modelForRequest)) {
                     if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
                         modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
@@ -1727,6 +1733,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         withTimeout(sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L) {
             withContext(Dispatchers.IO) {
                 val sharedPreferencesHelper = SharedPreferencesHelper( getApplication<Application>().applicationContext)
+                val webSearchOpts = if (sharedPreferencesHelper.getWebSearchBoolean() && !activeModelIsLan()) {
+                    WebSearchOptions(
+                        searchContextSize = sharedPreferencesHelper.getWebSearchContextSize()
+                    )
+                } else null
                 val maxTokens = try {
                     sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
                 } catch (e: Exception) {
@@ -1768,6 +1779,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     tools = if (_isToolsEnabled.value == true) buildTools() else null,
                     toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
                     plugins = buildWebSearchPlugin(),
+                    webSearchOptions = webSearchOpts,
                     modalities = if (isImageGenerationModel(modelForRequest)) {
                         if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
                             modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
@@ -3279,13 +3291,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()
 
     private fun buildWebSearchPlugin(): List<Plugin>? {
-        if (!sharedPreferencesHelper.getWebSearchBoolean()||activeModelIsLan()) return null
+        if (!sharedPreferencesHelper.getWebSearchBoolean() || activeModelIsLan()) return null
 
         val engine = getWebSearchEngine()
+        val maxResults = sharedPreferencesHelper.getWebSearchMaxResults()
+
         val plugin = if (engine != "default") {
-            Plugin(id = "web", engine = engine)
+            Plugin(id = "web", engine = engine, maxResults = maxResults)
         } else {
-            Plugin(id = "web")
+            Plugin(id = "web", maxResults = maxResults)
         }
         return listOf(plugin)
     }

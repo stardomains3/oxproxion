@@ -118,8 +118,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.text.get
-import kotlin.text.set
 
 interface OnKeyboardShortcutListener {
     fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean
@@ -322,17 +320,17 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         }
 
         folderPickerLauncher = registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+            ActivityResultContracts.OpenDocumentTree()
         ) { uri ->
             if (uri != null) {
                 // Take persistable permissions so it survives app restarts
-                val takeFlags: Int = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
 
                 // Save via your helper
                 sharedPreferencesHelper.saveSafFolderUri(uri.toString())
 
-                Toast.makeText(requireContext(), "Folder access granted! You can now use file tools.", android.widget.Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Folder access granted! You can now use file tools.", Toast.LENGTH_SHORT).show()
             }
         }
         imagePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -3559,11 +3557,13 @@ $cleanContent
         val engines = listOf(
             "default" to "Default (Native if available, fallback Exa)",
             "native" to "Native (Provider's built-in search)",
-            "exa" to "Exa (Always use Exa search)"
+            "exa" to "Exa (Always use Exa search)",
+            "firecrawl" to "Firecrawl (Always use Firecrawl search. Uses your BYOK credits)",
+            "parallel" to "Parallel (Always use Parallel search)"
         )
 
         val currentEngine = sharedPreferencesHelper.getWebSearchEngine()
-        var selectedEngine = currentEngine  // Track selection locally
+        var selectedEngine = currentEngine
 
         MaterialAlertDialogBuilder(requireContext(),
             com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
@@ -3571,18 +3571,68 @@ $cleanContent
             .setTitle("Web Search Engine")
             .setSingleChoiceItems(
                 engines.map { it.second }.toTypedArray(),
-                engines.indexOfFirst { it.first == currentEngine }
+                engines.indexOfFirst { it.first == currentEngine }.takeIf { it >= 0 } ?: 0
             ) { _, which ->
-                selectedEngine = engines[which].first  // Update local selection only
+                selectedEngine = engines[which].first
             }
             .setPositiveButton("Save") { _, _ ->
-                // Save only when Save is pressed
                 sharedPreferencesHelper.saveWebSearchEngine(selectedEngine)
-                Toast.makeText(
-                    requireContext(),
-                    "Web search engine: ${engines.find { it.first == selectedEngine }?.second}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                showWebSearchContextSizeDialog()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // NEW: Dialog for Context Size
+    private fun showWebSearchContextSizeDialog() {
+        val sizes = listOf(
+            "low" to "Low (Minimal context, basic queries)",
+            "medium" to "Medium (Moderate context, general queries)",
+            "high" to "High (Extensive context, detailed research)"
+        )
+
+        val currentSize = sharedPreferencesHelper.getWebSearchContextSize()
+        var selectedSize = currentSize
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Search Context Size")
+            .setSingleChoiceItems(
+                sizes.map { it.second }.toTypedArray(),
+                sizes.indexOfFirst { it.first == currentSize }.takeIf { it >= 0 } ?: 1 // Default to medium
+            ) { _, which ->
+                selectedSize = sizes[which].first
+            }
+            .setPositiveButton("Save") { _, _ ->
+                sharedPreferencesHelper.saveWebSearchContextSize(selectedSize)
+                showWebSearchMaxResultsDialog()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    private fun showWebSearchMaxResultsDialog() {
+        // Generate list 1 to 20
+        val options = (1..20).toList()
+        val optionsStrings = options.map { it.toString() }.toTypedArray()
+
+        val currentMax = sharedPreferencesHelper.getWebSearchMaxResults()
+        var selectedMax = currentMax
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            // Combine the title and the message here
+            .setTitle("Max Search Results\n(Higher values increase costs)")
+            .setSingleChoiceItems(
+                optionsStrings,
+                options.indexOf(currentMax).takeIf { it >= 0 } ?: 4 // Index 4 is '5'
+            ) { _, which ->
+                selectedMax = options[which]
+            }
+            .setPositiveButton("Save") { _, _ ->
+                // Final save step
+                sharedPreferencesHelper.saveWebSearchMaxResults(selectedMax)
             }
             .setNegativeButton("Cancel", null)
             .show()

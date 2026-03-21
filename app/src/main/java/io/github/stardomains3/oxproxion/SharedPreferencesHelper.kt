@@ -390,6 +390,16 @@ class SharedPreferencesHelper(context: Context) {
             engine
         )
     }
+    fun getWebSearchContextSize(): String = mainPrefs.getString("KEY_WEB_SEARCH_CONTEXT_SIZE", "medium") ?: "medium"
+
+    fun saveWebSearchContextSize(size: String) = mainPrefs.edit {
+        putString("KEY_WEB_SEARCH_CONTEXT_SIZE", size)
+    }
+    fun getWebSearchMaxResults(): Int = mainPrefs.getInt("KEY_WEB_SEARCH_MAX_RESULTS", 5)
+
+    fun saveWebSearchMaxResults(results: Int) = mainPrefs.edit {
+        putInt("KEY_WEB_SEARCH_MAX_RESULTS", results)
+    }
     fun saveExtendedTopBarEnabled(enabled: Boolean) {
         mainPrefs.edit { putBoolean(KEY_EXTENDED_TOP_BAR, enabled) }
     }
