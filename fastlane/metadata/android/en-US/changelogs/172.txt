@@ -1,0 +1,3 @@
+- LAN and cloud models now use optimized, dedicated networking code paths so no unnecessary parameters are sent. (And laying groundwork for hopefully eventually moving OpenRouter calls to Responses API.)
+- Fix for the spelling correcting context menu item function where if a LAN model is used it won't have the "</think> prepended to the response.
+- Fixed an background thread issue when both tools are streaming are used.

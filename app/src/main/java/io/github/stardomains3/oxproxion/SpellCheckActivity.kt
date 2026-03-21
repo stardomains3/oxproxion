@@ -3,7 +3,6 @@ package io.github.stardomains3.oxproxion
 import android.content.Intent
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -207,23 +206,31 @@ class SpellCheckActivity : AppCompatActivity() {
         activeJob = lifecycleScope.launch {
             try {
                 statusText.text = "Sending to AI..."
-                val correctedText = vm.getAIFixContent(inputText)
+                val rawText = vm.getAIFixContent(inputText)
 
-                if (!correctedText.isNullOrBlank()) {
-                    correctedResult = correctedText
-                    showResult(correctedText)
+                if (!rawText.isNullOrBlank()) {
+                    // Check if the first line starts with the tag
+                    val cleanedText = if (rawText.trimStart().startsWith("</think>")) {
+                        // This grabs everything after the first newline character
+                        rawText.substringAfter('\n').trim()
+                    } else {
+                        rawText
+                    }
+
+                    correctedResult = cleanedText
+                    showResult(cleanedText)
                 } else {
                     showError("AI couldn't find any fixes for this text.")
                 }
             } catch (e: Exception) {
                 // Don't show error if user cancelled
                 if (e is kotlinx.coroutines.CancellationException) {
-                    Log.d("AIFix", "User cancelled the request")
+                   // Log.d("AIFix", "User cancelled the request")
                     finish()
                     return@launch
                 }
 
-                Log.e("AIFix", "Correction failed", e)
+              //  Log.e("AIFix", "Correction failed", e)
                 val errorMessage = when {
                     e.message?.contains("timeout", ignoreCase = true) == true ->
                         "Request timed out. Please try again."
