@@ -443,8 +443,31 @@ class SystemMessageLibraryFragment : Fragment() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-
     private fun deleteSystemMessage(systemMessage: SystemMessage) {
+        val customMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
+
+        // Find the item matching title and prompt, ignoring UI states like isExpanded
+        val indexToRemove = customMessages.indexOfFirst {
+            it.title == systemMessage.title && it.prompt == systemMessage.prompt
+        }
+
+        if (indexToRemove != -1) {
+            customMessages.removeAt(indexToRemove)
+            sharedPreferencesHelper.saveCustomSystemMessages(customMessages)
+
+            // Also check if the currently selected message is the one being deleted
+            val currentSelected = sharedPreferencesHelper.getSelectedSystemMessage()
+            if (currentSelected.title == systemMessage.title && currentSelected.prompt == systemMessage.prompt) {
+                val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
+                sharedPreferencesHelper.saveSelectedSystemMessage(defaultMessage)
+                systemMessageAdapter.selectedMessage = defaultMessage
+            }
+
+            // This will now reliably trigger and refresh the UI!
+            loadSystemMessages()
+        }
+    }
+    private fun deleteSystemMessageBUGGYOLD(systemMessage: SystemMessage) {
         val customMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
         if (customMessages.remove(systemMessage)) {
             sharedPreferencesHelper.saveCustomSystemMessages(customMessages)

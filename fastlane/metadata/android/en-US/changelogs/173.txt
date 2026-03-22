@@ -1,0 +1,1 @@
+- Fixed a bug where a saved System Message wouldn't delete.
