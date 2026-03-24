@@ -276,7 +276,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Model Selection
             *   **Access**: Tap the **model name** at the top of the chat screen.
-            *   **"Select Model" Screen**: Shows your list of available models. The default is **Maverick Llama**. Tap a model in the list to change the model for the current chat.
+            *   **"Select Model" Screen**: Shows your list of available models. The default is **OpenRouter: Free**. Tap a model in the list to change the model for the current chat.
             *   **Vision**: If the model supports image upload the icon to the left of the name will show an image icon.
             *   **Image Generation**: If the model supports it the icon to the left of the name will show a palette icon.
             *   **Add a Model**: Use the floating action button to add a custom model.

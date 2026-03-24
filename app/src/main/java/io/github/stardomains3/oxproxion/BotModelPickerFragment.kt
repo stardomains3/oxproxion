@@ -315,7 +315,7 @@ class BotModelPickerFragment : Fragment() {
 
     private fun deleteModel(model: LlmModel) {
         if (model.apiIdentifier == sharedPreferencesHelper.getPreferenceModelnew()) {
-            val default = "meta-llama/llama-4-maverick"
+            val default = "openrouter/free"
             sharedPreferencesHelper.savePreferenceModelnewchat(default)
             chatViewModel.setModel(default)
             adapter.updateCurrentModel(default)
@@ -331,8 +331,15 @@ class BotModelPickerFragment : Fragment() {
         sharedPreferencesHelper.saveCustomModels(custom)
     }
 
-    private fun getModelsList() = listOf(LlmModel("Meta: Llama 4 Maverick", "meta-llama/llama-4-maverick", true))
-
+    private fun getModelsList() = listOf(
+        LlmModel(
+            displayName = "OpenRouter: Free",
+            apiIdentifier = "openrouter/free",
+            isVisionCapable = true,
+            isReasoningCapable = true,
+            isFree = true
+        )
+    )
     private fun updateSortButtons(sortOrder: SortOrder) {
         sortBar.check(if (sortOrder == SortOrder.ALPHABETICAL) R.id.sortAlphabeticalButton else R.id.sortDateButton)
     }

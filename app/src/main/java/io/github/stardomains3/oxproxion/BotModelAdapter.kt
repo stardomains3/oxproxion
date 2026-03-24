@@ -88,8 +88,8 @@ class BotModelAdapter(
             true
         }*/
         holder.editIcon.setOnClickListener {
-            if (model.apiIdentifier == "meta-llama/llama-4-maverick") {
-                Toast.makeText(holder.itemView.context, "Maverick is the permanent default model and cannot be edited or deleted.", Toast.LENGTH_SHORT).show()
+            if (model.apiIdentifier == "openrouter/free") {
+                Toast.makeText(holder.itemView.context, "This is the permanent default model and cannot be edited or deleted.", Toast.LENGTH_SHORT).show()
             } else {
                 showModelPopupWindow(holder.editIcon, model) // Pass the icon as anchor
             }

@@ -2674,7 +2674,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getBuiltInModels(): List<LlmModel> {
         return listOf(
-            LlmModel("Meta: Llama 4 Maverick", "meta-llama/llama-4-maverick", true)
+            LlmModel(
+                displayName = "OpenRouter: Free",
+                apiIdentifier = "openrouter/free",
+                isVisionCapable = true,
+                isReasoningCapable = true,  // Add this (set to true if it supports reasoning)\
+                isFree = true,
+                isLANModel = false
+            )
         )
     }
     fun checkAdvancedReasoningStatus() {

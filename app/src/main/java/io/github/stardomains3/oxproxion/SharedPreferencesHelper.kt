@@ -400,6 +400,15 @@ class SharedPreferencesHelper(context: Context) {
     fun saveWebSearchMaxResults(results: Int) = mainPrefs.edit {
         putInt("KEY_WEB_SEARCH_MAX_RESULTS", results)
     }
+    fun hasMigratedMaverick(): Boolean {
+        return mainPrefs.getBoolean("migrated_maverick_to_openrouter", false)
+    }
+
+    fun setMigratedMaverick() {
+        mainPrefs.edit(commit = true) {
+            putBoolean("migrated_maverick_to_openrouter", true)
+        }
+    }
     fun saveExtendedTopBarEnabled(enabled: Boolean) {
         mainPrefs.edit { putBoolean(KEY_EXTENDED_TOP_BAR, enabled) }
     }
@@ -577,7 +586,7 @@ class SharedPreferencesHelper(context: Context) {
     }
 
     fun getPreferenceModelnew(): String {
-        return mainPrefs.getString(KEY_MODEL_NEW_CHAT, "meta-llama/llama-4-maverick").toString()
+        return mainPrefs.getString(KEY_MODEL_NEW_CHAT, "openrouter/free").toString()
     }
     fun getScrollersPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_SCROLLERS_ENABLED, false)
