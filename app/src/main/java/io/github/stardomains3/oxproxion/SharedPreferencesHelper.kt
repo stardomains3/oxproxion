@@ -33,6 +33,7 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         const val LAN_PROVIDER_MLX_LM = "mlx_lm"  // NEW
+        const val LAN_PROVIDER_HERMES_AGENT = "hermes_agent"  // NEW - Hermes Agent provider
         private const val KEY_AUTO_BACK = "auto_back_enabled"
         private const val KEY_VOLUME_SCROLL = "volume_scroll_enabled"
         private const val KEY_ENABLED_TOOLS = "enabled_tools"

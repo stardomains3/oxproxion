@@ -43,6 +43,7 @@ class LanModelsFragment : Fragment() {
             "llama_cpp" -> "llama.cpp Models"
             "mlx_lm" -> "MLX LM Models"
             "ollama" -> "Ollama Models"
+            "hermes_agent" -> "Hermes Agent Model"
             else -> "LAN Models"
         }
         toolbar.title = title
@@ -83,6 +84,7 @@ class LanModelsFragment : Fragment() {
                     "llama_cpp" -> "No llama.cpp models found.\nMake sure llama.cpp server is running and has models loaded."
                     "mlx_lm" -> "No MLX LM models found.\nMake sure MLX LM server is running and has models loaded."
                     "ollama" -> "No Ollama models found.\nMake sure Ollama is installed and has models pulled."
+                    "hermes_agent" -> "No Hermes Agent model found.\nMake sure Hermes Agent server is running and has models loaded."
                     else -> "No models found."
                 }
                 Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_LONG).show()

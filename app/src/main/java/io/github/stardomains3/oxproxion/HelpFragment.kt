@@ -154,7 +154,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             Welcome! This guide will help you understand how to use the **oxproxion** app.
 
-            **oxproxion** is an open-source Android app for chatting with OpenRouter LLMs, supporting both text and image inputs for compatible models. It now also allows chat with Ollama, LM Studio, llama.cpp and MLX LM models served on your LAN.
+            **oxproxion** is an open-source Android app for chatting with OpenRouter LLMs, supporting both text and image inputs for compatible models. It now also allows chat with Ollama, LM Studio, llama.cpp, MLX LM and Hermes Agent models served on your LAN.
 
             ---
 
@@ -291,7 +291,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **View Model Info**: Tap the icon on the right of the model to open its info page on the OpenRouter website.
             *   **Refresh**: Tap the **refresh icon** to get the latest list of models from OpenRouter.
             
-            ### "LAN Models" Screen (Ollama, LM Studio, llama.cpp, and MLX LM served models)
+            ### "LAN Models" Screen (Ollama, LM Studio, llama.cpp, MLX LM, and Hermes Agent served models)
             *   **Add to Your List**: Tap any model to add it to your "Select Model" screen.
             *   **Refresh**: The list will refresh when opened.
             
@@ -355,13 +355,43 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   This open-source app is provided 'as-is' without any warranty, express or implied. Use at your own discretion.
             *   OpenRouter allows Presets which allow you to manage your LLM configurations—models, provider routing, and other features. You can use Presets in oxproxion by just manually adding them in your model list. [https://openrouter.ai/docs/features/presets/](https://openrouter.ai/docs/features/presets/)
             *   The app is a target for multiple text shares: "Prompt"(set the prompt to the shared text), "System Message Chooser"(set the prompt to the shared text and sets the System Message as chosen in the popup), "Auto Send"(Auto sends the prompt to current model with current settings), and "Presets"(Allows the user to apply a chosen preset and options for the shared text.)
-            *   Ollama, LM Studio, llama.cpp and MLX LM endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
-            *   Ollama, LM Studio, llama.cpp and MLX LM function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served properly on your LAN.
+            *   Ollama, LM Studio, llama.cpp, MLX LM, and Hermes Agent endpoint default is plain http, therefore the chat is passed via unencrypted text on your LAN. Unless you have an https endpoint for them.
+            *   Ollama, LM Studio, llama.cpp, MLX LM, and Hermes Agent function is nascent and might not support all capabilities at this time. Furthermore you must set them to be served properly on your LAN.
             *   Notifications and Connectivity Service: The "Connectivity Service Channel" runs and you can hide that; go into your app settings in the system and go to notifications and you can toggle that notification off. ("Connectivity Service Channel") And the only notifications you will receive(if in the app you have the notification bell active) is if the app is back-grounded and there's either an error or you receive the response from the model. Notifications won't show if app is in the foreground. Notifications are auto-dismissed when returning to the app. Closing the app by swiping it away in Recents will shut down the service properly.
             *   Notifications Buttons: "Dismiss" closes the notification. "Open" will bring oxproxion to the foreground. "Speak" will speak aloud the last AI response. You stop the audio here too by pressing stop, dismissing, or swiping the notification away. This is separate from the main app's text-to-speak function.
             *   If you make a preset titled "Digital Assistant"(case-insensitive), and have oxproxion as your system digital assistant in your Android settings(Settings->Apps->Default apps), this preset will be applied for when you use it as the system digital assistant.
             *   **Variable Substitution**: Use `{{oxdate}}` (yyyy-MM-dd), `{{oxtime}}` (HH:mm:ss), `{{oxdatetime}}` (ISO), or `{{oxhdt}}` (human-readable) in prompts/system messages. Auto-replaces with current date/time on send.
             *   GitHub Changelogs: <br>[https://github.com/stardomains3/oxproxion/releases](https://github.com/stardomains3/oxproxion/releases)
+            
+            ## Hermes Agent Info:
+            
+            Use Hermes Agent v0.4.0 (v2026.3.23) or newer on your computer
+            Enable the API server
+            Add to `~/.hermes/.env`
+            
+             Environment Variables
+             | Variable | Default | Description |
+             |----------|---------|-------------|
+             | `API_SERVER_ENABLED` | `false` | Enable the API server |
+             | `API_SERVER_PORT` | `8642` | HTTP server port |
+             | `API_SERVER_HOST` | `127.0.0.1` | Bind address (localhost only by default) |
+             | `API_SERVER_KEY` | _(none)_ | Bearer token for auth |
+             
+             You would need to set API_SERVER_HOST to 0.0.0.0  and set a API_SERVER_KEY to be able to use it with oxproxion on your LAN.
+             Then enter the ip endpoint with port and API_SERVER_KEY you chose for the LAN setting in oxproxion.
+             The model will populate as "hermes-agent" in the LAN models list. Add it to your list and start chatting with the Hermes Agent on your computer.
+             
+             Use at own risk. See docs:
+             
+             https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md
+             
+             Will not act like Telegram, etc in that it can't message you whenever. It is just for back and forth chat: "List all the files on my MacBook's Desktop", "Check out example.com and tell me what it says" etc.. 
+             Also it doesn't accept image input, nor tools from oxproxion(Hermes Agent uses its own tools on the computer you have it on.)
+             
+             Check out Hermes Agent docs for all it can do:
+             
+             https://hermes-agent.nousresearch.com/
+            
             ## What You Can Do With oxproxion
 
             oxproxion puts the power of multiple AI models at your fingertips. With custom system messages, you can tailor your experience for virtually any task. Here are some popular use cases:

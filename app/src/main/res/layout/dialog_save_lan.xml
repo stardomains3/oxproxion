@@ -104,6 +104,13 @@
                 android:text="MLX LM"
                 android:textColor="#FFFFFF"
                 style="@style/Widget.App.CheckBox" />
+            <CheckBox
+                android:id="@+id/checkbox_hermes_agent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hermes Agent"
+                android:textColor="#FFFFFF"
+                style="@style/Widget.App.CheckBox" />
 
         </LinearLayout>
 
@@ -120,7 +127,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter if required"
+            android:hint="Enter if Required"
             app:boxStrokeColor="#C2C2C2"
             app:hintTextColor="#C2C2C2"
             app:boxBackgroundMode="outline"

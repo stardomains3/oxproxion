@@ -3648,6 +3648,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             "lm_studio" -> fetchLmStudioModels()
             "ollama" -> fetchOllamaModels()
             "mlx_lm" -> fetchLmStudioModels()  // If you have it; else emptyList()
+            "hermes_agent" -> fetchHermesAgentModels()  // Hermes Agent uses OpenAI-compatible API
             else -> emptyList()
         }
     }
@@ -3714,6 +3715,60 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }.sortedBy { it.displayName.lowercase() }
             } catch (e: Exception) {
                 // Log.e("LmStudioModels", "Failed to fetch LM Studio models", e)
+                throw e
+            }
+        }
+    }
+    // NEW: Hermes Agent models fetch - uses OpenAI-compatible API
+    private suspend fun fetchHermesAgentModels(): List<LlmModel> = withTimeout(10000) {
+        withContext(Dispatchers.IO) {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint.isNullOrBlank()) {
+                throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
+            }
+            val apiKey = sharedPreferencesHelper.getLanApiKey()
+
+            try {
+                val response = httpClient.get("$lanEndpoint/v1/models") {
+                    timeout { requestTimeoutMillis = 10000 }
+                    if (!apiKey.isNullOrBlank() && apiKey != "any-non-empty-string") {
+                        header("Authorization", "Bearer $apiKey")
+                    }
+                }
+                if (!response.status.isSuccess()) {
+                    throw Exception("Server returned ${response.status}: ${response.status.description}")
+                }
+
+                val responseBody = response.body<JsonObject>()
+                val modelsArray = responseBody["data"]?.jsonArray ?: return@withContext emptyList()
+
+                modelsArray.mapNotNull { modelJson ->
+                    try {
+                        val modelObj = modelJson.jsonObject
+                        val id = modelObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+
+                        // Hermes Agent models - detect capabilities from model name
+                        val isVisionCapable = id.contains("vision", ignoreCase = true) ||
+                                id.contains("vl", ignoreCase = true)
+                        val isReasoningCapable = id.contains("reason", ignoreCase = true) ||
+                                id.contains("thinking", ignoreCase = true) ||
+                                id.contains("r1", ignoreCase = true)
+
+                        LlmModel(
+                            displayName = id,
+                            apiIdentifier = id,
+                            isVisionCapable = isVisionCapable,
+                            isImageGenerationCapable = false, // Hermes Agent doesn't typically do image generation
+                            isReasoningCapable = isReasoningCapable,
+                            created = System.currentTimeMillis() / 1000,
+                            isFree = true, // Local models are always free
+                            isLANModel = true
+                        )
+                    } catch (e: Exception) {
+                        null // Skip malformed entries
+                    }
+                }.sortedBy { it.displayName.lowercase() }
+            } catch (e: Exception) {
                 throw e
             }
         }
