@@ -11,5 +11,6 @@ data class LlmModel(
     val isReasoningCapable: Boolean = false,
     val created: Long = 0L,
     val isFree: Boolean = apiIdentifier.endsWith(":free")||apiIdentifier.endsWith("/free"),
-    val isLANModel: Boolean = false
+    val isLANModel: Boolean = false,
+    val isLoaded: Boolean = false  // Used by llama.cpp to indicate if model is loaded
 )

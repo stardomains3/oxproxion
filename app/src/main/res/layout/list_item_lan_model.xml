@@ -38,6 +38,33 @@
             android:textColor="@android:color/darker_gray"
             android:textSize="14sp"/>
     </LinearLayout>
-    <!-- No right icon for LAN models -->
+
+    <!-- Eject button for loaded llama.cpp models -->
+    <ImageButton
+        android:id="@+id/btnEject"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+
+        android:padding="12dp"
+        android:src="@drawable/ic_eject"
+
+        android:visibility="gone" />
+    <ImageButton
+        android:id="@+id/btnLoad"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+
+        android:padding="12dp"
+        android:src="@drawable/ic_loadmodel"
+
+        android:visibility="gone" />
+    <ProgressBar
+        android:id="@+id/progressLoading"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="12dp"
+        android:visibility="gone" />
 
 </LinearLayout>

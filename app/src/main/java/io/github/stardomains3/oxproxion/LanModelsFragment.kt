@@ -67,9 +67,21 @@ class LanModelsFragment : Fragment() {
         recyclerView = view.findViewById(R.id.recyclerViewLanModels)
         recyclerView.layoutManager = LinearLayoutManager(context)
 
-        adapter = LanModelsAdapter(emptyList()) { model ->
-            addModel(model)
-        }
+        // Pass provider to adapter to determine eject button visibility
+        val isLlamaCpp = provider == "llama_cpp"
+        adapter = LanModelsAdapter(
+            models = emptyList(),
+            isLlamaCppProvider = isLlamaCpp,
+            onItemClicked = { model ->
+                addModel(model)
+            },
+            onEjectClicked = if (isLlamaCpp) { model ->
+                unloadModel(model)
+            } else null,
+            onLoadClicked = if (isLlamaCpp) { model ->
+                loadModel(model)
+            } else null
+        )
         recyclerView.adapter = adapter
 
         // OBSERVE MODELS (REACTIVE)
@@ -84,7 +96,7 @@ class LanModelsFragment : Fragment() {
                     "llama_cpp" -> "No llama.cpp models found.\nMake sure llama.cpp server is running and has models loaded."
                     "mlx_lm" -> "No MLX LM models found.\nMake sure MLX LM server is running and has models loaded."
                     "ollama" -> "No Ollama models found.\nMake sure Ollama is installed and has models pulled."
-                    "hermes_agent" -> "No Hermes Agent model found.\nMake sure Hermes Agent server is running and has models loaded."
+                    "hermes_agent" -> "No Hermes Agent models found.\nMake sure Hermes Agent server is running and has models loaded."
                     else -> "No models found."
                 }
                 Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_LONG).show()
@@ -109,6 +121,54 @@ class LanModelsFragment : Fragment() {
             viewModel.addCustomModel(model)
             val provider = viewModel.getCurrentLanProvider()
             Toast.makeText(context, "LAN Model added: ${model.displayName}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    private fun loadModel(model: LlmModel) {
+        // Show spinner for this model
+        adapter.setLoadingState(model.apiIdentifier, true)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                Toast.makeText(context, "Loading model, please wait...", Toast.LENGTH_SHORT).show()
+                val success = viewModel.loadLlamaCppModel(model)
+                if (success) {
+                    Toast.makeText(context, "Loaded model: ${model.apiIdentifier}", Toast.LENGTH_SHORT).show()
+
+                } else {
+                    Toast.makeText(context, "Server returned unsuccessful load", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to load: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                kotlinx.coroutines.delay(1600)
+                // Hide spinner and fetch updated list
+                adapter.setLoadingState(model.apiIdentifier, false)
+
+                viewModel.startLanModelsFetch()
+            }
+        }
+    }
+    private fun unloadModel(model: LlmModel) {
+        // Show spinner for this model
+        adapter.setLoadingState(model.apiIdentifier, true)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val success = viewModel.unloadLlamaCppModel(model)
+                if (success) {
+                    Toast.makeText(context, "Unloaded model: ${model.apiIdentifier}", Toast.LENGTH_SHORT).show()
+
+                } else {
+                    Toast.makeText(context, "Server returned unsuccessful unload", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to unload: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                kotlinx.coroutines.delay(1600)
+                // Hide spinner and fetch updated list
+                adapter.setLoadingState(model.apiIdentifier, false)
+                viewModel.startLanModelsFetch()
+            }
         }
     }
 

@@ -6,7 +6,7 @@ oxproxion is a versatile and user-centric Android chat application designed to i
 
 🤖 Multi-Model Support: Switch between different LLM bots and models.
 
-🤖 Chat with OpenRouter models or locally served models using Ollama, LM Studio, llama.cpp or MLX LM.
+🤖 Chat with OpenRouter models or locally served models using Ollama, LM Studio, llama.cpp, MLX LM or Hermes Agent.
 
 💬 Chat Interface: A clean and intuitive interface for conversing with AI models.
 
@@ -48,9 +48,9 @@ Long-Press the **Tools** button in the options menu to enable/disable specific f
   • Tap icon in model list to open the OpenRouter model's info in your browser.  
   • Long-press the API key icon to view your remaining OpenRouter credits.  
 
-🔗 Ollama, LM Studio and llama.cpp Integration:
+🔗 Ollama, LM Studio, llama.cpp, MLX LM and Hermes Agent Integration:
 
-  • It now also allows chat with Ollama, LM Studio, and llama.cpp models served on your LAN.
+  • It now also allows chat with Ollama, LM Studio, llama.cpp, MLX LM or Hermes Agent models served on your LAN.
 
 
 📋 Effortless Copying: Press any avatar to copy the corresponding response to the clipboard. Long-press the response avatar to copy in Markdown.
@@ -146,13 +146,13 @@ To use with OpenRouter models, this application requires an API key from [OpenRo
 
 Once you have your key, you can add it to the app's settings by pressing the "OpenRouter API Key" button.
 
-Alternatively, you can run this locally with Ollama, LM Studio, llama.cpp, or MLX LM.
+Alternatively, you can run this locally with Ollama, LM Studio, llama.cpp, MLX LM or Hermes Agent.
 
 To use these, you must host the model servers on your own LAN. Note: This application does not provide setup guidance for local infrastructure. You will need to configure the following yourself:
 
 Server Setup: Read the official documentation for your chosen server to configure it correctly.
 
-    💡 Tip: Don't know where to start? Ask an AI to generate the specific configuration steps for your OS and hardware.
+💡 Tip: Don't know where to start? Ask an AI to generate the specific configuration steps for your OS and hardware.
 
 Network Configuration: Adjust your network environment, including firewall rules, router settings, and port forwarding.
 

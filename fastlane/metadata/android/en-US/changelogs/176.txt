@@ -1,0 +1,2 @@
+- Updated ktor dependency.
+- For llama.cpp models : Tap the eject icon to the right of the model name to unload, tap the power on button to load the model.

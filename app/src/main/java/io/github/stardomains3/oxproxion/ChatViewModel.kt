@@ -3855,6 +3855,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val description = modelObj["status"]?.jsonObject?.get("value")?.jsonPrimitive?.content ?: ""
                         val capabilities = emptyList<String>() // llama.cpp doesn't provide this in the new format
 
+                        // Check if the model is loaded based on the description
+                        val isLoaded = description.equals("loaded", ignoreCase = true) ||
+                                (description.contains("loaded", ignoreCase = true) &&
+                                        !description.contains("unloaded", ignoreCase = true))
+
                         LlmModel(
                             displayName = if (description.isNotEmpty()) "$name - $description" else name,
                             apiIdentifier = name,
@@ -3863,7 +3868,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             isReasoningCapable = false,
                             created = System.currentTimeMillis() / 1000,
                             isFree = true,
-                            isLANModel = true
+                            isLANModel = true,
+                            isLoaded = isLoaded
                         )
                     } catch (e: Exception) {
                         null // Skip malformed entries
@@ -3873,6 +3879,58 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 throw e
             }
         }
+    }
+    suspend fun loadLlamaCppModel(model: LlmModel): Boolean = withContext(Dispatchers.IO) {
+        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+        if (lanEndpoint.isNullOrBlank()) {
+            throw IllegalStateException("LAN endpoint not configured.")
+        }
+
+        val lanKey = sharedPreferencesHelper.getLanApiKey()
+
+        val response = httpClient.post("$lanEndpoint/models/load") {
+            contentType(ContentType.Application.Json)
+            // Include API key if configured (some llama.cpp servers require authentication)
+            if (!lanKey.isNullOrBlank()) {
+                header("Authorization", "Bearer $lanKey")
+            }
+            setBody(mapOf("model" to model.apiIdentifier))
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = try { response.bodyAsText() } catch (_: Exception) { "Unknown error" }
+            throw Exception("Failed to load model: ${response.status} - $errorBody")
+        }
+
+        // Parse response to check for success field
+        val responseBody = try { response.body<JsonObject>() } catch (_: Exception) { null }
+        responseBody?.get("success")?.jsonPrimitive?.booleanOrNull == true
+    }
+    suspend fun unloadLlamaCppModel(model: LlmModel): Boolean = withContext(Dispatchers.IO) {
+        val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+        if (lanEndpoint.isNullOrBlank()) {
+            throw IllegalStateException("LAN endpoint not configured.")
+        }
+
+        val lanKey = sharedPreferencesHelper.getLanApiKey()
+
+        val response = httpClient.post("$lanEndpoint/models/unload") {
+            contentType(ContentType.Application.Json)
+            // Include API key if configured (some llama.cpp servers require authentication)
+            if (!lanKey.isNullOrBlank()) {
+                header("Authorization", "Bearer $lanKey")
+            }
+            setBody(mapOf("model" to model.apiIdentifier))
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = try { response.bodyAsText() } catch (_: Exception) { "Unknown error" }
+            throw Exception("Failed to unload model: ${response.status} - $errorBody")
+        }
+
+        // Parse response to check for success field
+        val responseBody = try { response.body<JsonObject>() } catch (_: Exception) { null }
+        responseBody?.get("success")?.jsonPrimitive?.booleanOrNull == true
     }
 
     fun getLanEndpoint(): String? = sharedPreferencesHelper.getLanEndpoint()
