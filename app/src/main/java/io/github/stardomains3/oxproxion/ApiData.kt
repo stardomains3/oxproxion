@@ -291,10 +291,16 @@ data class StreamedDelta(
     val toolCalls: List<ToolCallChunk>? = null,
     val annotations: List<Annotation>? = null,
     val images: List<ImageResponse>? = null,
+    val audio: AudioDelta? = null,
     val reasoning: String? = null,
     val reasoning_details: List<ReasoningDetail>? = null
 )
-
+@Serializable
+data class AudioDelta(
+    val id: String? = null,
+    val data: String? = null, // Chunks of base64
+    val transcript: String? = null
+)
 // NEW: Added from my code for citations
 @Serializable
 data class Annotation(

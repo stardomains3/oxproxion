@@ -1742,9 +1742,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun handleStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage) {
+    private suspend fun handleStreamedResponse(
+        modelForRequest: String,
+        messagesForApiRequest: List<FlexibleMessage>,
+        thinkingMessage: FlexibleMessage
+    ) {
         withContext(Dispatchers.IO) {
-            val sharedPreferencesHelper = SharedPreferencesHelper(getApplication<Application>().applicationContext)
+            val sharedPreferencesHelper =
+                SharedPreferencesHelper(getApplication<Application>().applicationContext)
+
+            // --- Detection for Lyria / Audio models ---
+            val isLyria = modelForRequest.contains("google/lyria", ignoreCase = true)
+
+            // --- Existing config ---
             val webSearchOpts = if (sharedPreferencesHelper.getWebSearchBoolean() && !activeModelIsLan()) {
                 WebSearchOptions(
                     searchContextSize = sharedPreferencesHelper.getWebSearchContextSize()
@@ -1757,31 +1767,51 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
             val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
             val effort = if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
+
+            // --- Build ChatRequest with ALL features ---
             val chatRequest = ChatRequest(
                 model = modelForRequest,
                 messages = messagesForApiRequest,
                 transforms = if (sharedPreferencesHelper.getOpenRouterTransformsEnabled() && !activeModelIsLan())
                     listOf("middle-out")
-                else
-                    null,
+                else null,
                 stream = true,
                 max_tokens = maxTokens,
-                //logprobs = null,
+                tools = if (_isToolsEnabled.value == true) buildTools() else null,
+                plugins = buildWebSearchPlugin(),
+                webSearchOptions = webSearchOpts,
+                toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
+                // === AUDIO modality ===
+                modalities = if (isLyria) {
+                    listOf("text", "audio")
+                } else if (isImageGenerationModel(modelForRequest)) {
+                    if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
+                        modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
+                        modelForRequest.contains("sourceful/riverflow", ignoreCase = true)
+                    ) {
+                        listOf("image")
+                    } else {
+                        listOf("image", "text")
+                    }
+                } else null,
+                // === IMAGE CONFIG (Gemini image gen) ===
+                imageConfig = if (isImageGenerationModel(modelForRequest) &&
+                    modelForRequest.contains("google", ignoreCase = true) &&
+                    modelForRequest.contains("gemini", ignoreCase = true) &&
+                    modelForRequest.contains("image", ignoreCase = true)
+                ) {
+                    val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
+                    ImageConfig(aspectRatio = aspectRatio)
+                } else null,
+                // === REASONING CONFIG ===
                 reasoning = if (_isReasoningEnabled.value == true && isReasoningModel(_activeChatModel.value)) {
                     if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
-                        if (maxRTokens != null && maxRTokens > 0) {
-                            Reasoning(
-                                enabled = true,
-                                exclude = sharedPreferencesHelper.getReasoningExclude(),
-                                max_tokens = maxRTokens
-                            )
-                        } else {
-                            Reasoning(
-                                enabled = true,
-                                exclude = sharedPreferencesHelper.getReasoningExclude(),
-                                effort = effort
-                            )
-                        }
+                        Reasoning(
+                            enabled = true,
+                            exclude = sharedPreferencesHelper.getReasoningExclude(),
+                            effort = effort,
+                            max_tokens = maxRTokens
+                        )
                     } else {
                         Reasoning(enabled = true, exclude = true)
                     }
@@ -1789,29 +1819,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     Reasoning(enabled = false, exclude = true)
                 } else {
                     null
-                },
-                tools = if (_isToolsEnabled.value == true) buildTools() else null,
-                toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
-                plugins = buildWebSearchPlugin(),
-                webSearchOptions = webSearchOpts,
-                modalities = if (isImageGenerationModel(modelForRequest)) {
-                    if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
-                        modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
-                        modelForRequest.contains("sourceful/riverflow", ignoreCase = true)) {
-                        listOf("image")
-                    } else {
-                        listOf("image", "text")
-                    }
-                } else null,
-                imageConfig = if (isImageGenerationModel(modelForRequest) &&
-                    modelForRequest.contains("google", ignoreCase = true) &&
-                    modelForRequest.contains("gemini", ignoreCase = true) &&
-                    modelForRequest.contains("image", ignoreCase = true)) {
-                    val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
-                    ImageConfig(aspectRatio = aspectRatio)
-                } else null,
-
-                )
+                }
+            )
 
             try {
                 httpClient.preparePost(activeChatUrl) {
@@ -1822,9 +1831,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     setBody(chatRequest)
                 }.execute { httpResponse ->
                     if (!httpResponse.status.isSuccess()) {
-                        val errorBody = try { httpResponse.bodyAsText() } catch (ex: Exception) { "No details" }
-                        val openRouterError = parseOpenRouterError(errorBody)  // FIXED: Parse for friendly message (no raw JSON)
-                        throw Exception(openRouterError)
+                        val errorBody = try {
+                            httpResponse.bodyAsText()
+                        } catch (ex: Exception) {
+                            "No details"
+                        }
+                        throw Exception(parseOpenRouterError(errorBody))
                     }
 
                     val channel = httpResponse.body<ByteReadChannel>()
@@ -1833,70 +1845,69 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     var hasUsedReasoningDetails = false
                     var reasoningStarted = false
                     var finish_reason: String? = null
-                    var lastChoice: StreamedChoice? = null
                     val toolCallBuffer = mutableListOf<ToolCall>()
                     val accumulatedAnnotations = mutableListOf<Annotation>()
                     val accumulatedImages = mutableListOf<String>()
+
+                    // --- AUDIO variables ---
+                    val audioBuffer = StringBuilder()
 
                     while (!channel.isClosedForRead) {
                         val line = channel.readLine() ?: continue
                         if (line.startsWith("data:")) {
                             val jsonString = line.substring(5).trim()
-                            //  if (jsonString == "[DONE]") break
                             if (jsonString == "[DONE]") {
-                                // ==== NEW: read the final payload that may contain citations ====
-                                // OpenRouter occasionally sends one more delta *after* [DONE]
-                                // that has the full citations.  We already exited the loop
-                                // too early; instead we simply keep accumulating below.
-                                // (We do NOT break here any more.)
-                                continue
+                                continue  // Keep reading — OpenRouter can send data after [DONE]
                             }
 
                             try {
                                 val chunk = json.decodeFromString<StreamedChatResponse>(jsonString)
 
-                                // Handle mid-stream error immediately (top-level error)
+                                // Handle mid-stream error
                                 chunk.error?.let { apiError ->
-                                    val rawDetails = "Code: ${apiError.code ?: "unknown"} - ${apiError.message ?: "Mid-stream error"}"
+                                    val rawDetails =
+                                        "Code: ${apiError.code ?: "unknown"} - ${apiError.message ?: "Mid-stream error"}"
                                     withContext(Dispatchers.Main) {
-                                        handleError(Exception(rawDetails), thinkingMessage)  // FIXED: Raw details (avoids nesting in handleError)
+                                        handleError(Exception(rawDetails), thinkingMessage)
                                     }
-                                    return@execute  // Exit the entire callback early (no post-loop processing for errors)
+                                    return@execute
                                 }
 
                                 val choice = chunk.choices.firstOrNull()
                                 finish_reason = choice?.finish_reason ?: finish_reason
-                                lastChoice = choice
                                 val delta = choice?.delta
-                                delta?.annotations?.forEach { accumulatedAnnotations.add(it)}
 
+                                // === AUDIO ACCUMULATION ===
+                                delta?.audio?.let { audioDelta ->
+                                    audioDelta.data?.let { audioBuffer.append(it) }
+                                }
+
+                                // === TEXT ACCUMULATION ===
                                 var contentChanged = false
-                                var reasoningChanged = false
-
                                 if (!delta?.content.isNullOrEmpty()) {
                                     val isFirstContentChunk = accumulatedResponse.isEmpty()
                                     accumulatedResponse += delta.content
                                     contentChanged = true
-                                    // If this is the first content chunk, we must replace the 'working...' placeholder.
+
                                     if (isFirstContentChunk) {
                                         withContext(Dispatchers.Main) {
                                             updateMessages { list ->
                                                 val index = list.indexOf(thinkingMessage)
                                                 if (index != -1) {
-                                                    // Replace 'working...' directly with the first accumulated content
                                                     list[index] = FlexibleMessage(
                                                         role = "assistant",
                                                         content = JsonPrimitive(accumulatedResponse),
-                                                        reasoning = accumulatedReasoning // Include reasoning if it started
+                                                        reasoning = accumulatedReasoning
                                                     )
                                                 }
                                             }
                                         }
-                                        // Skip the general update below for the first chunk, as we just performed the replacement
                                         continue
                                     }
                                 }
 
+                                // === REASONING ACCUMULATION ===
+                                var reasoningChanged = false
                                 if (delta?.reasoning_details?.isNotEmpty() == true) {
                                     hasUsedReasoningDetails = true
                                     delta.reasoning_details.forEach { detail ->
@@ -1918,6 +1929,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                     reasoningChanged = true
                                 }
 
+                                // === REAL-TIME UI UPDATE ===
                                 if (contentChanged || reasoningChanged) {
                                     withContext(Dispatchers.Main) {
                                         updateMessages { list ->
@@ -1932,6 +1944,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                     }
                                 }
 
+                                // === TOOL CALLS BUFFERING ===
                                 delta?.toolCalls?.forEach { deltaTc ->
                                     val index = deltaTc.index
                                     if (index >= toolCallBuffer.size) {
@@ -1949,35 +1962,37 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                         val existing = toolCallBuffer[index]
                                         toolCallBuffer[index] = existing.copy(
                                             function = existing.function.copy(
-                                                name = existing.function.name + (deltaTc.function?.name
-                                                    ?: ""),
-                                                arguments = existing.function.arguments + (deltaTc.function?.arguments
-                                                    ?: "")
+                                                name = existing.function.name + (deltaTc.function?.name ?: ""),
+                                                arguments = existing.function.arguments + (deltaTc.function?.arguments ?: "")
                                             )
                                         )
                                     }
                                 }
 
+                                // === ANNOTATIONS & IMAGES ===
                                 accumulatedAnnotations.addAll(delta?.annotations ?: emptyList())
                                 delta?.images?.forEach { accumulatedImages.add(it.image_url.url) }
+
                             } catch (e: Exception) {
-                                // Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
+                              //  Log.e("ChatViewModel", "Error parsing stream chunk: $jsonString", e)
                             }
                         }
                     }
-                    val downloadedUris = if (accumulatedImages.isNotEmpty()) {
-                        downloadImages(accumulatedImages)
-                    } else emptyList()
-                    // Post-loop: Only runs for normal completions (errors bail out early above)
+
+                    // ============================================================
+                    //  POST-STREAM PROCESSING
+                    // ============================================================
+
+                    // --- 1. Finish reason handling ---
                     when (finish_reason) {
                         "error" -> {
-                            // Fallback for "error" finish_reason (e.g., if parsing failed earlier)
                             val errorMsg = "**Error:** The model encountered an error while generating the response. Please try again."
                             withContext(Dispatchers.Main) {
                                 handleError(Exception(errorMsg), thinkingMessage)
                             }
                             return@execute
                         }
+
                         "content_filter" -> {
                             val errorMsg = "**Error:** The response was filtered due to content policies. Please rephrase your query."
                             withContext(Dispatchers.Main) {
@@ -1985,27 +2000,55 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             }
                             return@execute
                         }
+
                         "length" -> {
-                            Toast.makeText(getApplication<Application>().applicationContext, "Response was truncated due to max_tokens limit.", Toast.LENGTH_SHORT).show()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    getApplication<Application>().applicationContext,
+                                    "Response was truncated due to max_tokens limit.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
-                        "tool_calls", "stop", null -> {
-                            // Normal cases
-                        }
+
+                        "tool_calls", "stop", null -> { /* Normal */ }
+
                         else -> {
-                            // Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
+                          //  Log.w("ChatViewModel", "Unknown finish_reason: $finish_reason")
                         }
                     }
 
+                    // --- 2. Close reasoning code fence ---
                     if (reasoningStarted) {
-                        accumulatedReasoning += "\n```"
-                        accumulatedReasoning += "\n\n---\n\n"
+                        accumulatedReasoning += "\n```\n\n---\n\n"
                     }
 
+                    // --- 3. Download generated images ---
+                    val downloadedUris = if (accumulatedImages.isNotEmpty()) {
+                        downloadImages(accumulatedImages)
+                    } else emptyList()
+
+                    // --- 4. Save Audio if present ---
+                    if (audioBuffer.isNotEmpty()) {
+                        try {
+                            val audioBytes = Base64.getDecoder().decode(audioBuffer.toString())
+                            val filename = "lyria_${System.currentTimeMillis()}.mp3"
+                            val mimeType = "audio/mpeg"
+                            saveBinaryFileToDownloads(filename, audioBytes, mimeType)
+                            _toolUiEvent.postValue(Event("✅ Music saved: $filename"))
+                        } catch (e: Exception) {
+                            _toolUiEvent.postValue(Event("❌ Audio save failed: ${e.message}"))
+                        }
+                    }
+
+                    // --- 5. Citations ---
+                    val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+                        formatCitations(accumulatedAnnotations)
+                    } else ""
+
+                    // --- 6. Final UI Update ---
                     val hadToolCalls = toolCallBuffer.isNotEmpty()
                     if (hadToolCalls && !toolCallsHandledForTurn) {
-                        val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
-                            formatCitations(accumulatedAnnotations)
-                        } else ""
                         val assistantMessage = FlexibleMessage(
                             role = "assistant",
                             content = JsonPrimitive(accumulatedResponse + citationsMarkdown),
@@ -2020,10 +2063,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         handleToolCalls(toolCallBuffer, thinkingMessage)
                     } else {
-                        val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
-                            formatCitations(accumulatedAnnotations)
-                        } else ""
-                        val finalContent = (accumulatedResponse + citationsMarkdown).takeIf { it.isNotBlank() } ?: "No response received."
+                        val finalContent = (accumulatedResponse + citationsMarkdown)
+                            .takeIf { it.isNotBlank() } ?: "No response received."
 
                         withContext(Dispatchers.Main) {
                             updateMessages { list ->
@@ -2039,6 +2080,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
+                    // --- 7. Notification logic ---
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         val apiIdentifier = activeChatModel.value ?: "Unknown Model"
                         val displayName = getModelDisplayName(apiIdentifier)
@@ -2047,7 +2089,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         } else {
                             accumulatedResponse
                         }
-                        sharedPreferencesHelper.saveLastAiResponseForChannel(2, truncatedResponse)  //#ttsnoti
+                        sharedPreferencesHelper.saveLastAiResponseForChannel(2, truncatedResponse)
                         ForegroundService.updateNotificationStatus(displayName, "Response Received.")
                     }
                 }
@@ -2057,13 +2099,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
                         val apiIdentifier = activeChatModel.value ?: "Unknown Model"
                         val displayName = getModelDisplayName(apiIdentifier)
-                        sharedPreferencesHelper.saveLastAiResponseForChannel(2, "Error!")//#ttsnoti
+                        sharedPreferencesHelper.saveLastAiResponseForChannel(2, "Error!")
                         ForegroundService.updateNotificationStatus(displayName, "Error!")
                     }
                 }
             }
         }
     }
+
 
 
 

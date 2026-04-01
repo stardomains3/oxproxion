@@ -118,6 +118,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.ranges.contains
 
 interface OnKeyboardShortcutListener {
     fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean
@@ -682,6 +683,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
                 modelNameTextView.text = viewModel.getModelDisplayName(model)
+                if (model.contains("google/lyria", ignoreCase = true)) {
+                    // Only toggle if it's currently OFF to avoid redundant toasts
+                    if (viewModel.isStreamingEnabled.value == false) {
+                        viewModel.toggleStreaming()
+                        Toast.makeText(requireContext(), "Streaming enabled: Required for music generation", Toast.LENGTH_SHORT).show()
+                    }
+                }
 
                 // Handle vision model capabilities
                 if (viewModel.isVisionModel(model)) {
@@ -2289,7 +2297,17 @@ $cleanContent
         }
 
         streamButton.setOnClickListener {
-            viewModel.toggleStreaming()
+            val currentModel = viewModel.activeChatModel.value ?: ""
+            val isLyria = currentModel.contains("google/lyria", ignoreCase = true)
+            val isStreamEnabled = viewModel.isStreamingEnabled.value ?: false
+
+            if (isLyria && isStreamEnabled) {
+                // Prevent turning off streaming for Lyria
+                Toast.makeText(requireContext(), "Streaming is required for Lyria music models.", Toast.LENGTH_SHORT).show()
+            } else {
+                // Normal toggle for other models or if turning it ON for Lyria
+                viewModel.toggleStreaming()
+            }
         }
 
         reasoningButton.setOnClickListener {

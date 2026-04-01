@@ -1,0 +1,1 @@
+- Added support for google/lyria-3 models on OpenRouter. It works just for streaming so that gets locked in. It can take a minute or so to download the song, but eventually a snackbar appears when done.
