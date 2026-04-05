@@ -1,0 +1,2 @@
+- Updated Commonmark dep.
+- Added optional Brave Search Tool. Enter your Brave Search API key in the settings and the option for the tool will appear when long-pressing tools button. Allows for local or cloud models to have Brave search results injected into context.

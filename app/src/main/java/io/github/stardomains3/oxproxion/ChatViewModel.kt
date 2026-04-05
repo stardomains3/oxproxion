@@ -940,7 +940,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                         put("type", "string")
                                     }
                                 }
-                                put("description", "List of filenames to delete (e.g., ['old_notes.txt', 'draft.json']). Must be filenames only, no paths.")
+                                put("description", "List of filenames to delete (e.g., ['old_notes.txt', 'draft.json']). If only one file is requested, provide it as a single-element array (e.g., ['file.txt']). Must be filenames only, no paths.")
                             }
                         }
                         putJsonArray("required") { add(JsonPrimitive("filenames")) }
@@ -965,6 +965,54 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         }
                         putJsonArray("required") { add(JsonPrimitive("filename")) }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "brave_search",
+                    description = "Search the web using Brave Search API. Returns ranked results with titles, URLs, and relevant text snippets. Use 'web' type for general knowledge, facts, how-tos, product info. Use 'news' type when the user asks about current events, breaking news, recent developments, or anything time-sensitive. The 'freshness' parameter is especially useful with 'news' to filter results by recency. SafeSearch is moderate by default but can be set to strict or off.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("query") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "The search query (1-400 chars, max 50 words). Be specific and concise."
+                                )
+                            }
+                            putJsonObject("type") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Search type: 'web' for general search (default), 'news' for recent news articles and current events."
+                                )
+                            }
+                            putJsonObject("freshness") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Time filter for results. Valid values: 'pd' (past day), 'pw' (past week), 'pm' (past month), 'py' (past year), or a date range like '2024-01-01to2024-06-30'. Leave blank for no time filter. Particularly useful with type=news."
+                                )
+                            }
+                            putJsonObject("safesearch") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Adult content filter. Valid values: 'off', 'moderate' (default), 'strict'."
+                                )
+                            }
+                            putJsonObject("count") {
+                                put("type", "integer")
+                                put(
+                                    "description",
+                                    "Number of results to return, between 1 and 20. Default is 10."
+                                )
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("query")) }
                     }
                 )
             ),
@@ -1309,6 +1357,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         "Error deleting files: ${e.message}"
                     }
                 }
+                "brave_search" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val query = arguments["query"]?.jsonPrimitive?.content
+                        val type = arguments["type"]?.jsonPrimitive?.contentOrNull ?: "web"
+                        val freshness = arguments["freshness"]?.jsonPrimitive?.contentOrNull
+                        val safesearch = arguments["safesearch"]?.jsonPrimitive?.contentOrNull ?: "moderate"
+                        val count = arguments["count"]?.jsonPrimitive?.intOrNull ?: 10
+
+                        if (query.isNullOrBlank()) {
+                            "Error: No search query provided."
+                        } else {
+                            searchBrave(query, type, freshness, safesearch, count)
+                        }
+                    } catch (e: Exception) {
+                        "Error: Failed to search with Brave – ${e.message}"
+                    }
+                }
                 "open_file" -> {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
@@ -1465,7 +1531,104 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         return sb.toString()
     }
+    private suspend fun searchBrave(
+        query: String,
+        type: String,
+        freshness: String?,
+        safesearch: String,
+        count: Int
+    ): String {
+        return withContext(Dispatchers.IO) {
+            try {
 
+                val apiKey = sharedPreferencesHelper.getApiKeyFromPrefs("brave_search_api_key")
+                val isNews = type.lowercase() == "news"
+
+                val urlBuilder = StringBuilder("https://api.search.brave.com/res/v1/web/search").apply {
+                    append("?q=").append(java.net.URLEncoder.encode(query, "UTF-8"))
+                    append("&count=").append(count.coerceIn(1, 20))
+                    val safe = if (safesearch in listOf("off", "moderate", "strict")) safesearch else "moderate"
+                    append("&safesearch=").append(safe)
+                    if (isNews) {
+                        append("&result_filter=news")
+                    }
+                    if (!freshness.isNullOrBlank()) {
+                        append("&freshness=").append(java.net.URLEncoder.encode(freshness, "UTF-8"))
+                    }
+                }
+
+                val response = httpClient.get(urlBuilder.toString()) {
+                    header("Accept", "application/json")
+                    header("X-Subscription-Token", apiKey)
+                }
+
+                if (!response.status.isSuccess()) {
+                    val errorBody = try {
+                        response.bodyAsText()
+                    } catch (ex: Exception) {
+                        "No details"
+                    }
+                    return@withContext "Brave Search Error: ${response.status} – $errorBody"
+                }
+
+                val data = response.body<JsonObject>()
+
+                // Parse results based on search type
+                val resultsArray = if (isNews) {
+                    val newsObj = data["news"]?.jsonObject
+                    newsObj?.get("results")?.jsonArray ?: JsonArray(listOf())
+                } else {
+                    val webObj = data["web"]?.jsonObject
+                    webObj?.get("results")?.jsonArray ?: JsonArray(listOf())
+                }
+
+                if (resultsArray.isEmpty()) {
+                    return@withContext "No results found for: $query"
+                }
+
+                val sb = StringBuilder()
+                sb.appendLine("## Brave Search Results (${type.uppercase()}) for: \"$query\"")
+                if (!freshness.isNullOrBlank()) {
+                    val freshnessLabel = when (freshness) {
+                        "pd" -> "Past Day"
+                        "pw" -> "Past Week"
+                        "pm" -> "Past Month"
+                        "py" -> "Past Year"
+                        else -> "Date Range: $freshness"
+                    }
+                    sb.appendLine("Freshness filter: $freshnessLabel")
+                }
+                sb.appendLine()
+
+                resultsArray.forEachIndexed { index, element ->
+                    val result = element.jsonObject
+                    val title = result["title"]?.jsonPrimitive?.content ?: "Untitled"
+                    val url = result["url"]?.jsonPrimitive?.content ?: ""
+                    val description = result["description"]?.jsonPrimitive?.content
+                        ?: result["snippets"]?.jsonArray?.firstOrNull()?.jsonPrimitive?.content
+                        ?: ""
+                    val publisher = result["meta_url"]?.jsonObject?.get("hostname")?.jsonPrimitive?.content
+                        ?: result["profile"]?.jsonObject?.get("name")?.jsonPrimitive?.content
+                        ?: ""
+                    val pageAge = result["age"]?.jsonPrimitive?.content
+                        ?: result["page_age"]?.jsonPrimitive?.content
+                        ?: ""
+
+                    sb.appendLine("### ${index + 1}. $title")
+                    if (publisher.isNotBlank()) sb.appendLine("Source: $publisher")
+                    if (pageAge.isNotBlank()) sb.appendLine("Published: $pageAge")
+                    sb.appendLine("URL: $url")
+                    if (description.isNotBlank()) sb.appendLine("Summary: $description")
+                    sb.appendLine()
+                }
+
+                sb.toString()
+            } catch (e: Exception) {
+                // Log.e("BraveSearch", "Search failed", e)
+                "Error: Brave Search failed – ${e.message}"
+            }
+        }
+    }
     private suspend fun handleStreamedResponseLAN(
         modelForRequest: String,
         messagesForApiRequest: List<FlexibleMessage>,
@@ -4556,6 +4719,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     ?: return@withContext "Error: Could not access the workspace folder."
 
                 val results = mutableListOf<String>()
+                val allFiles = documentFile.listFiles().toList()
 
                 for (filename in filenames) {
                     // Security check
@@ -4564,7 +4728,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         continue
                     }
 
-                    val targetFile = documentFile.listFiles().find { it.name == filename && it.isFile }
+                    //val targetFile = documentFile.listFiles().find { it.name == filename && it.isFile }
+                    val targetFile = allFiles.find { it.name == filename && it.isFile }
 
                     if (targetFile == null) {
                         results.add("❌ '$filename': File not found")

@@ -3482,48 +3482,58 @@ $cleanContent
         val enabledTools = sharedPreferencesHelper.getEnabledTools()
         val hasStoredPrefs = sharedPreferencesHelper.hasEnabledToolsStored()
 
-        // 2️⃣ Compute effective enabled set for display (all enabled if first use)
+        // 2️⃣ Compute effective enabled set for display
         val effectiveEnabledSet = if (!hasStoredPrefs) {
-            // First use: treat all as enabled for dialog visuals
             ToolItem.getAllToolItems(emptySet()).map { it.name }.toSet()
         } else {
-            enabledTools  // Use stored set (could be empty/partial)
+            enabledTools
         }
 
-        // 3️⃣ Build the list of items using effective set (shows correct checkboxes)
+        // 3️⃣ Get ALL items
         val allItems = ToolItem.getAllToolItems(effectiveEnabledSet)
 
-        // 4️⃣ Create a mutable copy we’ll edit while the user toggles switches
-        val mutableItems = allItems.toMutableList()
+        // --- NEW LOGIC: FILTERING ---
+        // 4️⃣ Check if Brave API key exists
+        val braveApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("brave_search_api_key")
+        val hasBraveKey = braveApiKey.isNotEmpty()
 
-        // 5️⃣ Create the dialog (centered, dimmed background – same style you used for fonts)
+        // 5️⃣ Filter the list: Keep everything UNLESS it's brave_search and we don't have a key
+        val filteredItems = allItems.filter { item ->
+            if (item.name == "brave_search") {
+                hasBraveKey // Only keep if key exists
+            } else {
+                true // Keep all other tools
+            }
+        }
+        // ----------------------------
+
+        // 6️⃣ Create a mutable copy of the FILTERED list
+        val mutableItems = filteredItems.toMutableList()
+
+        // 7️⃣ Create the dialog
         val dialog = MaterialAlertDialogBuilder(requireContext(),
             com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
         )
             .setTitle("Enable / Disable Tools")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save") { _, _ ->
-                // 5a️⃣ When the user taps “Save”, persist the new set
+                // Note: We map from the mutableItems which is already filtered
                 val newEnabledSet = mutableItems
                     .filter { it.isEnabled }
                     .map { it.name }
                     .toSet()
                 sharedPreferencesHelper.saveEnabledTools(newEnabledSet)
-                // Optional: if you need to refresh the tool list used by the LLM immediately:
-                // chatViewModel.refreshToolsIfNeeded()   <-- add this method to your VM if you want
             }
             .create()
 
-        // 6️⃣ Build ScrollView + LinearLayout container (replaces RecyclerView)
         val scrollView = ScrollView(requireContext()).apply {
-            // Optional: Add light padding for better feel
             setPadding(1.dpToPx(), 1.dpToPx(), 1.dpToPx(), 1.dpToPx())
         }
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
         }
 
-        // 7️⃣ Dynamically add a row for each tool (stable index capture for listeners)
+        // 8️⃣ Loop through the FILTERED list
         for ((index, item) in mutableItems.withIndex()) {
             val row = LayoutInflater.from(requireContext()).inflate(
                 R.layout.item_tool_toggle,
@@ -3531,7 +3541,6 @@ $cleanContent
                 false
             )
 
-            // Bind data
             val checkBox = row.findViewById<CheckBox>(R.id.checkbox_tool)
             val titleTv = row.findViewById<TextView>(R.id.text_tool_title)
             val descTv = row.findViewById<TextView>(R.id.text_tool_desc)
@@ -3540,8 +3549,9 @@ $cleanContent
             descTv.text = item.description
             checkBox.isChecked = item.isEnabled
 
-            // ✅ Row click: Toggle with STABLE index capture
             val stableIndex = index
+
+            // Row click
             row.setOnClickListener {
                 val currentItem = mutableItems[stableIndex]
                 val newState = !currentItem.isEnabled
@@ -3549,12 +3559,11 @@ $cleanContent
                 checkBox.isChecked = newState
             }
 
-            // ✅ Checkbox listener: Update list with STABLE index capture
+            // Checkbox click
             checkBox.setOnCheckedChangeListener { _, isChecked ->
                 mutableItems[stableIndex] = mutableItems[stableIndex].copy(isEnabled = isChecked)
             }
 
-            // Optional: Add small bottom margin for spacing between rows
             val layoutParams = row.layoutParams as LinearLayout.LayoutParams
             layoutParams.bottomMargin = 1.dpToPx()
             row.layoutParams = layoutParams
@@ -3567,10 +3576,10 @@ $cleanContent
         dialog.window?.setDimAmount(0.8f)
         dialog.show()
 
-        // 8️⃣ Underline the title (same as your font dialog)
         val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
         titleView?.paintFlags = titleView.paintFlags.or(Paint.UNDERLINE_TEXT_FLAG)
     }
+
     private fun showWebSearchEngineDialog() {
         val engines = listOf(
             "default" to "Default (Native if available, fallback Exa)",

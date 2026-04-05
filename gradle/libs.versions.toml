@@ -28,7 +28,7 @@ roomRuntime = "2.8.4"
 coil = "2.7.0"
 prism4j = "2.0.0"
 biometric = "1.1.0"
-commonmark = "0.27.1"
+commonmark = "0.28.0"
 documentfile = "1.1.0"
 [libraries]
 markwon-simple = { module = "io.noties.markwon:simple-ext", version.ref = "markwon"}

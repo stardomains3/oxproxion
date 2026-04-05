@@ -41,6 +41,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val timeoutButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.timeoutButton)
         val scrollProgressSwitch = view.findViewById<MaterialSwitch>(R.id.scrollProgressSwitch)
         val apiKeyButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.apiKeyButton)
+        val braveApiKeyButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.braveApiKeyButton)
         val promptsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.promptsButton)
         val creditsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.creditsButton)
         val helpButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.helpButton)
@@ -69,6 +70,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         apiKeyButton.setOnClickListener {
             val dialog = SaveApiDialogFragment()
             dialog.show(childFragmentManager, "SaveApiDialogFragment")
+        }
+        braveApiKeyButton.setOnClickListener {
+            val dialog = SaveBraveApiDialogFragment()
+            dialog.show(childFragmentManager, SaveBraveApiDialogFragment.TAG)
         }
         promptsButton.setOnClickListener {
             parentFragmentManager.beginTransaction()

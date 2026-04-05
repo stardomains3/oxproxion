@@ -22,6 +22,12 @@ data class ToolItem(
                 isEnabled = "delete_files" in enabledSet
             ),
             ToolItem(
+                name = "brave_search",
+                displayName = "Brave Search",
+                description = "Search the web or filter for news with Brave Search API. Supports freshness filters and SafeSearch.",
+                isEnabled = "brave_search" in enabledSet
+            ),
+            ToolItem(
                 name = "set_timer",
                 displayName = "Set Timer",
                 description = "Launch Android timer with optional title",
