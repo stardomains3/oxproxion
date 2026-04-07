@@ -54,16 +54,28 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Vision Capable"
-        android:visibility="gone"
-         />
+        android:visibility="visible"
+        />
     <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/switchReasoningCapable"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="Reasoning Capable"
-        android:visibility="gone"
-   />
+        android:visibility="visible"
+        />
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switchLanModel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="LAN Model" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switchImageGen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Image Generation" />
+
 
 
 </LinearLayout>

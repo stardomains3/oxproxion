@@ -11,7 +11,7 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:title="Select Model"
+        app:title="Your Models"
         app:titleTextColor="@android:color/white"
         android:background="#1C1C1E"
         app:menu="@menu/bottom_sheet_model_picker_menu"

@@ -1,0 +1,3 @@
+- Changed "Select Model" screen to "Your Models" screen name.
+- When you add or edit a model from that screen all toggles show for to enter correct properties of the model(vision, reasoning, LAN, image gen)
+- When you edit a model that is also the currently active chat model, any edits to model coapabilities will reflect when you go back to the chat screen.

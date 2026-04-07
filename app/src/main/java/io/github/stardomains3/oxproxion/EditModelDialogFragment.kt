@@ -11,6 +11,7 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import kotlin.toString
 
 class EditModelDialogFragment : DialogFragment() {
 
@@ -27,6 +28,8 @@ class EditModelDialogFragment : DialogFragment() {
         val editApiId     = view.findViewById<EditText>(R.id.editApiIdentifier)
         val switchVision  = view.findViewById<MaterialSwitch>(R.id.switchVisionCapable)
         val switchReason  = view.findViewById<MaterialSwitch>(R.id.switchReasoningCapable)
+        val switchLan     = view.findViewById<MaterialSwitch>(R.id.switchLanModel) // NEW
+        val switchImage   = view.findViewById<MaterialSwitch>(R.id.switchImageGen) // NEW
 
         /* ----------  tint styling – unchanged  ---------- */
         val thumbTint = ColorStateList(
@@ -38,7 +41,7 @@ class EditModelDialogFragment : DialogFragment() {
                 intArrayOf(-android.R.attr.state_checked)),
             intArrayOf("#a0610a".toColorInt(), "#000000".toColorInt()))
 
-        listOf(switchVision, switchReason).forEach {
+        listOf(switchVision, switchReason,switchLan,switchImage,).forEach {
             it.thumbTintList  = thumbTint
             it.trackTintList  = trackTint
             it.thumbTintMode  = PorterDuff.Mode.SRC_ATOP
@@ -71,6 +74,8 @@ class EditModelDialogFragment : DialogFragment() {
             editApiId.setText(m.apiIdentifier)
             switchVision.isChecked = m.isVisionCapable
             switchReason.isChecked = m.isReasoningCapable
+            switchLan.isChecked    = m.isLANModel
+            switchImage.isChecked  = m.isImageGenerationCapable
             builder.setTitle("Edit Model")
 
         } ?: builder.setTitle("Add Model")
@@ -86,9 +91,10 @@ class EditModelDialogFragment : DialogFragment() {
 
             switchVision.visibility  = if (isSpecial) View.VISIBLE else View.GONE
             switchReason.visibility  = if (isSpecial) View.VISIBLE else View.GONE
+
         }
-        editApiId.doAfterTextChanged { updateSwitchesVisibility() }
-        updateSwitchesVisibility()   // initial call
+        // editApiId.doAfterTextChanged { updateSwitchesVisibility() }
+        //updateSwitchesVisibility()   // initial call
 
         /* ----------  buttons  ---------- */
         /* ----------  buttons  ---------- */
@@ -99,17 +105,22 @@ class EditModelDialogFragment : DialogFragment() {
 
                 if (name.isBlank() || id.isBlank()) return@setPositiveButton
 
-                val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
+                /*val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
                         id.endsWith(":online", ignoreCase = true) ||
                         id.endsWith(":nitro",  ignoreCase = true) ||
                         id.endsWith(":floor",  ignoreCase = true) ||
                         existingModel?.isLANModel == true
 
-                //val vision    = if (isSpecial) switchVision.isChecked  else false
+               // val vision    = if (isSpecial) switchVision.isChecked  else false
                 val vision = if (isSpecial) switchVision.isChecked else (existingModel?.isVisionCapable ?: false)
-              //  val reasoning = if (isSpecial) switchReason.isChecked else false
+                //val reasoning = if (isSpecial) switchReason.isChecked else false
                 val reasoning = if (isSpecial) switchReason.isChecked else (existingModel?.isReasoningCapable ?: false)
-
+                val isLan     = if (isSpecial) switchLan.isChecked else (existingModel?.isLANModel ?: false)
+                val isImage   = if (isSpecial) switchImage.isChecked else (existingModel?.isImageGenerationCapable ?: false)*/
+                val vision    = switchVision.isChecked
+                val reasoning = switchReason.isChecked
+                val isLan     = switchLan.isChecked
+                val isImage   = switchImage.isChecked
                 val createdTimestamp = existingModel?.created ?: (System.currentTimeMillis() / 1000)
                 val isFreeValue = existingModel?.isFree ?: id.endsWith(":free")
 
@@ -117,10 +128,10 @@ class EditModelDialogFragment : DialogFragment() {
                     displayName  = name,
                     apiIdentifier= id,
                     isVisionCapable     = vision,
-                    isImageGenerationCapable = existingModel?.isImageGenerationCapable ?: false,
+                    isImageGenerationCapable = isImage,  // existingModel?.isImageGenerationCapable ?: false,
                     isReasoningCapable  = reasoning,
                     created = createdTimestamp,
-                    isLANModel         = existingModel?.isLANModel ?: false,
+                    isLANModel         = isLan, //existingModel?.isLANModel ?: false,
                     isFree = isFreeValue  // Use the preserved/default value
                 )
 

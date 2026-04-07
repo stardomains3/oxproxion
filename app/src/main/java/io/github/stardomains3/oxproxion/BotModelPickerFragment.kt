@@ -299,8 +299,38 @@ class BotModelPickerFragment : Fragment() {
             filterAndSortModels(searchView.query.toString())
         }
     }
-
     private fun updateModel(oldModel: LlmModel, newModel: LlmModel) {
+        val index = models.indexOfFirst { it.apiIdentifier == oldModel.apiIdentifier }
+        if (index != -1) {
+            // 1. Update the local list
+            models[index] = newModel
+
+            // 2. Save the new list to SharedPreferences
+            saveCustomModels()
+
+            // 3. Get the ID that the Chat is currently using
+            val currentActiveId = sharedPreferencesHelper.getPreferenceModelnew()
+
+            // CASE: We changed the ID of the model that is currently active
+            if (oldModel.apiIdentifier == currentActiveId) {
+                // The user changed "old-id" to "new-id".
+                // We must tell the ChatViewModel to start using "new-id"
+                // and we must update the Preference so it remembers "new-id" next time.
+
+                sharedPreferencesHelper.savePreferenceModelnewchat(newModel.apiIdentifier)
+                chatViewModel.setModel(newModel.apiIdentifier)
+            }
+            // CASE: We changed the Name/Capabilities of the active model (ID is the same)
+            else if (newModel.apiIdentifier == currentActiveId) {
+                // Just force a refresh to update the Name/UI
+                chatViewModel.setModel(newModel.apiIdentifier)
+            }
+
+            filterAndSortModels(searchView.query.toString())
+        }
+    }
+
+    /*private fun updateModel(oldModel: LlmModel, newModel: LlmModel) {
         val index = models.indexOfFirst { it.apiIdentifier == oldModel.apiIdentifier }
         if (index != -1) {
             if (oldModel.apiIdentifier == sharedPreferencesHelper.getPreferenceModelnew()) {
@@ -311,7 +341,7 @@ class BotModelPickerFragment : Fragment() {
             saveCustomModels()
             filterAndSortModels(searchView.query.toString())
         }
-    }
+    }*/
 
     private fun deleteModel(model: LlmModel) {
         if (model.apiIdentifier == sharedPreferencesHelper.getPreferenceModelnew()) {
