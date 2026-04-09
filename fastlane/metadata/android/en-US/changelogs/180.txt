@@ -1,0 +1,2 @@
+- For llama.cpp models, you can switch reasoning off/on for models that support: chatTemplateKwargs enable_thinking parameter. No advanced reasoning parameters though.
+- Added "IS Free Model" switch for adding/editing a model.

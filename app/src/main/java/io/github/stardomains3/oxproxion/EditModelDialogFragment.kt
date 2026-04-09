@@ -28,10 +28,11 @@ class EditModelDialogFragment : DialogFragment() {
         val editApiId     = view.findViewById<EditText>(R.id.editApiIdentifier)
         val switchVision  = view.findViewById<MaterialSwitch>(R.id.switchVisionCapable)
         val switchReason  = view.findViewById<MaterialSwitch>(R.id.switchReasoningCapable)
-        val switchLan     = view.findViewById<MaterialSwitch>(R.id.switchLanModel) // NEW
-        val switchImage   = view.findViewById<MaterialSwitch>(R.id.switchImageGen) // NEW
+        val switchLan     = view.findViewById<MaterialSwitch>(R.id.switchLanModel)
+        val switchImage   = view.findViewById<MaterialSwitch>(R.id.switchImageGen)
+        val switchIsFree  = view.findViewById<MaterialSwitch>(R.id.switchIsFree) // NEW
 
-        /* ----------  tint styling – unchanged  ---------- */
+        /* ----------  tint styling  ---------- */
         val thumbTint = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked),
                 intArrayOf(-android.R.attr.state_checked)),
@@ -41,7 +42,8 @@ class EditModelDialogFragment : DialogFragment() {
                 intArrayOf(-android.R.attr.state_checked)),
             intArrayOf("#a0610a".toColorInt(), "#000000".toColorInt()))
 
-        listOf(switchVision, switchReason,switchLan,switchImage,).forEach {
+        // Added switchIsFree to the styling list
+        listOf(switchVision, switchReason, switchLan, switchImage, switchIsFree).forEach {
             it.thumbTintList  = thumbTint
             it.trackTintList  = trackTint
             it.thumbTintMode  = PorterDuff.Mode.SRC_ATOP
@@ -52,8 +54,8 @@ class EditModelDialogFragment : DialogFragment() {
         existingModel = arguments?.let { args ->
             val dn = args.getString("displayName")
             val id = args.getString("apiIdentifier")
-            val created = args.getLong("created", 0L)  // Restore existing created timestamp
-            val isFree = args.getBoolean("isFree", false)  // IMPROVED: Restore from args, default true
+            val created = args.getLong("created", 0L)
+            val isFree = args.getBoolean("isFree", false)
             val isImageGen = args.getBoolean("isImageGenerationCapable", false)
             if (!dn.isNullOrBlank() && !id.isNullOrBlank()) {
                 LlmModel(
@@ -64,7 +66,7 @@ class EditModelDialogFragment : DialogFragment() {
                     isImageGenerationCapable = isImageGen,
                     created = created,
                     isLANModel = args.getBoolean("isLANModel", false),
-                    isFree = isFree  // Use the restored value
+                    isFree = isFree
                 )
             } else null
         }
@@ -76,27 +78,10 @@ class EditModelDialogFragment : DialogFragment() {
             switchReason.isChecked = m.isReasoningCapable
             switchLan.isChecked    = m.isLANModel
             switchImage.isChecked  = m.isImageGenerationCapable
+            switchIsFree.isChecked = m.isFree // RESTORE STATE
             builder.setTitle("Edit Model")
-
         } ?: builder.setTitle("Add Model")
 
-        /* ----------  watch the api-id field  ---------- */
-        fun updateSwitchesVisibility() {
-            val id = editApiId.text.toString().trim()
-            val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
-                    id.endsWith(":online", ignoreCase = true) ||
-                    id.endsWith(":nitro",  ignoreCase = true) ||
-                    id.endsWith(":floor",  ignoreCase = true)||
-                    existingModel?.isLANModel == true
-
-            switchVision.visibility  = if (isSpecial) View.VISIBLE else View.GONE
-            switchReason.visibility  = if (isSpecial) View.VISIBLE else View.GONE
-
-        }
-        // editApiId.doAfterTextChanged { updateSwitchesVisibility() }
-        //updateSwitchesVisibility()   // initial call
-
-        /* ----------  buttons  ---------- */
         /* ----------  buttons  ---------- */
         builder.setView(view)
             .setPositiveButton("Save") { _, _ ->
@@ -105,41 +90,29 @@ class EditModelDialogFragment : DialogFragment() {
 
                 if (name.isBlank() || id.isBlank()) return@setPositiveButton
 
-                /*val isSpecial = id.startsWith("@preset/", ignoreCase = true) ||
-                        id.endsWith(":online", ignoreCase = true) ||
-                        id.endsWith(":nitro",  ignoreCase = true) ||
-                        id.endsWith(":floor",  ignoreCase = true) ||
-                        existingModel?.isLANModel == true
-
-               // val vision    = if (isSpecial) switchVision.isChecked  else false
-                val vision = if (isSpecial) switchVision.isChecked else (existingModel?.isVisionCapable ?: false)
-                //val reasoning = if (isSpecial) switchReason.isChecked else false
-                val reasoning = if (isSpecial) switchReason.isChecked else (existingModel?.isReasoningCapable ?: false)
-                val isLan     = if (isSpecial) switchLan.isChecked else (existingModel?.isLANModel ?: false)
-                val isImage   = if (isSpecial) switchImage.isChecked else (existingModel?.isImageGenerationCapable ?: false)*/
                 val vision    = switchVision.isChecked
                 val reasoning = switchReason.isChecked
                 val isLan     = switchLan.isChecked
                 val isImage   = switchImage.isChecked
+                val isFree    = switchIsFree.isChecked // CAPTURE TOGGLE STATE
+
                 val createdTimestamp = existingModel?.created ?: (System.currentTimeMillis() / 1000)
-                val isFreeValue = existingModel?.isFree ?: id.endsWith(":free")
 
                 val newModel = LlmModel(
                     displayName  = name,
                     apiIdentifier= id,
                     isVisionCapable     = vision,
-                    isImageGenerationCapable = isImage,  // existingModel?.isImageGenerationCapable ?: false,
+                    isImageGenerationCapable = isImage,
                     isReasoningCapable  = reasoning,
                     created = createdTimestamp,
-                    isLANModel         = isLan, //existingModel?.isLANModel ?: false,
-                    isFree = isFreeValue  // Use the preserved/default value
+                    isLANModel         = isLan,
+                    isFree = isFree // PASS TO MODEL
                 )
 
                 existingModel?.let { old -> onModelUpdated?.invoke(old, newModel) }
                     ?: onModelAdded?.invoke(newModel)
             }
             .setNegativeButton("Cancel", null)
-
 
         return builder.create()
     }

@@ -76,6 +76,12 @@
         android:layout_height="wrap_content"
         android:text="Image Generation" />
 
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switchIsFree"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Is Free Model" />
+
 
 
 </LinearLayout>

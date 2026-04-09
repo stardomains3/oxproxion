@@ -17,6 +17,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_LLAMA_CPP
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OLLAMA
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -1643,8 +1644,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 12000
             }
-            val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
-            val effort = if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
+            val llamaCppKwargs = if (
+                sharedPreferencesHelper.getLanProvider() == LAN_PROVIDER_LLAMA_CPP &&
+                isReasoningModel(_activeChatModel.value)
+            ) {
+                mapOf("enable_thinking" to JsonPrimitive(_isReasoningEnabled.value == true))
+            } else null
 
             val chatRequest = ChatRequest(
                 model = modelForRequest,
@@ -1656,6 +1661,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 ) {
                     _isReasoningEnabled.value
                 } else null,
+                // NEW: Add the llama.cpp specific logic
+                chatTemplateKwargs = llamaCppKwargs,
                 tools = if (_isToolsEnabled.value == true) buildTools() else null,
                 toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
 
@@ -2290,10 +2297,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) {
                     12000
                 }
-                val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
-                val effort =
-                    if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
 
+                val llamaCppKwargs = if (
+                    sharedPreferencesHelper.getLanProvider() == LAN_PROVIDER_LLAMA_CPP &&
+                    isReasoningModel(_activeChatModel.value)
+                ) {
+                    // We pass the current state of your toggle to the "enable_thinking" key
+                    mapOf("enable_thinking" to JsonPrimitive(_isReasoningEnabled.value == true))
+                } else {
+                    null
+                }
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messages = messagesForApiRequest,
@@ -2302,6 +2315,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     ) {
                         _isReasoningEnabled.value
                     } else null,
+                    chatTemplateKwargs = llamaCppKwargs,
 
                     max_tokens = maxTokens,
                     tools = if (_isToolsEnabled.value == true) buildTools() else null,

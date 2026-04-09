@@ -233,8 +233,8 @@ class BotModelPickerFragment : Fragment() {
 
         tempFiltered = when (currentCostFilter) {
             CostFilter.ALL -> tempFiltered
-            CostFilter.FREE -> tempFiltered.filter { it.isLANModel || (!it.isLANModel && it.isFree) }.toMutableList()
-            CostFilter.PAID -> tempFiltered.filter { !it.isLANModel && !it.isFree }.toMutableList()
+            CostFilter.FREE -> tempFiltered.filter { it.isFree }.toMutableList() // Simplified
+            CostFilter.PAID -> tempFiltered.filter { !it.isFree }.toMutableList() // Simplified
         }
 
         tempFiltered = when (currentSourceFilter) {

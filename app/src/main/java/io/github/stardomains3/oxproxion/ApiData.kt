@@ -25,6 +25,8 @@ data class ChatRequest(
     val searchParameters: SearchParameters? = null,
     val temperature: Double? = null,
     val modalities: List<String>? = null,
+    @SerialName("chat_template_kwargs")
+    val chatTemplateKwargs: Map<String, JsonElement>? = null,
     val logprobs: Boolean? = null,
     val think: Boolean? = null,
     @SerialName("image_config")  // NEW: Optional for Gemini
