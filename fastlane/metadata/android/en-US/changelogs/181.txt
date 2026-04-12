@@ -1,0 +1,1 @@
+- Optimizations to the correct prompt, spell check and suggest chat title functions.

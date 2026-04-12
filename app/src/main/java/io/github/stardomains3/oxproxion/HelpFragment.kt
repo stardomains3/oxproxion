@@ -219,14 +219,14 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Clear Chat**(button on bottom left) {{ic_rechat}} : Starts a new chat with the current model. Long-press to start a new chat without a warning alert.
             *   **System Message Button** {{ic_tune}} : Opens your library of system messages. If you currently are on a non-default System Message you can long-press and it will auto switch to your default.
             *   **Saved Chats** {{ic_schats}} : Opens a list of your saved conversations.
-            *   **Save Chat** {{ic_savechat}} : Saves the chat. Only text chats can be saved. You can name it yourself or let an AI generate a title(qwen/qwen3-30b-a3b-instruct-2507 is used and the entire chat is sent to it for this function.)
+            *   **Save Chat** {{ic_savechat}} : Saves the chat. Only text chats can be saved. You can name it yourself or let an AI generate a title(google/gemma-4-26b-a4b-it is used and the entire chat is sent to it for this function.)
             
             ---
 
             ##  Menu
 
             Tap the **menu button** {{ic_menudot}} (the one on the lower left with nine dots) to show or hide the main menu. The menu will also hide if you tap outside of it.
-            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "qwen/qwen3-30b-a3b-instruct-2507" to fix it and it will automatically correct the prompt in the prompt box.
+            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "google/gemma-4-26b-a4b-it" to fix it and it will automatically correct the prompt in the prompt box.
 
             ### Contextual Buttons (Enabled during a chat)
             *   **Copy Chat** {{ic_copi}} : Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.
@@ -277,7 +277,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
 
             ### Model Selection
             *   **Access**: Tap the **model name** at the top of the chat screen.
-            *   **"Select Model" Screen**: Shows your list of available models. The default is **OpenRouter: Free**. Tap a model in the list to change the model for the current chat.
+            *   **"Your Models" Screen**: Shows your list of available models. The default is **OpenRouter: Free**. Tap a model in the list to change the model for the current chat.
             *   **Vision**: If the model supports image upload the icon to the left of the name will show an image icon.
             *   **Image Generation**: If the model supports it the icon to the left of the name will show a palette icon.
             *   **Add a Model**: Use the floating action button to add a custom model.
@@ -288,12 +288,12 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ### "OpenRouter Models" Screen
             *   **Sort**: Toggle between **Alphabetical** and **Newest**.
             *   **Search**: Tap to search through the models.
-            *   **Add to Your List**: Tap any model to add it to your "Select Model" screen.
+            *   **Add to Your List**: Tap any model to add it to your "Your Model" screen.
             *   **View Model Info**: Tap the icon on the right of the model to open its info page on the OpenRouter website.
             *   **Refresh**: Tap the **refresh icon** to get the latest list of models from OpenRouter.
             
             ### "LAN Models" Screen (Ollama, LM Studio, llama.cpp, MLX LM, and Hermes Agent served models)
-            *   **Add to Your List**: Tap any model to add it to your "Select Model" screen.
+            *   **Add to Your List**: Tap any model to add it to your "Your Models" screen.
             *   **Refresh**: The list will refresh when opened.
             
             ### "Saved Chats" Screen

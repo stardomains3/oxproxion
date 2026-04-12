@@ -1,6 +1,8 @@
 package io.github.stardomains3.oxproxion
 
 import android.util.Log
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_LLAMA_CPP
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OLLAMA
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
@@ -35,13 +37,24 @@ class LlmService(
         apiKey: String,
         modelId: String,           // NEW: model to use
         endpoint: String,          // NEW: endpoint to call
-        isLanModel: Boolean = false // NEW: tells service what auth header to use
+        isLanModel: Boolean = false, // NEW: tells service what auth header to use
+        lanProvider: String? = null,        // Pass the provider (e.g., LAN_PROVIDER_LLAMA_CPP)
+        isReasoningModel: Boolean = false,  // Pass whether this specific modelId is a reasoning model
+        isThinkingEnabled: Boolean = false
     ): String? {
         val prompt = "Respond only with a 1 to 8 word title for a save title for this chat. Do not use Markdown in your response. Chat Contents: ```$chatContent```"
 
         val messages = listOf(
             FlexibleMessage(role = "user", content = JsonPrimitive(prompt))
         )
+        val thinkParam = if (lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
+            false
+        } else {
+            null // Excluded from JSON entirely if not Ollama or not a reasoning model
+        }
+        val llamaCppKwargs = if (lanProvider == LAN_PROVIDER_LLAMA_CPP && isReasoningModel) {
+            mapOf("enable_thinking" to JsonPrimitive(false))
+        } else null
 
         try {
             return withTimeout(SUGGESTION_TIMEOUT_MS) {
@@ -50,10 +63,12 @@ class LlmService(
                 val chatRequest = ChatRequest(
                     model = modelId,
                     messages = messages,
-                    max_tokens = 100,
-                    logprobs = null,
-                    temperature = 0.7,
-                    stream = false
+                    max_tokens = 40,
+                    //logprobs = null,
+                    temperature = 0.1,
+                    stream = false,
+                    think = thinkParam,             // Added Ollama logic
+                    chatTemplateKwargs = llamaCppKwargs // Added Llama.cpp logic
                 )
 
                 val response = httpClient.post(endpoint) {
