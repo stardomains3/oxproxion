@@ -119,6 +119,8 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.ranges.contains
+import kotlin.text.get
+import kotlin.text.set
 
 interface OnKeyboardShortcutListener {
     fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean
@@ -214,6 +216,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
     private var currentCameraUri: Uri? = null
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var locationPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var imagePicker: ActivityResultLauncher<Intent>  // Renamed for clarity (gallery picker)
     private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
     private lateinit var layoutManager: LinearLayoutManager
@@ -264,6 +267,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 launchCamera()
             } else {
                 Toast.makeText(requireContext(), "Camera permission needed to take photo", Toast.LENGTH_SHORT).show()
+            }
+        }
+        locationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (!isGranted) {
+                Toast.makeText(requireContext(), "Location permission is required for this tool", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -2210,7 +2220,7 @@ $cleanContent
 
                 lifecycleScope.launch {
                     val corrected = viewModel.correctText(inputText)
-                    if (corrected != null && corrected.isNotBlank()) {
+                    if (!corrected.isNullOrBlank()) {
                         chatEditText.setText(corrected)
                         chatEditText.setSelection(corrected.length)
                     } else {
@@ -3499,8 +3509,8 @@ $cleanContent
 
         // 5️⃣ Filter the list: Keep everything UNLESS it's brave_search and we don't have a key
         val filteredItems = allItems.filter { item ->
-            if (item.name == "brave_search") {
-                hasBraveKey // Only keep if key exists
+            if (item.name == "brave_search" || item.name == "find_nearby_places") {
+                hasBraveKey // Only keep Brave tools if key exists
             } else {
                 true // Keep all other tools
             }
@@ -3555,6 +3565,23 @@ $cleanContent
             row.setOnClickListener {
                 val currentItem = mutableItems[stableIndex]
                 val newState = !currentItem.isEnabled
+
+                // --- NEW: Intercept get_location if turning ON ---
+                if (currentItem.name == "get_location" && newState) {
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (!hasPermission) {
+                        // Permission not granted yet, ask the system for it
+                        locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        return@setOnClickListener // Don't toggle the checkbox yet
+                    }
+                }
+                // -----------------------------------------------
+
+                // Normal toggle behavior
                 mutableItems[stableIndex] = currentItem.copy(isEnabled = newState)
                 checkBox.isChecked = newState
             }

@@ -1,0 +1,2 @@
+- New Tool: Get Location — AI can now fetch your precise GPS/Network location, returning Plus Code, coordinates, map links, and accuracy. Requires Location permission.
+- New Tool: Brave Nearby Places — AI can search for local businesses/POIs using your current location (e.g., "nearest coffee shop"). Returns name, address, phone, website, hours, and ratings. Requires Brave API key.

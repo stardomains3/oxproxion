@@ -22,12 +22,25 @@ data class ToolItem(
                 isEnabled = "delete_files" in enabledSet
             ),
             ToolItem(
+                name = "get_location",
+                displayName = "Get Location",
+                description = "Gets current precise location with Plus Code, coordinates, map links, and accuracy",
+                isEnabled = "get_location" in enabledSet
+            ),
+            ToolItem(
                 name = "brave_search",
                 displayName = "Brave Search",
                 description = "Search the web or filter for news with Brave Search API. Supports freshness filters and SafeSearch.",
                 isEnabled = "brave_search" in enabledSet
             ),
             ToolItem(
+                name = "find_nearby_places",
+                displayName = "Brave Nearby Places",
+                description = "Searches for nearby businesses/POIs via Brave Search using current location (requires Get Location tool)",
+                isEnabled = "find_nearby_places" in enabledSet
+            ),
+
+                    ToolItem(
                 name = "set_timer",
                 displayName = "Set Timer",
                 description = "Launch Android timer with optional title",

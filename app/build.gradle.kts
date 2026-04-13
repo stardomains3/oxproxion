@@ -26,8 +26,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 181
-        versionName = "2.1.71"
+        versionCode = 182
+        versionName = "2.1.72"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -122,6 +122,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.openlocationcode)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.oss.licenses.parser)

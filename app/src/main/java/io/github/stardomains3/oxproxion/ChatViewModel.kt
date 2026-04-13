@@ -1,23 +1,34 @@
 package io.github.stardomains3.oxproxion
 
+import android.Manifest
 import android.app.Application
 import android.content.ContentResolver
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
+import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.openlocationcode.OpenLocationCode
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_LLAMA_CPP
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OLLAMA
 import io.ktor.client.HttpClient
@@ -46,6 +57,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerialName
@@ -60,6 +72,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -78,6 +91,7 @@ import org.commonmark.renderer.text.TextContentRenderer
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Base64
 import java.util.Calendar
@@ -89,6 +103,7 @@ import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.resume
 
 @Serializable
 data class OpenRouterResponse(val data: List<ModelData>)
@@ -898,6 +913,51 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 )
             ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "find_nearby_places",
+                    description = "Finds nearby businesses, landmarks, and points of interest using the user's current coordinates. Returns names, addresses, ratings, distance, and hours. Use this when the user asks for nearby restaurants, hospitals, coffee shops, etc. IMPORTANT: You MUST call 'get_location' first to get the user's coordinates before using this tool.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("query") {
+                                put("type", "string")
+                                put("description", "What to look for (e.g., 'coffee shops', 'hospital', 'pizza'). Omit for general area exploration.")
+                            }
+                            putJsonObject("latitude") {
+                                put("type", "number")
+                                put("description", "Latitude of the search center. Must be obtained from the get_location tool first.")
+                            }
+                            putJsonObject("longitude") {
+                                put("type", "number")
+                                put("description", "Longitude of the search center. Must be obtained from the get_location tool first.")
+                            }
+                            putJsonObject("radius") {
+                                put("type", "integer")
+                                put("description", "Search radius in meters. Default is 5000 (approx 3 miles). Under 20000 is best for 'near me' queries.")
+                            }
+                        }
+                        putJsonArray("required") {
+                            add(JsonPrimitive("query"))
+                            add(JsonPrimitive("latitude"))
+                            add(JsonPrimitive("longitude"))
+                        }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "get_location",
+                    description = "Gets the user's current precise location, including Plus Code, latitude/longitude, timestamp, accuracy, and map links (Apple, Google, OpenStreetMap). Use when the user asks where they are, to share their location, or for any task requiring their current coordinates.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {}
+                        putJsonArray("required") {}
+                    }
+                )
+            ),
 
             Tool(
                 type = "function",
@@ -1359,6 +1419,38 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         "Error deleting files: ${e.message}"
                     }
                 }
+                "find_nearby_places" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val query = arguments["query"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val latitude = arguments["latitude"]?.jsonPrimitive?.doubleOrNull
+                        val longitude = arguments["longitude"]?.jsonPrimitive?.doubleOrNull
+                        val radius = arguments["radius"]?.jsonPrimitive?.intOrNull ?: 5000
+
+                        if (latitude == null || longitude == null) {
+                            "Error: Latitude and longitude are required. Use the get_location tool first."
+                        } else {
+                            searchNearbyPlaces(query, latitude, longitude, radius)
+                        }
+                    } catch (e: Exception) {
+                        "Error finding nearby places: ${e.message}"
+                    }
+                }
+                "get_location" -> {
+                    try {
+                        val context = getApplication<Application>().applicationContext
+                        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+                        if (!hasFine && !hasCoarse) {
+                            "Permission denied: Location permission has not been granted to the app. Please ask the user to grant location permission in app settings."
+                        } else {
+                            fetchCurrentLocation()
+                        }
+                    } catch (e: Exception) {
+                        "Error checking location permissions: ${e.message}"
+                    }
+                }
                 "brave_search" -> {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
@@ -1532,6 +1624,205 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         return sb.toString()
+    }
+    private suspend fun fetchCurrentLocation(): String {
+        return withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { continuation ->
+                val context = getApplication<Application>().applicationContext
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+                val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+
+                if (!isGpsEnabled && !isNetworkEnabled) {
+                    continuation.resume("Location is disabled on the device. Please enable it in settings.")
+                    return@suspendCancellableCoroutine
+                }
+
+                val handler = Handler(Looper.getMainLooper())
+                val timeoutMillis = 30000L
+                val desiredAccuracyMeters = 10f
+
+                val locationListener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        if (location.hasAccuracy() && location.accuracy <= desiredAccuracyMeters) {
+                            cleanup()
+                            continuation.resume(buildLocationResult(location))
+                        }
+                        // If accuracy > 10m, we just keep listening (like old app)
+                    }
+
+                    override fun onProviderDisabled(provider: String) {
+                        if (provider == LocationManager.GPS_PROVIDER && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                            // GPS turned off mid-search, fallback handled by timeout
+                        } else if (!locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                            cleanup()
+                            continuation.resume("Location provider was disabled during search.")
+                        }
+                    }
+
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+
+                    private fun cleanup() {
+                        handler.removeCallbacksAndMessages(null)
+                        try { locationManager.removeUpdates(this) } catch (_: Exception) {}
+                    }
+                }
+
+                val timeoutRunnable = Runnable {
+                    try { locationManager.removeUpdates(locationListener) } catch (_: Exception) {}
+
+                    // Fallback to Network Provider (equivalent to your doLocation2())
+                    if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                        try {
+                            val lastNetLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                            if (lastNetLocation != null) {
+                                continuation.resume(buildLocationResult(lastNetLocation))
+                            } else {
+                                continuation.resume("GPS timed out (accuracy not met) and no Network location was available.")
+                            }
+                        } catch (e: SecurityException) {
+                            continuation.resume("GPS timed out and Network location permission was denied.")
+                        }
+                    } else {
+                        continuation.resume("Location request timed out (accuracy not met within 40 seconds) and no fallback was available.")
+                    }
+                }
+
+                handler.postDelayed(timeoutRunnable, timeoutMillis)
+
+                try {
+                    if (isGpsEnabled) {
+                        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, locationListener)
+                    } else if (isNetworkEnabled) {
+                        // If GPS is off entirely, just use Network immediately
+                        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000L, 0f, locationListener)
+                    }
+                } catch (e: SecurityException) {
+                    handler.removeCallbacksAndMessages(null)
+                    continuation.resume("Location permission denied during request.")
+                }
+
+                continuation.invokeOnCancellation {
+                    handler.removeCallbacksAndMessages(null)
+                    try { locationManager.removeUpdates(locationListener) } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
+    private fun buildLocationResult(location: Location): String {
+        val plusCode = OpenLocationCode.encode(location.latitude, location.longitude)
+        val lat = location.latitude.toString()
+        val lon = location.longitude.toString()
+        val lsds = location.provider.toString()
+        val acc = location.accuracy.toString()
+
+        val timeLong = try { location.time } catch (e: Exception) { System.currentTimeMillis() }
+        val date = Date(timeLong)
+        val dateFormat = SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.getDefault())
+        val formattedTime = dateFormat.format(date)
+
+        val osm = "http://www.openstreetmap.org/?lat=$lat&lon=$lon&zoom=17"
+        val apple1 = URLEncoder.encode("$lat,$lon", "UTF-8")
+        val apple = "https://maps.apple.com/?q=$apple1"
+        val google1 = URLEncoder.encode(plusCode, "UTF-8")
+        val google = "https://maps.google.com/?q=$google1"
+
+        return "My Location(via $lsds) @: $formattedTime:\n\nPlus Code: $plusCode\n\n$lat,$lon\n\n$apple\n\n$google\n\n$osm\n\naccuracy: $acc meters"
+    }
+    private suspend fun searchNearbyPlaces(
+        query: String,
+        latitude: Double,
+        longitude: Double,
+        radius: Int
+    ): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val apiKey = sharedPreferencesHelper.getApiKeyFromPrefs("brave_search_api_key")
+
+                val userCountry = Locale.getDefault().country
+                val units = if (userCountry == "US" || userCountry == "LR" || userCountry == "MM") "imperial" else "metric"
+
+                val urlBuilder = StringBuilder("https://api.search.brave.com/res/v1/local/place_search").apply {
+                    append("?q=").append(java.net.URLEncoder.encode(query, "UTF-8"))
+                    append("&latitude=").append(latitude)
+                    append("&longitude=").append(longitude)
+                    append("&radius=").append(radius)
+                    append("&count=10")
+                    append("&units=").append(units)
+                }
+
+
+                val response = httpClient.get(urlBuilder.toString()) {
+                    header("Accept", "application/json")
+                    header("X-Subscription-Token", apiKey)
+                }
+
+                if (!response.status.isSuccess()) {
+                    val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details" }
+                    return@withContext "Brave Place Search Error: ${response.status} – $errorBody"
+                }
+
+                val data = response.body<JsonObject>()
+                val resultsArray = data["results"]?.jsonArray
+
+                if (resultsArray == null || resultsArray.isEmpty()) {
+                    return@withContext "No nearby places found for: $query"
+                }
+
+                val sb = StringBuilder()
+                sb.appendLine("## Nearby Places for: \"$query\" (within ${radius}m)")
+                sb.appendLine()
+
+                resultsArray.forEachIndexed { index, element ->
+                    val result = element.jsonObject
+                    val title = result["title"]?.jsonPrimitive?.content ?: "Untitled"
+                    val address = result["postal_address"]?.jsonObject?.get("displayAddress")?.jsonPrimitive?.contentOrNull ?: ""
+                    val distance = result["distance"]?.jsonObject?.let { distObj ->
+                        val value = distObj["value"]?.jsonPrimitive?.doubleOrNull
+                        val units = distObj["units"]?.jsonPrimitive?.contentOrNull ?: ""
+                        if (value != null) "$value $units" else ""
+                    } ?: ""
+
+                    val ratingObj = result["rating"]?.jsonObject
+                    val ratingValue = ratingObj?.get("ratingValue")?.jsonPrimitive?.doubleOrNull
+                    val reviewCount = ratingObj?.get("reviewCount")?.jsonPrimitive?.intOrNull
+                    val ratingStr = if (ratingValue != null) {
+                        if (reviewCount != null) "$ratingValue/5 ($reviewCount reviews)" else "$ratingValue/5"
+                    } else ""
+
+                    val priceRange = result["price_range"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val phone = result["phone"]?.jsonPrimitive?.contentOrNull
+                        ?: result["provider_url"]?.jsonPrimitive?.contentOrNull?.substringAfterLast("/")?.replace("-", " ")
+
+                    val website = result["url"]?.jsonPrimitive?.contentOrNull ?: ""
+
+
+                    // Parse today's hours simply
+                    val hoursStr = result["opening_hours"]?.jsonObject?.get("current_day")?.jsonArray?.firstOrNull()?.jsonObject?.let { dayObj ->
+                        val opens = dayObj["opens"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val closes = dayObj["closes"]?.jsonPrimitive?.contentOrNull ?: ""
+                        if (opens.isNotBlank() && closes.isNotBlank()) "Today: $opens-$closes" else ""
+                    } ?: ""
+
+                    sb.appendLine("### ${index + 1}. $title")
+                    if (address.isNotBlank()) sb.appendLine("Address: $address")
+                    if (distance.isNotBlank()) sb.appendLine("Distance: $distance")
+                    if (phone != null && phone.isNotBlank()) sb.appendLine("Phone: $phone") // NEW
+                    if (website.isNotBlank()) sb.appendLine("Website: $website")           // NEW
+                    if (ratingStr.isNotBlank()) sb.appendLine("Rating: $ratingStr")
+                    if (priceRange.isNotBlank()) sb.appendLine("Price: $priceRange")
+                    if (hoursStr.isNotBlank()) sb.appendLine("Hours: $hoursStr")
+                    sb.appendLine()
+
+                }
+
+                sb.toString()
+            } catch (e: Exception) {
+                "Error: Brave Place Search failed – ${e.message}"
+            }
+        }
     }
     private suspend fun searchBrave(
         query: String,
@@ -3148,19 +3439,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.IO) {
                     createHttpClient().use { localClient ->
 
-                        val thinkParam = if (isLanModel && lanProvider == SharedPreferencesHelper.LAN_PROVIDER_OLLAMA && isReasoningModel) {
+                        val thinkParam = if (isLanModel && lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
                             false
                         } else {
                             null
                         }
 
-                        val llamaCppKwargs = if (isLanModel && lanProvider == SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP && isReasoningModel) {
-                            mapOf("enable_thinking" to JsonPrimitive(false))
-                        } else null
+                        /* val llamaCppKwargs = if (isLanModel && lanProvider == SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP && isReasoningModel) {
+                             mapOf("enable_thinking" to JsonPrimitive(false))
+                         } else null*/
 
                         val requestBody = buildJsonObject {
                             put("model", JsonPrimitive(modelToUse))
-                          //  put("temperature", JsonPrimitive(0.1))
+                            // put("temperature", JsonPrimitive(0.1))
                             putJsonArray("messages") {
                                 add(buildJsonObject {
                                     put("role", JsonPrimitive("system"))
@@ -3221,7 +3512,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         } catch (e: Throwable) {
-            //Log.e("ChatViewModel", "AI Fix failed", e)
+           // Log.e("ChatViewModel", "AI Fix failed", e)
             null
         }
     }
