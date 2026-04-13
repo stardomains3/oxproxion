@@ -1793,8 +1793,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     } else ""
 
                     val priceRange = result["price_range"]?.jsonPrimitive?.contentOrNull ?: ""
-                    val phone = result["phone"]?.jsonPrimitive?.contentOrNull
-                        ?: result["provider_url"]?.jsonPrimitive?.contentOrNull?.substringAfterLast("/")?.replace("-", " ")
+                    val phone = result["contact"]?.jsonObject?.get("telephone")?.jsonPrimitive?.contentOrNull ?: ""
 
                     val website = result["url"]?.jsonPrimitive?.contentOrNull ?: ""
 
