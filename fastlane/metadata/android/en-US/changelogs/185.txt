@@ -1,0 +1,12 @@
+🚀 Notable Changes
+
+- Android 17 HTTPS Preparation: In anticipation of Android 17 restricting cleartext HTTP traffic (android:usesCleartextTraffic="true"), we've upgraded LAN networking to fully support secure HTTPS connections.
+- Self-Signed Certificate Support for llama.cpp: You can now run your local llama server with HTTPS using self-signed certificates (via --ssl-key-file and --ssl-cert-file). The app will securely connect to your local server without certificate validation errors.
+- Isolated Network Transports: Introduced a dedicated, isolated network client specifically for LAN connections. This ensures that your public internet traffic (OpenRouter, etc.) remains strictly secured by standard SSL validation, while only local LAN traffic is permitted to bypass self-signed certificate checks.
+
+🛠️ How to Use: If you are running a local llama.cpp server, you can now generate a self-signed certificate and key on your host machine and start the server with HTTPS:
+
+bash
+
+./llama-server -m model.gguf --ssl-key-file key.pem --ssl-cert-file cert.pem
+Enter in the app the correct Https LAN IP address and the app will automatically handle the secure HTTPS connection to your local IP.

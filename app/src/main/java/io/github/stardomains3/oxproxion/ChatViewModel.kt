@@ -92,6 +92,8 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.URLEncoder
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.text.SimpleDateFormat
 import java.util.Base64
 import java.util.Calendar
@@ -102,6 +104,8 @@ import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 
@@ -198,6 +202,39 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     writeTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     connectTimeout(60_000L, TimeUnit.MILLISECONDS)
+                }
+            }
+        }
+    }
+    private fun createLanHttpClient(): HttpClient {
+        val timeoutMs = sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L
+
+        return HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+
+            engine {
+                config {
+                    // --- START SSL BYPASS (Strictly for LAN) ---
+                    val trustAllCerts = object : X509TrustManager {
+                        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                    }
+                    val sslContext = SSLContext.getInstance("SSL")
+                    sslContext.init(null, arrayOf(trustAllCerts), SecureRandom())
+
+                    sslSocketFactory(sslContext.socketFactory, trustAllCerts)
+                    hostnameVerifier { _, _ -> true }
+                    // --- END SSL BYPASS ---
+
+                    addInterceptor(CompressionInterceptor(Gzip))
+                    addInterceptor(BrotliInterceptor)
+                    readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    writeTimeout(30_000L, TimeUnit.MILLISECONDS)
+                    connectTimeout(30_000L, TimeUnit.MILLISECONDS)
                 }
             }
         }
@@ -352,6 +389,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     //val generatedImages = mutableMapOf<Int, String>()
     private var pendingUserImageUri: String? = null  // String (toString())
     private var httpClient: HttpClient
+    private var lanHttpClient: HttpClient
     private var llmService: LlmService
     private val sharedPreferencesHelper: SharedPreferencesHelper = SharedPreferencesHelper(application)
     //private val soundManager: SoundManager
@@ -367,6 +405,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         })
         httpClient = createHttpClient()
+        lanHttpClient = createLanHttpClient()
         /*httpClient = HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             engine {
@@ -399,9 +438,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        //   soundManager.release()
-        httpClient.close() // Prevent leaks
+        httpClient.close()
+        lanHttpClient.close()
     }
+
 
     /*fun playCancelTone() {
         soundManager.playCancelTone()
@@ -2022,7 +2062,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 )
 
             try {
-                httpClient.preparePost(activeChatUrl) {
+                lanHttpClient.preparePost(activeChatUrl) {
                     header("Authorization", "Bearer $activeChatApiKey")
                     contentType(ContentType.Application.Json)
                     setBody(chatRequest)
@@ -2675,7 +2715,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     toolChoice = if (_isToolsEnabled.value == true) "auto" else null
                 )
 
-                val response = httpClient.post(activeChatUrl) {
+                val response = lanHttpClient.post(activeChatUrl) {
                     header("Authorization", "Bearer $activeChatApiKey")
                     contentType(ContentType.Application.Json)
                     setBody(chatRequest)
@@ -2991,7 +3031,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun refreshHttpClient() {
         httpClient.close()
+        lanHttpClient.close()
         httpClient = createHttpClient()
+        lanHttpClient = createLanHttpClient()
         llmService = LlmService(httpClient, activeChatUrl)
     }
     private fun handleSuccessResponse(
@@ -4334,7 +4376,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             try {
-                val response = httpClient.get("$lanEndpoint/v1/models") {
+                val response = lanHttpClient.get("$lanEndpoint/v1/models") {
                     timeout { requestTimeoutMillis = 10000 }  // Per-call short timeout (Ktor)
                 }
                 if (!response.status.isSuccess()) {
@@ -4436,7 +4478,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             try {
-                val response = httpClient.get("$lanEndpoint/api/tags") {
+                val response = lanHttpClient.get("$lanEndpoint/api/tags") {
                     timeout { requestTimeoutMillis = 10000 }  // Per-call short timeout (Ktor)
                 }
                 if (!response.status.isSuccess()) {
@@ -4488,7 +4530,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             try {
-                val response = httpClient.get("$lanEndpoint/v1/models") {
+                val response = lanHttpClient.get("$lanEndpoint/v1/models") {
                     timeout { requestTimeoutMillis = 10000 }
                 }
                 if (!response.status.isSuccess()) {
