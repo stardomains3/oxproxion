@@ -852,30 +852,25 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "make_file",
-                    description = "Creates a text file (e.g., .txt, .md, .html,.json) and saves it to the public Downloads folder. Content should be plain text or structured text like JSON/YAML. **Important:** Use RAW, UNESCAPED content in the 'content' parameter - it gets written directly to disk as-is via OutputStream. No HTML entities, no escaping needed. Only use when the user specifically asks for a file to be made.",
+                    description = "Creates a text file (e.g., .txt, .md, .html, .json) and saves it to the Download/oxproxion workspace. Content should be plain text or structured text. **Important:** Use RAW, UNESCAPED content in the 'content' parameter - it gets written directly to disk as-is via OutputStream. No HTML entities, no escaping needed. Only use when the user specifically asks for a file to be made.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
                             putJsonObject("filename") {
                                 put("type", "string")
-                                put(
-                                    "description",
-                                    "The name of the text file to create, including extension (e.g., summary.txt, data.json)."
-                                )
+                                put("description", "The name of the text file to create, including extension (e.g., summary.txt, data.json).")
                             }
                             putJsonObject("content") {
                                 put("type", "string")
-                                put(
-                                    "description",
-                                    "The plain text content for the file (e.g., summary or JSON data)."
-                                )
+                                put("description", "The plain text content for the file (e.g., summary or JSON data).")
                             }
                             putJsonObject("mimetype") {
                                 put("type", "string")
-                                put(
-                                    "description",
-                                    "MIME type for the text file, e.g., text/plain, application/json, text/markdown."
-                                )
+                                put("description", "MIME type for the text file, e.g., text/plain, application/json, text/markdown.")
+                            }
+                            putJsonObject("subfolder") {
+                                put("type", "string")
+                                put("description", "Optional subfolder inside the oxproxion workspace to save the file into (e.g., 'Skills', 'Notes'). Leave empty to save in the root oxproxion folder.")
                             }
                         }
                         putJsonArray("required") {
@@ -887,6 +882,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 )
             ),
             Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "create_folder",
+                    description = "Creates a new subfolder in the Download/oxproxion workspace. Use this when the user explicitly asks to create a folder or organize files into a new directory.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("folder_path") {
+                                put("type", "string")
+                                put("description", "The name or relative path of the folder to create (e.g., 'Archives' or 'Projects/Web').")
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("folder_path")) }
+                    }
+                )
+            ),
+
+                    Tool(
                 type = "function",
                 function = FunctionTool(
                     name = "set_timer",
@@ -991,21 +1004,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "delete_files",
-                    description = "Deletes one or more files from the Download/oxproxion workspace folder. Use this when the user wants to remove files they've created. Confirm with the user before deleting if they didn't explicitly ask for deletion.",
+                    description = "Deletes one or more files from the Download/oxproxion workspace folder. Use this when the user wants to remove files. Confirm with the user before deleting if they didn't explicitly ask for deletion.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
-                            putJsonObject("filenames") {
+                            putJsonObject("filepaths") {
                                 put("type", "array")
                                 putJsonArray("items") {
                                     addJsonObject {
                                         put("type", "string")
                                     }
                                 }
-                                put("description", "List of filenames to delete (e.g., ['old_notes.txt', 'draft.json']). If only one file is requested, provide it as a single-element array (e.g., ['file.txt']). Must be filenames only, no paths.")
+                                put("description", "List of file paths to delete (e.g., ['old_notes.txt', 'Skills/draft.json']). If only one file is requested, provide it as a single-element array. Must be relative paths from the workspace root.")
                             }
                         }
-                        putJsonArray("required") { add(JsonPrimitive("filenames")) }
+                        putJsonArray("required") { add(JsonPrimitive("filepaths")) }
                     }
                 )
             ),
@@ -1013,20 +1026,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "open_file",
-                    description = "Opens an existing file from the Download/oxproxion folder using the system's default app (e.g., opens PDFs in a PDF viewer, images in gallery, etc.). Use this when the user wants to view a file they've created or that exists in the app folder.",
+                    description = "Opens an existing file from the Download/oxproxion workspace using the system's default app (e.g., opens PDFs in a PDF viewer, images in gallery). Use this when the user wants to view a file.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
-                            putJsonObject("filename") {
+                            putJsonObject("filepath") {
                                 put("type", "string")
-                                put("description", "The name of the file to open (e.g., 'document.pdf', 'image.png'). Just the filename, not the full path.")
+                                put("description", "The relative path of the file to open (e.g., 'document.pdf' or 'Skills/image.png').")
                             }
                             putJsonObject("mimetype") {
                                 put("type", "string")
                                 put("description", "Optional MIME type hint (e.g., 'application/pdf', 'image/png'). If not provided, the system will infer from file extension.")
                             }
                         }
-                        putJsonArray("required") { add(JsonPrimitive("filename")) }
+                        putJsonArray("required") { add(JsonPrimitive("filepath")) }
                     }
                 )
             ),
@@ -1142,11 +1155,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "list_oxproxion_files",
-                    description = "Lists all files in the Download/oxproxion folder. Returns a list of filenames that can be read using the read_oxproxion_file tool.",
+                    description = "Lists all files and subfolders in the Download/oxproxion folder or a specified subfolder. Returns names with relative paths (e.g., 'Skills/data.json'). Use this to find files before reading them.",
                     parameters = buildJsonObject {
                         put("type", "object")
-                        putJsonObject("properties") {}
-                        putJsonArray("required") {}
+                        putJsonObject("properties") {
+                            putJsonObject("path") {
+                                put("type", "string")
+                                put("description", "Optional subfolder path to list (e.g., 'Skills'). Leave empty or omit to list the root Download/oxproxion folder.")
+                            }
+                        }
+                        putJsonArray("required") {} // Path is optional
                     }
                 )
             ),
@@ -1154,22 +1172,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "read_oxproxion_file",
-                    description = "Reads the contents of a single text file from the Download/oxproxion folder. Only reads text-based files (e.g., .txt, .md, .json, .html). Use list_oxproxion_files first to see available files.",
+                    description = "Reads the contents of a single text file from the Download/oxproxion workspace. Only reads text-based files (e.g., .txt, .md, .json). Use list_oxproxion_files first to see available files and their paths.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
-                            putJsonObject("filename") {
+                            putJsonObject("filepath") {
                                 put("type", "string")
                                 put(
                                     "description",
-                                    "The name of the file to read (e.g., 'notes.txt', 'data.json'). Just the filename, not the full path."
+                                    "The relative path of the file to read (e.g., 'notes.txt' or 'Skills/data.json')."
                                 )
                             }
                         }
-                        putJsonArray("required") { add(JsonPrimitive("filename")) }
+                        putJsonArray("required") { add(JsonPrimitive("filepath")) }
                     }
                 )
-            )
+            ),
             // Add more tools here as your app grows – the filtering logic below stays the same!
         )
 
@@ -1282,6 +1300,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         error
                     }
                 }
+                "create_folder" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val folderPath = arguments["folder_path"]?.jsonPrimitive?.content
+                        if (folderPath != null) {
+                            createFolderInWorkspaceViaMediaStore(folderPath)
+                            "Folder '$folderPath' created successfully." // <--- Add this line!
+                        } else {
+                            "Error: No folder_path provided."
+                        }
+                    } catch (e: Exception) {
+                        "Error creating folder: ${e.message}"
+                    }
+                }
+
+
 
                 "add_calendar_event" -> {
                     try {
@@ -1391,29 +1425,33 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val filename = args["filename"]?.jsonPrimitive?.content ?: ""
                         val content = args["content"]?.jsonPrimitive?.content ?: ""
                         val mimeType = args["mimetype"]?.jsonPrimitive?.content ?: "text/plain"
+                        val subfolder = args["subfolder"]?.jsonPrimitive?.contentOrNull ?: "" // NEW
 
                         if (filename.isBlank() || content.isBlank()) {
                             "Error: filename or content empty."
                         } else {
-                            saveFileToDownloads(filename, content, mimeType)
-                            _toolUiEvent.postValue(Event("File saved to Downloads: $filename"))
-                            "File “$filename” successfully created in Downloads."
+                            // Use the new function instead of saveFileToDownloads
+                            saveFileToOpenChatWorkspace(filename, content, mimeType, subfolder)
+
+                            val displayPath = if (subfolder.isNotBlank()) "oxproxion/$subfolder/$filename" else "oxproxion/$filename"
+                            _toolUiEvent.postValue(Event("File saved to Downloads: $displayPath"))
+                            "File “$filename” successfully created in Downloads/$displayPath."
                         }
                     } catch (e: Exception) {
-
+                        //  Log.e("ToolCall", "make_file failed", e)
                         "Error creating file: ${e.message}"
                     }
                 }
                 "delete_files" -> {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
-                        val filenamesJson = arguments["filenames"]?.jsonArray
+                        val filepathsJson = arguments["filepaths"]?.jsonArray
 
-                        if (filenamesJson != null && filenamesJson.isNotEmpty()) {
-                            val filenames = filenamesJson.mapNotNull { it.jsonPrimitive.contentOrNull }
-                            deleteFilesViaSaf(filenames)
+                        if (filepathsJson != null && filepathsJson.isNotEmpty()) {
+                            val filepaths = filepathsJson.mapNotNull { it.jsonPrimitive.contentOrNull }
+                            deleteFilesViaSaf(filepaths)
                         } else {
-                            "Error: No filenames provided."
+                            "Error: No filepaths provided."
                         }
                     } catch (e: Exception) {
                         "Error deleting files: ${e.message}"
@@ -1469,25 +1507,29 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         "Error: Failed to search with Brave – ${e.message}"
                     }
                 }
+
                 "open_file" -> {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
-                        val filename = arguments["filename"]?.jsonPrimitive?.content
+                        val filepath = arguments["filepath"]?.jsonPrimitive?.content
                         val mimeType = arguments["mimetype"]?.jsonPrimitive?.content
 
-                        if (filename != null) {
-                            openFileViaSaf(filename, mimeType)
+                        if (filepath != null) {
+                            openFileViaSaf(filepath, mimeType)
                         } else {
-                            "Error: No filename provided."
+                            "Error: No filepath provided."
                         }
                     } catch (e: Exception) {
                         "Error opening file: ${e.message}"
                     }
                 }
 
+
                 "list_oxproxion_files" -> {
                     try {
-                        listOpenChatFilesViaSaf()
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val path = arguments["path"]?.jsonPrimitive?.contentOrNull ?: ""
+                        listOpenChatFilesViaSaf(path)
                     } catch (e: Exception) {
                         "Error listing files: ${e.message}"
                     }
@@ -1496,11 +1538,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 "read_oxproxion_file" -> {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
-                        val filename = arguments["filename"]?.jsonPrimitive?.content
-                        if (filename != null) {
-                            readOpenChatFileViaSaf(filename)
+                        val filepath = arguments["filepath"]?.jsonPrimitive?.content
+                        if (filepath != null) {
+                            readOpenChatFileViaSaf(filepath)
                         } else {
-                            "Error: No filename provided."
+                            "Error: No filepath provided."
                         }
                     } catch (e: Exception) {
                         "Error reading file: ${e.message}"
@@ -1753,7 +1795,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     append("&units=").append(units)
                 }
 
-
                 val response = httpClient.get(urlBuilder.toString()) {
                     header("Accept", "application/json")
                     header("X-Subscription-Token", apiKey)
@@ -1779,10 +1820,30 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val result = element.jsonObject
                     val title = result["title"]?.jsonPrimitive?.content ?: "Untitled"
                     val address = result["postal_address"]?.jsonObject?.get("displayAddress")?.jsonPrimitive?.contentOrNull ?: ""
+
+                    // --- NEW: Extract Coordinates ---
+                    val coordinatesArray = result["coordinates"]?.jsonArray
+                    val placeLat = coordinatesArray?.get(0)?.jsonPrimitive?.doubleOrNull
+                    val placeLng = coordinatesArray?.get(1)?.jsonPrimitive?.doubleOrNull
+
+                    // --- NEW: Generate Google Maps Link ---
+                    val mapsLink = if (placeLat != null && placeLng != null) {
+                        "https://www.google.com/maps/search/?api=1&query=$placeLat,$placeLng"
+                    } else {
+                        // Fallback to website if coordinates are missing
+                        result["url"]?.jsonPrimitive?.contentOrNull ?: ""
+                    }
+                    val appleMapsLink = if (placeLat != null && placeLng != null) {
+                        "https://maps.apple.com/?q=$placeLat,$placeLng"
+                    } else {
+                        ""
+                    }
+                    // ---------------------------------
+
                     val distance = result["distance"]?.jsonObject?.let { distObj ->
                         val value = distObj["value"]?.jsonPrimitive?.doubleOrNull
-                        val units = distObj["units"]?.jsonPrimitive?.contentOrNull ?: ""
-                        if (value != null) "$value $units" else ""
+                        val distUnits = distObj["units"]?.jsonPrimitive?.contentOrNull ?: ""
+                        if (value != null) "$value $distUnits" else ""
                     } ?: ""
 
                     val ratingObj = result["rating"]?.jsonObject
@@ -1797,7 +1858,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                     val website = result["url"]?.jsonPrimitive?.contentOrNull ?: ""
 
-
                     // Parse today's hours simply
                     val hoursStr = result["opening_hours"]?.jsonObject?.get("current_day")?.jsonArray?.firstOrNull()?.jsonObject?.let { dayObj ->
                         val opens = dayObj["opens"]?.jsonPrimitive?.contentOrNull ?: ""
@@ -1808,8 +1868,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     sb.appendLine("### ${index + 1}. $title")
                     if (address.isNotBlank()) sb.appendLine("Address: $address")
                     if (distance.isNotBlank()) sb.appendLine("Distance: $distance")
-                    if (phone != null && phone.isNotBlank()) sb.appendLine("Phone: $phone") // NEW
-                    if (website.isNotBlank()) sb.appendLine("Website: $website")           // NEW
+                    if (phone.isNotBlank()) sb.appendLine("Phone: $phone")
+                    if (website.isNotBlank()) sb.appendLine("Website: $website")
+                    if (mapsLink.isNotBlank()) sb.appendLine("Google Maps: $mapsLink") // NEW
+                    if (appleMapsLink.isNotBlank()) sb.appendLine("Apple Maps: $appleMapsLink")
                     if (ratingStr.isNotBlank()) sb.appendLine("Rating: $ratingStr")
                     if (priceRange.isNotBlank()) sb.appendLine("Price: $priceRange")
                     if (hoursStr.isNotBlank()) sb.appendLine("Hours: $hoursStr")
@@ -3226,6 +3288,105 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun hasGeneratedImagesInChat(): Boolean = _chatMessages.value?.any {
         it.role == "assistant" && !it.imageUri.isNullOrEmpty()
     } ?: false
+
+    private fun saveFileToOpenChatWorkspace(filename: String, content: String, mimeType: String, subfolder: String = "") {
+        val context = getApplication<Application>().applicationContext
+
+        // Sanitize the subfolder path (remove leading slashes, prevent directory traversal)
+        val safeSubfolder = subfolder.trim().removePrefix("/").removeSuffix("/")
+        if (safeSubfolder.contains("..")) {
+            throw Exception("Invalid path: Directory traversal not allowed.")
+        }
+
+        // Construct the relative path (e.g., "Downloads/oxproxion" or "Downloads/oxproxion/Skills")
+        val relativePath = if (safeSubfolder.isNotBlank()) {
+            "${Environment.DIRECTORY_DOWNLOADS}/oxproxion/$safeSubfolder"
+        } else {
+            "${Environment.DIRECTORY_DOWNLOADS}/oxproxion"
+        }
+
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+        }
+
+        // Check if file already exists in that path to prevent MediaStore crash on duplicate names
+        // MediaStore throws an error if you insert a file with the exact same name in the same folder.
+        val baseName = filename.substringBeforeLast(".")
+        val extension = filename.substringAfterLast(".", "")
+        var finalFilename = filename
+
+        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
+        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+        val selectionArgs = arrayOf(filename, "%$relativePath%")
+
+        context.contentResolver.query(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                // File exists, append timestamp to make it unique
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                finalFilename = if (extension.isNotBlank()) {
+                    "${baseName}_$timestamp.$extension"
+                } else {
+                    "${baseName}_$timestamp"
+                }
+            }
+        }
+
+        // Update the values with the final filename (in case it was renamed)
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, finalFilename)
+
+        val uri = context.contentResolver
+            .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw Exception("MediaStore insert failed")
+
+        context.contentResolver.openOutputStream(uri)?.use { out ->
+            out.write(content.toByteArray())
+        } ?: throw Exception("Cannot open output stream")
+    }
+
+    private fun createFolderInWorkspaceViaMediaStore(folderPath: String) {
+        val context = getApplication<Application>().applicationContext
+
+        // Security check
+        if (folderPath.contains("\\") || folderPath.contains("..")) {
+            throw Exception("Invalid path: Backslashes and parent directories (..) are not allowed.")
+        }
+
+        val safeFolderPath = folderPath.trim().removePrefix("/").removeSuffix("/")
+        if (safeFolderPath.isBlank()) {
+            throw Exception("Folder path cannot be empty.")
+        }
+
+        // Construct the relative path (e.g., "Downloads/oxproxion/Archives")
+        val relativePath = "${Environment.DIRECTORY_DOWNLOADS}/oxproxion/$safeFolderPath"
+
+        // Quirk: MediaStore only creates folders when a file is created inside them.
+        // So, we create a temporary dummy file, then delete it. The folder remains!
+        val dummyFilename = ".folder_placeholder_temp"
+
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, dummyFilename)
+            put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+        }
+
+        val uri = context.contentResolver
+            .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw Exception("Failed to create folder (MediaStore insert failed)")
+
+        // Immediately delete the dummy file
+        context.contentResolver.delete(uri, null, null)
+    }
+
+
+
     private fun saveFileToDownloads(filename: String, content: String, mimeType: String) {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
@@ -4887,7 +5048,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 </body></html>
     """.trimIndent()
     }
-    private suspend fun listOpenChatFilesViaSaf(): String {
+    private suspend fun listOpenChatFilesViaSaf(path: String = ""): String {
         return withContext(Dispatchers.IO) {
             val uriString = sharedPreferencesHelper.getSafFolderUri()
                 ?: return@withContext "Error: App does not have permission to read the folder yet. Tell the user to tap the 'Select Folder' button in the app settings to grant access."
@@ -4895,20 +5056,46 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val context = getApplication<Application>().applicationContext
                 val treeUri = uriString.toUri()
-                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                var currentDir = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                    ?: return@withContext "Error: Could not access the workspace folder."
 
-                if (documentFile == null || !documentFile.canRead()) {
+                // Navigate to subfolder if a path was provided
+                if (path.isNotBlank()) {
+                    if (path.contains("\\") || path.contains("..")) {
+                        return@withContext "Error: Invalid path characters."
+                    }
+                    val parts = path.trim('/').split("/")
+                    for (dirName in parts) {
+                        if (dirName.isBlank()) continue
+                        val nextDir = currentDir.findFile(dirName)
+                        if (nextDir == null || !nextDir.isDirectory) {
+                            return@withContext "Error: Subfolder '$dirName' not found."
+                        }
+                        currentDir = nextDir
+                    }
+                }
+
+                if (!currentDir.canRead()) {
                     return@withContext "Error: Lost access to the folder. Ask the user to re-select it."
                 }
 
-                val fileList = documentFile.listFiles()
-                    .filter { it.isFile && it.name != null }
-                    .map { it.name!! }
+                val fileList = mutableListOf<String>()
+                val basePath = if (path.isNotBlank()) path.trimEnd('/') + "/" else ""
+
+                for (doc in currentDir.listFiles()) {
+                    val name = doc.name ?: continue
+                    if (doc.isDirectory) {
+                        // Mark directories so the AI knows it can navigate into them
+                        fileList.add("[Folder] $basePath$name/")
+                    } else if (doc.isFile) {
+                        fileList.add("$basePath$name")
+                    }
+                }
 
                 if (fileList.isEmpty()) {
-                    "No files found in the selected folder."
+                    "No files or folders found in '${if (path.isBlank()) "root" else path}'."
                 } else {
-                    "Files available to read:\n${fileList.joinToString("\n")}"
+                    "Available items:\n${fileList.joinToString("\n")}"
                 }
             } catch (e: Exception) {
                 "Error accessing folder: ${e.message}"
@@ -4916,10 +5103,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun readOpenChatFileViaSaf(filename: String): String {
+    private suspend fun readOpenChatFileViaSaf(filepath: String): String {
         return withContext(Dispatchers.IO) {
-            if (filename.contains("/") || filename.contains("\\") || filename.contains("..")) {
-                return@withContext "Error: Invalid filename. Path separators not allowed."
+            // Block backward slashes and parent directory traversal, but allow forward slashes
+            if (filepath.contains("\\") || filepath.contains("..")) {
+                return@withContext "Error: Invalid filepath. Backslashes and parent directories (..) are not allowed."
             }
 
             val uriString = sharedPreferencesHelper.getSafFolderUri()
@@ -4928,11 +5116,29 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val context = getApplication<Application>().applicationContext
                 val treeUri = uriString.toUri()
-                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                var currentDir = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                    ?: return@withContext "Error: Could not access the workspace folder."
 
-                // Find the specific file
-                val targetFile = documentFile?.listFiles()?.find { it.name == filename && it.isFile }
-                    ?: return@withContext "Error: File '$filename' not found."
+                val pathParts = filepath.split("/")
+                val actualFilename = pathParts.last()
+
+                // Traverse directories if it's a nested path
+                for (i in 0 until pathParts.size - 1) {
+                    val dirName = pathParts[i]
+                    if (dirName.isBlank()) continue
+
+                    val nextDir = currentDir.findFile(dirName)
+                    if (nextDir == null || !nextDir.isDirectory) {
+                        return@withContext "Error: Directory '$dirName' not found in path."
+                    }
+                    currentDir = nextDir
+                }
+
+                // Find the file in the final directory
+                val targetFile = currentDir.findFile(actualFilename)
+                    ?: return@withContext "Error: File '$filepath' not found."
+
+                if (!targetFile.isFile) return@withContext "Error: '$filepath' is not a file."
 
                 // Limit size to ~10MB
                 if (targetFile.length() > 10 * 1024 * 1024) {
@@ -4947,7 +5153,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         return@withContext "Error: Binary files cannot be read. Only text files are supported."
                     }
 
-                    return@withContext "File: $filename\n\n$content"
+                    return@withContext "File: $filepath\n\n$content"
                 } ?: return@withContext "Error: Could not open input stream."
 
             } catch (e: Exception) {
@@ -4955,10 +5161,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    private suspend fun openFileViaSaf(filename: String, mimeType: String?): String {
+    private suspend fun openFileViaSaf(filepath: String, mimeType: String?): String {
         return withContext(Dispatchers.IO) {
-            if (filename.contains("/") || filename.contains("\\") || filename.contains("..")) {
-                return@withContext "Error: Invalid filename. Path separators not allowed."
+            // Security check
+            if (filepath.contains("\\") || filepath.contains("..")) {
+                return@withContext "Error: Invalid filepath. Backslashes and parent directories (..) are not allowed."
             }
 
             val uriString = sharedPreferencesHelper.getSafFolderUri()
@@ -4967,10 +5174,29 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val context = getApplication<Application>().applicationContext
                 val treeUri = uriString.toUri()
-                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                var currentDir = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                    ?: return@withContext "Error: Could not access the workspace folder."
 
-                val targetFile = documentFile?.listFiles()?.find { it.name == filename && it.isFile }
-                    ?: return@withContext "Error: File '$filename' not found."
+                val pathParts = filepath.split("/")
+                val actualFilename = pathParts.last()
+
+                // Traverse directories if it's a nested path
+                for (i in 0 until pathParts.size - 1) {
+                    val dirName = pathParts[i]
+                    if (dirName.isBlank()) continue
+
+                    val nextDir = currentDir.findFile(dirName)
+                    if (nextDir == null || !nextDir.isDirectory) {
+                        return@withContext "Error: Directory '$dirName' not found in path."
+                    }
+                    currentDir = nextDir
+                }
+
+                // Find the file in the final directory
+                val targetFile = currentDir.findFile(actualFilename)
+                    ?: return@withContext "Error: File '$filepath' not found."
+
+                if (!targetFile.isFile) return@withContext "Error: '$filepath' is not a file."
 
                 // Use the DocumentFile's URI directly - SAF grants us persistent access
                 val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -4985,7 +5211,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 // Check if any app can handle this
                 if (intent.resolveActivity(context.packageManager) != null) {
                     context.startActivity(intent)
-                    "Opening '$filename'..."
+                    "Opening '$filepath'..."
                 } else {
                     "Error: No app found to open this file type."
                 }
@@ -4995,7 +5221,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    private suspend fun deleteFilesViaSaf(filenames: List<String>): String {
+    private suspend fun deleteFilesViaSaf(filepaths: List<String>): String {
         return withContext(Dispatchers.IO) {
             val uriString = sharedPreferencesHelper.getSafFolderUri()
                 ?: return@withContext "Error: Folder permission not granted. Ask the user to grant folder access."
@@ -5003,41 +5229,59 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val context = getApplication<Application>().applicationContext
                 val treeUri = uriString.toUri()
-                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                val rootDocumentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
                     ?: return@withContext "Error: Could not access the workspace folder."
 
                 val results = mutableListOf<String>()
-                val allFiles = documentFile.listFiles().toList()
 
-                for (filename in filenames) {
-                    // Security check
-                    if (filename.contains("/") || filename.contains("\\") || filename.contains("..")) {
-                        results.add("❌ '$filename': Invalid filename (path separators not allowed)")
+                for (filepath in filepaths) {
+                    // Security check: block backward slashes and parent directory traversal
+                    if (filepath.contains("\\") || filepath.contains("..")) {
+                        results.add("❌ '$filepath': Invalid path (backslashes or '..' not allowed)")
                         continue
                     }
 
-                    //val targetFile = documentFile.listFiles().find { it.name == filename && it.isFile }
-                    val targetFile = allFiles.find { it.name == filename && it.isFile }
+                    val pathParts = filepath.split("/")
+                    val actualFilename = pathParts.last()
+                    var currentDir = rootDocumentFile
 
-                    if (targetFile == null) {
-                        results.add("❌ '$filename': File not found")
+                    // Traverse directories if it's a nested path
+                    var pathError = false
+                    for (i in 0 until pathParts.size - 1) {
+                        val dirName = pathParts[i]
+                        if (dirName.isBlank()) continue
+
+                        val nextDir = currentDir.findFile(dirName)
+                        if (nextDir == null || !nextDir.isDirectory) {
+                            results.add("❌ '$filepath': Directory '$dirName' not found.")
+                            pathError = true
+                            break
+                        }
+                        currentDir = nextDir
+                    }
+
+                    if (pathError) continue
+
+                    // Find the file in the final directory
+                    val targetFile = currentDir.findFile(actualFilename)
+
+                    if (targetFile == null || !targetFile.isFile) {
+                        results.add("❌ '$filepath': File not found")
                     } else {
                         val deleted = targetFile.delete()
                         if (deleted) {
-                            results.add("✅ '$filename': Deleted")
+                            results.add("✅ '$filepath': Deleted")
                         } else {
-                            results.add("❌ '$filename': Delete failed")
+                            results.add("❌ '$filepath': Delete failed")
                         }
                     }
                 }
 
                 val successCount = results.count { it.startsWith("✅") }
-                val failCount = results.size - successCount
-
-                val summary = if (filenames.size == 1) {
+                val summary = if (filepaths.size == 1) {
                     results.first().removePrefix("✅ ").removePrefix("❌ ")
                 } else {
-                    "Deleted $successCount of ${filenames.size} files"
+                    "Deleted $successCount of ${filepaths.size} files"
                 }
 
                 _toastUiEvent.postValue(Event(summary))

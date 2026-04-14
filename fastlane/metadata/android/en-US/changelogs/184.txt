@@ -1,0 +1,5 @@
+- Subfolder Support: The AI can now navigate your workspace subfolders. Read, open, and delete files anywhere inside Download/oxproxion using relative paths (e.g., Skills/notes.md).
+- Create Folders: Added a new create_folder tool so the AI can organize your workspace by creating new directories.
+- Smarter File Creation: The make_file tool now accepts an optional subfolder parameter to save files directly into specific folders.
+- Better Location Sharing: When finding nearby places, the AI now extracts exact coordinates.
+- Duplicate File Handling: Creating a file that already exists no longer crashes; it safely appends a timestamp to the new file.

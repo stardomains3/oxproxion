@@ -18,7 +18,7 @@ data class ToolItem(
             ToolItem(
                 name = "delete_files",
                 displayName = "Delete File(s)",
-                description = "Deletes existing file(s) from the Download/oxproxion folder.",
+                description = "Deletes existing file(s) from the Download/oxproxion workspace.",
                 isEnabled = "delete_files" in enabledSet
             ),
             ToolItem(
@@ -39,8 +39,7 @@ data class ToolItem(
                 description = "Searches for nearby businesses/POIs via Brave Search using current location (requires Get Location tool)",
                 isEnabled = "find_nearby_places" in enabledSet
             ),
-
-                    ToolItem(
+            ToolItem(
                 name = "set_timer",
                 displayName = "Set Timer",
                 description = "Launch Android timer with optional title",
@@ -64,16 +63,22 @@ data class ToolItem(
             ToolItem(
                 name = "list_oxproxion_files",
                 displayName = "List oxproxion Files",
-                description = "List all files in the Download/oxproxion folder",
+                description = "List files and folders in the Download/oxproxion workspace, including subfolders",
                 isEnabled = "list_oxproxion_files" in enabledSet
             ),
             ToolItem(
                 name = "read_oxproxion_file",
                 displayName = "Read oxproxion File",
-                description = "Read a single text file from Download/oxproxion folder",
+                description = "Read a text-based file from the Download/oxproxion workspace.",
                 isEnabled = "read_oxproxion_file" in enabledSet
             )
             ,
+            ToolItem(
+                name = "create_folder",
+                displayName = "Create Folder",
+                description = "Creates a new subfolder in the Download/OpenChat workspace",
+                isEnabled = "create_folder" in enabledSet
+            ),
             ToolItem(
                 name = "open_file",
                 displayName = "Open File",
