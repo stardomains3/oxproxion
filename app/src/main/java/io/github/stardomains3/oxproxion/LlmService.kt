@@ -29,7 +29,7 @@ class LlmService(
     companion object {
         private const val SUGGESTION_TIMEOUT_MS = 15_000L
         private const val TAG = "LlmService"
-        private const val DEFAULT_TITLE_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
+        private const val DEFAULT_TITLE_MODEL = "google/gemma-4-26b-a4b-it"
     }
 
     suspend fun getSuggestedChatTitle(
@@ -40,7 +40,8 @@ class LlmService(
         isLanModel: Boolean = false, // NEW: tells service what auth header to use
         lanProvider: String? = null,        // Pass the provider (e.g., LAN_PROVIDER_LLAMA_CPP)
         isReasoningModel: Boolean = false,  // Pass whether this specific modelId is a reasoning model
-        isThinkingEnabled: Boolean = false
+        isThinkingEnabled: Boolean = false,
+        client: HttpClient? = null
     ): String? {
         val prompt = "Respond only with a 1 to 8 word title for a save title for this chat. Do not use Markdown in your response. Chat Contents: ```$chatContent```"
 
@@ -70,8 +71,8 @@ class LlmService(
                     think = thinkParam,             // Added Ollama logic
                     chatTemplateKwargs = llamaCppKwargs // Added Llama.cpp logic
                 )
-
-                val response = httpClient.post(endpoint) {
+                val activeClient = client ?: httpClient
+                val response = activeClient.post(endpoint) {
                     header("Authorization", authHeader)
                     contentType(ContentType.Application.Json)
                     setBody(chatRequest)

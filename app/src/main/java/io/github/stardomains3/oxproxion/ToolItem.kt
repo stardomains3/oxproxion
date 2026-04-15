@@ -35,8 +35,8 @@ data class ToolItem(
             ),
             ToolItem(
                 name = "find_nearby_places",
-                displayName = "Brave Nearby Places",
-                description = "Searches for nearby businesses/POIs via Brave Search using current location (requires Get Location tool)",
+                displayName = "Brave Place Search",
+                description = "Searches for businesses, landmarks, and POIs via Brave Place Search — by location name or coordinates",
                 isEnabled = "find_nearby_places" in enabledSet
             ),
             ToolItem(
@@ -84,7 +84,13 @@ data class ToolItem(
                 displayName = "Open File",
                 description = "Opens an existing file from the Download/oxproxion folder using the system's default app. oxproxion has to be in the foreground for this tool to work.",
                 isEnabled = "open_file" in enabledSet
-            )
+            ),
+                    ToolItem(
+                    name = "process_plus_code",
+            displayName = "Plus Code Converter",
+            description = "Convert between geographic coordinates (Lat/Long) and Plus Codes",
+            isEnabled = "process_plus_code" in enabledSet
+        ),
             // Add more tools here as your app grows
         )
     }

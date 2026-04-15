@@ -67,8 +67,10 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -924,6 +926,39 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             Tool(
                 type = "function",
                 function = FunctionTool(
+                    name = "process_plus_code",
+                    description = "A utility to convert between Plus Codes and geographic coordinates. Use 'encode' to turn lat/long into a Plus Code, or 'decode' to turn a Plus Code back into coordinates.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("action") {
+                                put("type", "string")
+                                put("enum", buildJsonArray {
+                                    add("encode")
+                                    add("decode")
+                                })
+                                put("description", "The operation to perform: 'encode' or 'decode'.")
+                            }
+                            putJsonObject("latitude") {
+                                put("type", "number")
+                                put("description", "Latitude. Required for 'encode'.")
+                            }
+                            putJsonObject("longitude") {
+                                put("type", "number")
+                                put("description", "Longitude. Required for 'encode'.")
+                            }
+                            putJsonObject("plus_code") {
+                                put("type", "string")
+                                put("description", "The Plus Code string. Required for 'decode'.")
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("action")) }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
                     name = "create_folder",
                     description = "Creates a new subfolder in the Download/oxproxion workspace. Use this when the user explicitly asks to create a folder or organize files into a new directory.",
                     parameters = buildJsonObject {
@@ -970,31 +1005,33 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "find_nearby_places",
-                    description = "Finds nearby businesses, landmarks, and points of interest using the user's current coordinates. Returns names, addresses, ratings, distance, and hours. Use this when the user asks for nearby restaurants, hospitals, coffee shops, etc. IMPORTANT: You MUST call 'get_location' first to get the user's coordinates before using this tool.",
+                    description = "Finds businesses, landmarks, and points of interest using Brave Place Search. You can search near the user's current coordinates (use get_location first) OR by a location name (e.g., 'missoula mt united states', 'tokyo japan'). Use this for any geographic place lookup: restaurants, hotels, landmarks, etc. Prefer this over brave_search when the query is about finding physical places. For US locations use format: 'city state country' (e.g., 'missoula mt united states'). For non-US: 'city country' (e.g., 'tokyo japan').",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
                             putJsonObject("query") {
                                 put("type", "string")
-                                put("description", "What to look for (e.g., 'coffee shops', 'hospital', 'pizza'). Omit for general area exploration.")
+                                put("description", "What to look for (e.g., 'coffee shops', 'hospital', 'mcdonalds'). Omit for general area exploration.")
+                            }
+                            putJsonObject("location") {
+                                put("type", "string")
+                                put("description", "Location name as a geographic anchor. US: 'city state country' (e.g., 'missoula mt united states'). Non-US: 'city country' (e.g., 'tokyo japan'). Case-insensitive, no commas needed. Use this when you don't have coordinates.")
                             }
                             putJsonObject("latitude") {
                                 put("type", "number")
-                                put("description", "Latitude of the search center. Must be obtained from the get_location tool first.")
+                                put("description", "Latitude of the search center. Use instead of 'location' when you have coordinates (e.g., from get_location).")
                             }
                             putJsonObject("longitude") {
                                 put("type", "number")
-                                put("description", "Longitude of the search center. Must be obtained from the get_location tool first.")
+                                put("description", "Longitude of the search center. Use instead of 'location' when you have coordinates (e.g., from get_location).")
                             }
                             putJsonObject("radius") {
                                 put("type", "integer")
-                                put("description", "Search radius in meters. Default is 5000 (approx 3 miles). Under 20000 is best for 'near me' queries.")
+                                put("description", "Search radius in meters. Default is 5000. Under 20000 is best for 'near me' queries. Only used with coordinates.")
                             }
                         }
                         putJsonArray("required") {
                             add(JsonPrimitive("query"))
-                            add(JsonPrimitive("latitude"))
-                            add(JsonPrimitive("longitude"))
                         }
                     }
                 )
@@ -1340,6 +1377,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         error
                     }
                 }
+                "process_plus_code" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val action = arguments["action"]?.jsonPrimitive?.content
+                        val lat = arguments["latitude"]?.jsonPrimitive?.doubleOrNull
+                        val lng = arguments["longitude"]?.jsonPrimitive?.doubleOrNull
+                        val plusCode = arguments["plus_code"]?.jsonPrimitive?.contentOrNull
+
+                        // Pass to the helper logic
+                        performPlusCodeConversion(action, lat, lng, plusCode)
+                    } catch (e: Exception) {
+                        "Error parsing plus code arguments: ${e.message}"
+                    }
+                }
                 "create_folder" -> {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
@@ -1501,14 +1552,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
                         val query = arguments["query"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val location = arguments["location"]?.jsonPrimitive?.contentOrNull
                         val latitude = arguments["latitude"]?.jsonPrimitive?.doubleOrNull
                         val longitude = arguments["longitude"]?.jsonPrimitive?.doubleOrNull
                         val radius = arguments["radius"]?.jsonPrimitive?.intOrNull ?: 5000
 
-                        if (latitude == null || longitude == null) {
-                            "Error: Latitude and longitude are required. Use the get_location tool first."
+                        if (location.isNullOrBlank() && (latitude == null || longitude == null)) {
+                            "Error: Provide either a 'location' name or 'latitude'/'longitude' coordinates."
                         } else {
-                            searchNearbyPlaces(query, latitude, longitude, radius)
+                            searchNearbyPlaces(query, latitude, longitude, radius, location)
                         }
                     } catch (e: Exception) {
                         "Error finding nearby places: ${e.message}"
@@ -1813,11 +1865,57 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         return "My Location(via $lsds) @: $formattedTime:\n\nPlus Code: $plusCode\n\n$lat,$lon\n\n$apple\n\n$google\n\n$osm\n\naccuracy: $acc meters"
     }
+
+    /**
+     * Performs the conversion between Plus Codes and Coordinates.
+     * Uses the explicit getter methods from the OpenLocationCode.CodeArea documentation.
+     */
+    private fun performPlusCodeConversion(
+        action: String?,
+        lat: Double?,
+        lng: Double?,
+        plusCode: String?
+    ): String {
+        return try {
+            when (action) {
+                "encode" -> {
+                    if (lat != null && lng != null) {
+                        // Static method: encode(double, double)
+                        val code = OpenLocationCode.encode(lat, lng)
+                        "Encoded Plus Code: $code"
+                    } else {
+                        "Error: 'encode' requires both 'latitude' and 'longitude' as numbers."
+                    }
+                }
+                "decode" -> {
+                    if (!plusCode.isNullOrBlank()) {
+                        // Static method: decode(String) -> returns CodeArea object
+                        val area = OpenLocationCode.decode(plusCode)
+
+                        // Using the exact method names from the CodeArea documentation provided
+                        val centerLat = area.centerLatitude
+                        val centerLng = area.centerLongitude
+
+                        "Decoded Coordinates: Latitude $centerLat, Longitude $centerLng"
+                    } else {
+                        "Error: 'decode' requires a 'plus_code' string."
+                    }
+                }
+                else -> "Error: Invalid action. Please use 'encode' or 'decode'."
+            }
+        } catch (e: IllegalArgumentException) {
+            // This happens if the Plus Code string is malformed
+            "Error: The provided Plus Code is invalid."
+        } catch (e: Exception) {
+            "Error during conversion: ${e.message}"
+        }
+    }
     private suspend fun searchNearbyPlaces(
         query: String,
-        latitude: Double,
-        longitude: Double,
-        radius: Int
+        latitude: Double?,
+        longitude: Double?,
+        radius: Int,
+        location: String? // Add this parameter
     ): String {
         return withContext(Dispatchers.IO) {
             try {
@@ -1828,9 +1926,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 val urlBuilder = StringBuilder("https://api.search.brave.com/res/v1/local/place_search").apply {
                     append("?q=").append(java.net.URLEncoder.encode(query, "UTF-8"))
-                    append("&latitude=").append(latitude)
-                    append("&longitude=").append(longitude)
-                    append("&radius=").append(radius)
+
+                    // Branch here: use location name OR coordinates
+                    if (!location.isNullOrBlank()) {
+                        append("&location=").append(java.net.URLEncoder.encode(location, "UTF-8"))
+                    } else if (latitude != null && longitude != null) {
+                        append("&latitude=").append(latitude)
+                        append("&longitude=").append(longitude)
+                        append("&radius=").append(radius)
+                    }
                     append("&count=10")
                     append("&units=").append(units)
                 }
@@ -1853,7 +1957,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 val sb = StringBuilder()
-                sb.appendLine("## Nearby Places for: \"$query\" (within ${radius}m)")
+                // Dynamic header based on search type
+                if (!location.isNullOrBlank()) {
+                    sb.appendLine("## Places for: \"$query\" near $location")
+                } else {
+                    sb.appendLine("## Nearby Places for: \"$query\" (within ${radius}m)")
+                }
                 sb.appendLine()
 
                 resultsArray.forEachIndexed { index, element ->
@@ -3291,7 +3400,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             isLanModel = isLanModel,
             lanProvider = lanProvider,        // Pass the provider
             isReasoningModel = isReasoning,  // Pass reasoning status
-            isThinkingEnabled = false        // IMPORTANT: Set to false for titles so it doesn't return <think>...</think>
+            isThinkingEnabled = false ,       // IMPORTANT: Set to false for titles so it doesn't return <think>...</think>
+            client = if (isLanModel) lanHttpClient else null // <--- ADD THIS
         )
     }
 

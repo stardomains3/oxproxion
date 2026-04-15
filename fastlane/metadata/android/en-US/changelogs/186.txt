@@ -1,0 +1,3 @@
+- Fix for getting a suggested chat title when using llama.cpp server with https.
+- Added Plus Code Converter tool (Convert between geographic coordinates (Lat/Long) and Plus Codes).
+- Optimized Brave Place Search tool so the AI knows it can use named places in addition to coordinates.
