@@ -4030,7 +4030,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             withTimeout(23000) {
                 withContext(Dispatchers.IO) {
-                    createHttpClient().use { localClient ->
+                    val localClient = if (isLanModel) {
+                        createLanHttpClient()
+                    } else {
+                        createHttpClient()
+                    }
+                    localClient.use { client ->
 
                         val thinkParam = if (isLanModel && lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
                             false
@@ -4084,7 +4089,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                         }
 
-                        val response = localClient.post(requestUrl) {
+                        val response = client.post(requestUrl) {
                             header("Authorization", "Bearer $requestKey")
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
@@ -4140,9 +4145,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             withTimeout(15000) {
                 withContext(Dispatchers.IO) {
+                    val localClient = if (isLanModel) {
+                        createLanHttpClient()
+                    } else {
+                        createHttpClient()
+                    }
 
                     // 2. Use .use {} to guarantee the client is closed even if it crashes
-                    createHttpClient().use { localClient ->
+                    localClient.use { client ->
 
                         val requestBody = buildJsonObject {
                             put("model", JsonPrimitive(modelToUse))
@@ -4173,7 +4183,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
 
                         // 3. Use local requestUrl and requestKey
-                        val response = localClient.post(requestUrl) {
+                        val response = client.post(requestUrl) {
                             header("Authorization", "Bearer $requestKey")
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)

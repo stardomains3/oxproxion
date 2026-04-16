@@ -38,6 +38,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_VOLUME_SCROLL = "volume_scroll_enabled"
         private const val KEY_ENABLED_TOOLS = "enabled_tools"
         private const val KEY_TOOLS_ENABLED = "tools_enabled_preference"
+        private const val KEY_ANIMATE_BAR_ON_ERROR = "animate_bar_on_error"
         private const val SAF_FOLDER_URI = "saffolderuri"
         private const val KEY_USE_COPY_BUTTON2 = "use_copy_button2"
 
@@ -342,6 +343,13 @@ class SharedPreferencesHelper(context: Context) {
         } else {
             emptyList()
         }
+    }
+    fun getAnimateBarOnError(): Boolean {
+        return mainPrefs.getBoolean(KEY_ANIMATE_BAR_ON_ERROR, false)
+    }
+
+    fun saveAnimateBarOnError(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_ANIMATE_BAR_ON_ERROR, enabled) }
     }
     fun saveConversationModeEnabled(isEnabled: Boolean) {
         mainPrefs.edit { putBoolean(KEY_CONVERSATION_MODE_ENABLED, isEnabled) }

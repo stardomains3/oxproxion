@@ -1,6 +1,7 @@
 package io.github.stardomains3.oxproxion
 
 import android.Manifest
+import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -20,6 +21,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.graphics.pdf.PdfRenderer
 import android.media.AudioManager
 import android.net.Uri
@@ -64,6 +66,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
@@ -192,6 +195,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var progressBar: View
     private lateinit var pdfChatButton: MaterialButton
     private lateinit var systemMessageButton: MaterialButton
+    private lateinit var topBarLayout: ConstraintLayout
     private lateinit var streamButton: MaterialButton
     private lateinit var reasoningButton: MaterialButton
     private var ttsAvailable = true
@@ -424,6 +428,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         chatEditText = view.findViewById(R.id.chatEditText)
         sendChatButton = view.findViewById(R.id.sendChatButton)
         extBG = view.findViewById(R.id.extBG)
+        topBarLayout = view.findViewById(R.id.topBarLayout)
         fontSizeControlsContainer = view.findViewById(R.id.fontSizeControlsContainer)
         originalSendIcon = sendChatButton.icon
         resetChatButton = view.findViewById(R.id.resetChatButton)
@@ -919,6 +924,18 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                         else          "#222f3d".toColorInt()
                         modelNameTextView.animateColor(originalColor, targetColor,   1000)
                         modelNameTextView.animateColor(targetColor,   originalColor, 3000)
+                        if ( sharedPreferencesHelper.getAnimateBarOnError()) {
+                          //  animateBarBackground(topBarLayout, targetColor)
+                           // animateBarBackground(chatInputContainer, targetColor)
+                            val borderOverlayView = view.findViewById<View>(R.id.borderOverlayView)
+                            borderOverlayView.animateOutlineFlash(
+                                targetColorStr = if (isError) "#8c1911" else "#6D2E0F",
+                                glowDuration = 600,
+                                stayDuration = 1600,
+                                fadeDuration = 600,
+                                maxStrokeWidth = 12
+                            )
+                        }
                     }
                 }
             }
@@ -3790,6 +3807,78 @@ $cleanContent
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Copied", text))
                 Toast.makeText(requireContext(), "Copied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    fun View.animateOutlineFlash(
+        targetColorStr: String,
+        glowDuration: Long = 1000,
+        stayDuration: Long = 500,  // <--- NEW: How long it stays fully lit
+        fadeDuration: Long = 1000,
+        maxStrokeWidth: Int = 6
+    ) {
+        val bgColor = Color.TRANSPARENT
+
+        val outlineDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(bgColor)
+            setStroke(maxStrokeWidth, bgColor)
+            cornerRadius = 60f
+        }
+
+        this.background = outlineDrawable
+
+        val targetColor = targetColorStr.toColorInt()
+
+        // 1. Fade IN (Transparent -> Target Color)
+        val glowAnimator = ValueAnimator.ofArgb(bgColor, targetColor).apply {
+            duration = glowDuration
+            addUpdateListener { animator ->
+                val color = animator.animatedValue as Int
+                outlineDrawable.setStroke(maxStrokeWidth, color)
+            }
+        }
+
+        // 2. Fade OUT (Target Color -> Transparent)
+        val fadeAnimator = ValueAnimator.ofArgb(targetColor, bgColor).apply {
+            duration = fadeDuration
+
+            // <--- CHANGED: Wait for glow + stay time before fading out
+            startDelay = glowDuration + stayDuration
+
+            addUpdateListener { animator ->
+                val color = animator.animatedValue as Int
+                outlineDrawable.setStroke(maxStrokeWidth, color)
+            }
+        }
+
+        glowAnimator.start()
+        fadeAnimator.start()
+    }
+    private fun animateBarBackground(view: View, targetColor: Int) {
+        // 1. Get the background and .mutate() it
+        val bgDrawable = view.background?.mutate() as? android.graphics.drawable.GradientDrawable
+
+        if (bgDrawable != null) {
+            val defaultBgColor = "#18191a".toColorInt() // The "normal" state color
+
+            // Fade to Target Color (e.g., Red if error, Blue if not)
+            ValueAnimator.ofObject(ArgbEvaluator(), defaultBgColor, targetColor).apply {
+                duration = 1000
+                addUpdateListener { animator ->
+                    bgDrawable.color = android.content.res.ColorStateList.valueOf(animator.animatedValue as Int)
+                }
+                start()
+            }
+
+            // Fade back to Default Gray
+            ValueAnimator.ofObject(ArgbEvaluator(), targetColor, defaultBgColor).apply {
+                duration = 1000
+                startDelay = 1000
+                addUpdateListener { animator ->
+                    bgDrawable.color = android.content.res.ColorStateList.valueOf(animator.animatedValue as Int)
+                }
+                start()
             }
         }
     }

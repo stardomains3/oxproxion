@@ -36,6 +36,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val extendedTopBarSwitch = view.findViewById<MaterialSwitch>(R.id.extendedTopBarSwitch)
         val keepScreenOnSwitch = view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
         val scrollButtonsSwitch = view.findViewById<MaterialSwitch>(R.id.scrollButtonsSwitch)
+        val animateBarOnErrorSwitch = view.findViewById<MaterialSwitch>(R.id.animateBarOnErrorSwitch)
         val extendedDockSwitch = view.findViewById<MaterialSwitch>(R.id.extendedDockSwitch)
         val presetsExtendedSwitch = view.findViewById<MaterialSwitch>(R.id.presetsExtendedSwitch)
         val timeoutButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.timeoutButton)
@@ -56,6 +57,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         copyOrOpenSwitch.isChecked = prefs.getUseCopyButton()
         scrollButtonsSwitch.isChecked = viewModel.isScrollersEnabled.value ?: false
         autoBackSwitch.isChecked = prefs.getAutoBack()
+        animateBarOnErrorSwitch.isChecked = prefs.getAnimateBarOnError()
         copyOrDismissSwitch.isChecked = prefs.getUseCopyButton2()
         expandableInputSwitch.isChecked = viewModel.isExpandableInputEnabled.value ?: false
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
@@ -111,6 +113,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         extendedTopBarSwitch.setOnCheckedChangeListener { _, isChecked ->
             viewModel.toggleExtendedTopBar()  // VM saves + notifies Chat
+        }
+        animateBarOnErrorSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveAnimateBarOnError(isChecked)
         }
         notificationsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveNotiPreference(isChecked)
@@ -196,7 +201,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.autoBackSwitch,
             R.id.copyOrdismissSwitch,
             R.id.openRouterTransformsSwitch,
-            R.id.showCitationsSwitch
+            R.id.showCitationsSwitch,
+            R.id.animateBarOnErrorSwitch
         ).forEach { id ->
             view.findViewById<MaterialSwitch>(id)?.styleSwitch()
         }

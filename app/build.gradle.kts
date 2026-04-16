@@ -26,8 +26,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 36
-        versionCode = 188
-        versionName = "2.1.78"
+        versionCode = 189
+        versionName = "2.1.79"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

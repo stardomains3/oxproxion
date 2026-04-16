@@ -19,6 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="2dp"
+            android:id="@+id/topBarLayout"
             android:background="@drawable/bg_rounded_lin">
 
             <!-- Left Column -->
@@ -879,6 +880,13 @@
                 android:scaleX="0"
                 android:visibility="visible"
                 android:elevation="4dp" />
+            <View
+                android:id="@+id/borderOverlayView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clickable="false"
+                android:focusable="false"
+                android:focusableInTouchMode="false" />
         </FrameLayout>
 
         <LinearLayout

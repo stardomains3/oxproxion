@@ -1,0 +1,2 @@
+- Fix for correcting prompt and context menu grammar/spell check for when using HTTPS.
+- Added setting option to show a border animation when new message comes in.
