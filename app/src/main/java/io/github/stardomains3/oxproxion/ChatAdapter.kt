@@ -248,7 +248,8 @@ class ChatAdapter(
 
         // 2. Extract Text (JSON Logic)
         val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
-            "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+            // Show a clean, formatted indicator of what tool was used
+            "🔧 **Tool Used:** ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
         } else {
             getMessageText(message.content)
         }
@@ -291,23 +292,38 @@ class ChatAdapter(
         const val VIEW_TYPE_USER = 1
         const val VIEW_TYPE_ASSISTANT = 2
         const val VIEW_TYPE_THINKING = 3
+        const val VIEW_TYPE_HIDDEN = 4
     }
 
     override fun getItemViewType(position: Int): Int {
         val message = messages[position]
+
+        // 1. ONLY hide the raw tool results (the giant data dump)
+        if (message.role == "tool") return VIEW_TYPE_HIDDEN
+
+        // 2. Do NOT hide the assistant's tool calls anymore.
+        val contentText = getMessageText(message.content)
+
         return when (message.role) {
             "user" -> VIEW_TYPE_USER
             "assistant" -> {
-                val content = (message.content as? JsonPrimitive)?.content ?: ""
-                if (content == "working...") VIEW_TYPE_THINKING else VIEW_TYPE_ASSISTANT
+                if (contentText == "working...") VIEW_TYPE_THINKING else VIEW_TYPE_ASSISTANT
             }
             else -> VIEW_TYPE_ASSISTANT
         }
     }
 
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
+            VIEW_TYPE_HIDDEN -> { // <--- ADD THIS BLOCK
+                val emptyView = View(parent.context).apply {
+                    layoutParams = RecyclerView.LayoutParams(0, 0)
+                    visibility = View.GONE
+                }
+                HiddenViewHolder(emptyView)
+            }
             VIEW_TYPE_USER -> {
                 val view = inflater.inflate(R.layout.item_message_user, parent, false)
                 view.findViewById<TextView>(R.id.messageTextView)
@@ -338,7 +354,7 @@ class ChatAdapter(
         var contentText = getMessageText(message.content)
 
         if (message.role == "assistant" && message.toolCalls != null && contentText.isBlank()) {
-            contentText = "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+            contentText = "🔧 **Tool Used:** ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
         }
 
         when (holder) {
@@ -857,4 +873,5 @@ class ChatAdapter(
             messageTextView.ellipsize = if (isCollapsed) android.text.TextUtils.TruncateAt.END else null
         }
     }
+    inner class HiddenViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 }

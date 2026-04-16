@@ -1,0 +1,1 @@
+- Fixed AI Memory in Tool Chains: Resolved an issue where the AI would "forget" the results of earlier tool calls during complex, multi-step tasks. The AI now retains full context of all files read and actions taken throughout the entire chat.

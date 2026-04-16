@@ -1665,7 +1665,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
         }
-
+        withContext(Dispatchers.Main) {
+            updateMessages { it.addAll(toolResults) }
+        }
         // All tool calls now continue the conversation to report their status.
         val messagesForApi = _chatMessages.value?.toMutableList() ?: mutableListOf()
         val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
@@ -1676,12 +1678,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             )
             // Log.d("ToolDebug", "Re-added system message to continuation payload")
         }
-        messagesForApi.addAll(toolResults)
+      //  messagesForApi.addAll(toolResults)
         continueConversation(messagesForApi)
     }
 
     private suspend fun continueConversation(messages: List<FlexibleMessage>) {
-        if (toolRecursionDepth > 8) {
+        if (toolRecursionDepth > 12) {
             return
         }
         toolCallsHandledForTurn = false
