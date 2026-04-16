@@ -85,6 +85,19 @@ data class ToolItem(
                 description = "Opens an existing file from the Download/oxproxion folder using the system's default app. oxproxion has to be in the foreground for this tool to work.",
                 isEnabled = "open_file" in enabledSet
             ),
+            ToolItem(
+                name = "edit_file",
+                displayName = "Edit File",
+                description = "Overwrites an existing file with new content. Use to update or modify files while keeping the same name.",
+                isEnabled = "edit_file" in enabledSet
+            ),
+
+            ToolItem(
+                name = "copy_file",
+                displayName = "Copy/Rename File",
+                description = "Copies a file to a new location or renames it. Automatically adds a timestamp if the destination exists to prevent overwriting.",
+                isEnabled = "copy_file" in enabledSet
+            ),
                     ToolItem(
                     name = "process_plus_code",
             displayName = "Plus Code Converter",

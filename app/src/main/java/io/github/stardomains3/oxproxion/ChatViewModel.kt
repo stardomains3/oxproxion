@@ -1248,6 +1248,59 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             Tool(
                 type = "function",
                 function = FunctionTool(
+                    name = "copy_file",
+                    description = "Copies an existing file to a new location or renames it. You can use this to create backups. If the destination file already exists, a timestamp will be appended to the new filename to prevent overwriting (e.g., 'notes.bak' becomes 'notes_20231027_143000.bak').",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("source_filepath") {
+                                put("type", "string")
+                                put("description", "The relative path of the existing file to copy/rename (e.g., 'sharelocation.md').")
+                            }
+                            putJsonObject("destination_path") {
+                                put("type", "string")
+                                put("description", "The desired new path. Can be a new filename (e.g., 'sharelocation.bak') or a path with subfolder (e.g., 'Backups/sharelocation.md').")
+                            }
+                        }
+                        putJsonArray("required") {
+                            add(JsonPrimitive("source_filepath"))
+                            add(JsonPrimitive("destination_path"))
+                        }
+                    }
+                )
+            ),
+
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "edit_file",
+                    description = "Overwrites an existing file in the Download/oxproxion workspace with new content. Use this when the user wants to update, modify, or edit an existing file. IMPORTANT: You must provide the COMPLETE new content of the file, not just the changes. The entire file will be replaced.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("filepath") {
+                                put("type", "string")
+                                put("description", "The relative path of the existing file to overwrite (e.g., 'notes.txt' or 'Skills/data.json').")
+                            }
+                            putJsonObject("content") {
+                                put("type", "string")
+                                put("description", "The COMPLETE new content to write to the file.")
+                            }
+                            putJsonObject("mimetype") {
+                                put("type", "string")
+                                put("description", "Optional MIME type (e.g., 'text/plain', 'application/json'). If omitted, it attempts to keep the original type or defaults to text/plain.")
+                            }
+                        }
+                        putJsonArray("required") {
+                            add(JsonPrimitive("filepath"))
+                            add(JsonPrimitive("content"))
+                        }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
                     name = "read_oxproxion_file",
                     description = "Reads the contents of a single text file from the Download/oxproxion workspace. Only reads text-based files (e.g., .txt, .md, .json). Use list_oxproxion_files first to see available files and their paths.",
                     parameters = buildJsonObject {
@@ -1375,6 +1428,41 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         //   Log.e("ToolCall", "Error executing set_alarm", e)
                         val error = "Failed to set alarm: Error parsing arguments."
                         error
+                    }
+                }
+                "edit_file" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val filepath = arguments["filepath"]?.jsonPrimitive?.contentOrNull
+                        val content = arguments["content"]?.jsonPrimitive?.contentOrNull
+                        val mimeType = arguments["mimetype"]?.jsonPrimitive?.contentOrNull
+
+                        if (filepath.isNullOrBlank() || content == null) {
+                            "Error: filepath and content are required."
+                        } else {
+                            // Pass null for mimeType if not provided; helper will detect or default
+                            editFileViaSaf(filepath, content, mimeType)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ToolCall", "Error executing edit_file", e)
+                        "Error editing file: ${e.message}"
+                    }
+                }
+
+                "copy_file" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val sourcePath = arguments["source_filepath"]?.jsonPrimitive?.contentOrNull
+                        val destPath = arguments["destination_path"]?.jsonPrimitive?.contentOrNull
+
+                        if (sourcePath.isNullOrBlank() || destPath.isNullOrBlank()) {
+                            "Error: Both source_filepath and destination_path are required."
+                        } else {
+                            copyFileViaSaf(sourcePath, destPath)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ToolCall", "Error executing copy_file", e)
+                        "Error copying file: ${e.message}"
                     }
                 }
                 "process_plus_code" -> {
@@ -1912,6 +2000,194 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             "Error during conversion: ${e.message}"
         }
     }
+    private suspend fun editFileViaSaf(filepath: String, newContent: String, mimeType: String?): String {
+        return withContext(Dispatchers.IO) {
+            // 1. Security Checks
+            if (filepath.contains("\\") || filepath.contains("..")) {
+                return@withContext "Error: Invalid filepath. Backslashes and parent directories (..) are not allowed."
+            }
+
+            val uriString = sharedPreferencesHelper.getSafFolderUri()
+                ?: return@withContext "Error: Folder permission not granted."
+
+            try {
+                val context = getApplication<Application>().applicationContext
+                val treeUri = uriString.toUri()
+                val rootDocumentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                    ?: return@withContext "Error: Could not access workspace."
+
+                // 2. Locate the Existing File
+                val pathParts = filepath.split("/")
+                val filename = pathParts.last()
+                var currentDir = rootDocumentFile
+
+                // Traverse directories
+                for (i in 0 until pathParts.size - 1) {
+                    val dirName = pathParts[i]
+                    if (dirName.isBlank()) continue
+                    val nextDir = currentDir.findFile(dirName)
+                    if (nextDir == null || !nextDir.isDirectory) {
+                        return@withContext "Error: Directory '$dirName' not found in path."
+                    }
+                    currentDir = nextDir
+                }
+
+                val targetFile = currentDir.findFile(filename)
+                if (targetFile == null || !targetFile.isFile) {
+                    return@withContext "Error: File '$filepath' does not exist. Use 'make_file' to create new files."
+                }
+
+                // 3. Determine MIME Type
+                // If user didn't provide one, try to keep the existing one, or guess from extension
+                val finalMimeType = mimeType ?: targetFile.type ?: "text/plain"
+
+                // 4. Overwrite Content
+                // "w" mode truncates the file before writing
+                context.contentResolver.openOutputStream(targetFile.uri, "w")?.use { outputStream ->
+                    outputStream.write(newContent.toByteArray(Charsets.UTF_8))
+                    outputStream.flush()
+                } ?: return@withContext "Error: Could not open file for writing."
+
+                "File '$filepath' successfully updated."
+
+            } catch (e: Exception) {
+                Log.e("EditFile", "Error editing file", e)
+                "Error editing file: ${e.message}"
+            }
+        }
+    }
+
+    private suspend fun copyFileViaSaf(sourcePath: String, destinationPath: String): String {
+        return withContext(Dispatchers.IO) {
+            // 1. Security Checks
+            if (sourcePath.contains("\\") || sourcePath.contains("..") ||
+                destinationPath.contains("\\") || destinationPath.contains("..")) {
+                return@withContext "Error: Invalid paths. Backslashes and parent directories (..) are not allowed."
+            }
+
+            val uriString = sharedPreferencesHelper.getSafFolderUri()
+                ?: return@withContext "Error: Folder permission not granted. Ask the user to grant folder access."
+
+            try {
+                val context = getApplication<Application>().applicationContext
+                val treeUri = uriString.toUri()
+                val rootDocumentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                    ?: return@withContext "Error: Could not access the workspace folder."
+
+                // 2. Locate Source File
+                val sourceParts = sourcePath.split("/")
+                val sourceFilename = sourceParts.last()
+                var currentSourceDir = rootDocumentFile
+
+                // Traverse source directories
+                for (i in 0 until sourceParts.size - 1) {
+                    val dirName = sourceParts[i]
+                    if (dirName.isBlank()) continue
+                    val nextDir = currentSourceDir.findFile(dirName)
+                    if (nextDir == null || !nextDir.isDirectory) {
+                        return@withContext "Error: Source directory '$dirName' not found in path '$sourcePath'."
+                    }
+                    currentSourceDir = nextDir
+                }
+
+                val sourceFile = currentSourceDir.findFile(sourceFilename)
+                if (sourceFile == null || !sourceFile.isFile) {
+                    return@withContext "Error: Source file '$sourcePath' not found."
+                }
+
+                // 3. Prepare Destination Directory
+                val destParts = destinationPath.split("/")
+                val desiredDestFilename = destParts.last()
+
+                var destParentDir = rootDocumentFile
+                // Traverse/Create destination folders
+                if (destParts.size > 1) {
+                    for (i in 0 until destParts.size - 1) {
+                        val dirName = destParts[i]
+                        if (dirName.isBlank()) continue
+
+                        var nextDir = destParentDir.findFile(dirName)
+                        if (nextDir == null) {
+                            nextDir = destParentDir.createDirectory(dirName)
+                            if (nextDir == null) {
+                                return@withContext "Error: Could not create destination directory '$dirName'."
+                            }
+                        } else if (!nextDir.isDirectory) {
+                            return@withContext "Error: Destination path component '$dirName' exists but is not a directory."
+                        }
+                        destParentDir = nextDir
+                    }
+                }
+
+                // 4. Handle Filename Conflicts (Non-Overwrite Logic)
+                var finalDestFilename = desiredDestFilename
+                val existingFile = destParentDir.findFile(desiredDestFilename)
+
+                if (existingFile != null && existingFile.isFile) {
+                    // File exists! Generate a unique name with timestamp
+                    finalDestFilename = generateUniqueFilename(destParentDir, desiredDestFilename)
+                }
+
+                // 5. Create the new file and Copy Content
+                // Determine MIME type from source if possible, otherwise generic
+                val mimeType = sourceFile.type ?: "application/octet-stream"
+
+                val newDestFile = destParentDir.createFile(mimeType, finalDestFilename)
+
+                if (newDestFile == null) {
+                    return@withContext "Error: Failed to create destination file '$finalDestFilename'."
+                }
+
+                // Perform the byte copy
+                context.contentResolver.openInputStream(sourceFile.uri)?.use { input ->
+                    context.contentResolver.openOutputStream(newDestFile.uri)?.use { output ->
+                        input.copyTo(output)
+                    }
+                } ?: throw Exception("Failed to open streams for copy operation.")
+
+                val actualPath = if (destParts.size > 1) {
+                    // Reconstruct path for display
+                    destParts.dropLast(1).joinToString("/") + "/" + finalDestFilename
+                } else {
+                    finalDestFilename
+                }
+
+                "Successfully copied '$sourcePath' to '$actualPath'."
+
+            } catch (e: Exception) {
+                Log.e("CopyFile", "Error copying file", e)
+                "Error copying file: ${e.message}"
+            }
+        }
+    }
+    /**
+     * Generates a unique filename by appending a timestamp if the desired name exists.
+     * Example: "notes.txt" -> "notes_20231027_143000.txt"
+     */
+    private fun generateUniqueFilename(parentDir: androidx.documentfile.provider.DocumentFile, desiredName: String): String {
+        val baseName = desiredName.substringBeforeLast(".")
+        val extension = desiredName.substringAfterLast(".", "")
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+
+        var candidateName = if (extension.isNotEmpty()) {
+            "${baseName}_$timestamp.$extension"
+        } else {
+            "${baseName}_$timestamp"
+        }
+
+        // Safety loop: In the extremely rare case of a collision within the same second
+        var counter = 1
+        while (parentDir.findFile(candidateName) != null) {
+            candidateName = if (extension.isNotEmpty()) {
+                "${baseName}_${timestamp}_$counter.$extension"
+            } else {
+                "${baseName}_${timestamp}_$counter"
+            }
+            counter++
+        }
+
+        return candidateName
+    }
     private suspend fun searchNearbyPlaces(
         query: String,
         latitude: Double?,
@@ -2023,6 +2299,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (website.isNotBlank()) sb.appendLine("Website: $website")
                     if (mapsLink.isNotBlank()) sb.appendLine("Google Maps: $mapsLink") // NEW
                     if (appleMapsLink.isNotBlank()) sb.appendLine("Apple Maps: $appleMapsLink")
+                    if (placeLat != null && placeLng != null) {
+                        sb.appendLine("Coordinates: $placeLat, $placeLng")
+                    }
                     if (ratingStr.isNotBlank()) sb.appendLine("Rating: $ratingStr")
                     if (priceRange.isNotBlank()) sb.appendLine("Price: $priceRange")
                     if (hoursStr.isNotBlank()) sb.appendLine("Hours: $hoursStr")
