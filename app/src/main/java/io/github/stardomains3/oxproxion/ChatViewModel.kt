@@ -4827,7 +4827,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val apiKey = sharedPreferencesHelper.getLanApiKey()
 
             try {
-                val response = httpClient.get("$lanEndpoint/v1/models") {
+                val response = lanHttpClient.get("$lanEndpoint/v1/models") {
                     timeout { requestTimeoutMillis = 10000 }
                     if (!apiKey.isNullOrBlank() && apiKey != "any-non-empty-string") {
                         header("Authorization", "Bearer $apiKey")
@@ -4986,9 +4986,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         val lanKey = sharedPreferencesHelper.getLanApiKey()
 
-        val response = httpClient.post("$lanEndpoint/models/load") {
+        val response = lanHttpClient.post("$lanEndpoint/models/load") {
             contentType(ContentType.Application.Json)
-            // Include API key if configured (some llama.cpp servers require authentication)
             if (!lanKey.isNullOrBlank()) {
                 header("Authorization", "Bearer $lanKey")
             }
@@ -5012,9 +5011,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         val lanKey = sharedPreferencesHelper.getLanApiKey()
 
-        val response = httpClient.post("$lanEndpoint/models/unload") {
+        val response = lanHttpClient.post("$lanEndpoint/models/unload") {
             contentType(ContentType.Application.Json)
-            // Include API key if configured (some llama.cpp servers require authentication)
             if (!lanKey.isNullOrBlank()) {
                 header("Authorization", "Bearer $lanKey")
             }

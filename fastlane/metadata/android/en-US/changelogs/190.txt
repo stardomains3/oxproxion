@@ -1,0 +1,1 @@
+- More fixes for when using HTTPS with LAN models: llama.cpp ejecting/loading models
