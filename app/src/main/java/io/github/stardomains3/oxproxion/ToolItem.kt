@@ -104,6 +104,13 @@ data class ToolItem(
             description = "Convert between geographic coordinates (Lat/Long) and Plus Codes",
             isEnabled = "process_plus_code" in enabledSet
         ),
+            ToolItem(
+                name = "start_navigation",
+                displayName = "Start Navigation",
+                description = "Launches Google Maps turn-by-turn navigation. Options include driving, walking, bicycling, or transit modes, plus route avoidance (e.g., no tolls or highways).",
+                isEnabled = "start_navigation" in enabledSet
+            )
+
             // Add more tools here as your app grows
         )
     }

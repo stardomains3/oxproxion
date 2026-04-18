@@ -1,0 +1,12 @@
+🗺️ Native Google Maps Navigation
+You can now ask the AI to start turn-by-turn navigation directly. This tool integrates with the Google Maps app to provide a hands-free transition from chatting to driving.
+•	Turn-by-Turn Navigation: Launch Google Maps instantly by providing a destination name, address, or coordinates.
+•	Custom Travel Modes: Support for Driving, Walking, Bicycling, and Public Transit.
+•	Route Preferences: Optionally tell the AI to avoid tolls, highways, or ferries.
+•	Intelligent Defaults: Defaults to driving mode unless specified otherwise, and automatically handles address encoding for better accuracy.
+🛠️ Technical Improvements
+•	Enhanced Tool Support: Added the start_navigation tool to the internal toolset.
+Example commands to try:
+•	"Navigate to the nearest Starbucks avoiding tolls."
+•	"Start walking directions to the Empire State Building."
+•	"Drive to 1004 N Spruce St, Ogallala, Nebraska."

@@ -1048,6 +1048,48 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 )
             ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "start_navigation",
+                    description = "Launches Google Maps turn-by-turn navigation to a specified destination. You can specify the mode of transportation and things to avoid (like tolls or highways).",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("destination") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "The exact address, place name, or latitude/longitude coordinates to navigate to."
+                                )
+                            }
+                            putJsonObject("mode") {
+                                put("type", "string")
+                                put("enum", buildJsonArray {
+                                    add("d")
+                                    add("w")
+                                    add("b")
+                                    add("t")
+                                })
+                                put(
+                                    "description",
+                                    "Transportation mode: 'd' (driving - default), 'w' (walking), 'b' (bicycling), 't' (transit)."
+                                )
+                            }
+                            putJsonObject("avoid") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Features to avoid, separated by a pipe character '|'. Options are 'tolls', 'highways', 'ferries' (e.g., 'tolls' or 'tolls|highways')."
+                                )
+                            }
+                        }
+                        putJsonArray("required") {
+                            add(JsonPrimitive("destination"))
+                        }
+                    }
+                )
+            ),
 
             Tool(
                 type = "function",
@@ -1428,6 +1470,56 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         //   Log.e("ToolCall", "Error executing set_alarm", e)
                         val error = "Failed to set alarm: Error parsing arguments."
                         error
+                    }
+                }
+                "start_navigation" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val destination = arguments["destination"]?.jsonPrimitive?.content
+                        val mode = arguments["mode"]?.jsonPrimitive?.content ?: "d" // Default to driving
+                        val avoid = arguments["avoid"]?.jsonPrimitive?.content
+
+                        if (destination.isNullOrBlank()) {
+                            "Error: destination is required to start navigation."
+                        } else {
+                            val context = getApplication<Application>().applicationContext
+
+                            // Encode the destination to safely handle spaces and special characters
+                            val encodedDestination = Uri.encode(destination)
+                            var uriString = "google.navigation:q=$encodedDestination&mode=$mode"
+
+                            if (!avoid.isNullOrBlank()) {
+                                uriString += "&avoid=$avoid"
+                            }
+
+                            val gmmIntentUri = uriString.toUri()
+                            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
+                                setPackage("com.google.android.apps.maps")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+
+                            // Verify Google Maps is installed before firing
+                            if (mapIntent.resolveActivity(context.packageManager) != null) {
+                                context.startActivity(mapIntent)
+                                val successMsg = "Navigation started to $destination."
+                               // _toastUiEvent.postValue(Event(successMsg))
+                                successMsg
+                            } else {
+                                // Fallback to general geo intent if Maps app isn't found
+                                val fallbackUri = "geo:0,0?q=$encodedDestination".toUri()
+                                val fallbackIntent = Intent(Intent.ACTION_VIEW, fallbackUri).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                if (fallbackIntent.resolveActivity(context.packageManager) != null) {
+                                    context.startActivity(fallbackIntent)
+                                    "Google Maps not found. Launched default map app for $destination."
+                                } else {
+                                    "Error: No map application found on the device."
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        "Error launching navigation: ${e.message}"
                     }
                 }
                 "edit_file" -> {
