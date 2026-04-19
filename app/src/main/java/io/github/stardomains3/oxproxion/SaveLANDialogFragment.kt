@@ -40,6 +40,7 @@ class SaveLANDialogFragment : DialogFragment() {
         val checkboxLlamaCpp = view.findViewById<CheckBox>(R.id.checkbox_llama_cpp)
         val checkboxMlxLm = view.findViewById<CheckBox>(R.id.checkbox_mlx_lm)
         val checkboxHermesAgent = view.findViewById<CheckBox>(R.id.checkbox_hermes_agent)
+        val checkboxOmlx = view.findViewById<CheckBox>(R.id.checkbox_olmx)
         val btnSave = view.findViewById<MaterialButton>(R.id.button_save_lan)
         val btnCancel = view.findViewById<MaterialButton>(R.id.button_cancel_lan)
 
@@ -54,6 +55,7 @@ class SaveLANDialogFragment : DialogFragment() {
             SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP -> checkboxLlamaCpp.isChecked = true
             SharedPreferencesHelper.LAN_PROVIDER_MLX_LM -> checkboxMlxLm.isChecked = true
             SharedPreferencesHelper.LAN_PROVIDER_HERMES_AGENT -> checkboxHermesAgent.isChecked = true
+            SharedPreferencesHelper.LAN_PROVIDER_OMLX -> checkboxOmlx.isChecked = true
         }
 
         // Checkbox mutual exclusion
@@ -63,6 +65,16 @@ class SaveLANDialogFragment : DialogFragment() {
                 checkboxLlamaCpp.isChecked = false
                 checkboxMlxLm.isChecked = false
                 checkboxHermesAgent.isChecked = false
+                checkboxOmlx.isChecked = false
+            }
+        }
+        checkboxOmlx.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                checkboxLmStudio.isChecked = false
+                checkboxLlamaCpp.isChecked = false
+                checkboxMlxLm.isChecked = false
+                checkboxHermesAgent.isChecked = false
+                checkboxOllama.isChecked = false
             }
         }
         checkboxLmStudio.setOnCheckedChangeListener { _, isChecked ->
@@ -71,6 +83,7 @@ class SaveLANDialogFragment : DialogFragment() {
                 checkboxLlamaCpp.isChecked = false
                 checkboxMlxLm.isChecked = false
                 checkboxHermesAgent.isChecked = false
+                checkboxOmlx.isChecked = false
             }
         }
         checkboxLlamaCpp.setOnCheckedChangeListener { _, isChecked ->
@@ -79,6 +92,7 @@ class SaveLANDialogFragment : DialogFragment() {
                 checkboxLmStudio.isChecked = false
                 checkboxMlxLm.isChecked = false
                 checkboxHermesAgent.isChecked = false
+                checkboxOmlx.isChecked = false
             }
         }
         checkboxMlxLm.setOnCheckedChangeListener { _, isChecked ->
@@ -87,6 +101,7 @@ class SaveLANDialogFragment : DialogFragment() {
                 checkboxLmStudio.isChecked = false
                 checkboxLlamaCpp.isChecked = false
                 checkboxHermesAgent.isChecked = false
+                checkboxOmlx.isChecked = false
             }
         }
         checkboxHermesAgent.setOnCheckedChangeListener { _, isChecked ->
@@ -95,6 +110,7 @@ class SaveLANDialogFragment : DialogFragment() {
                 checkboxLmStudio.isChecked = false
                 checkboxLlamaCpp.isChecked = false
                 checkboxMlxLm.isChecked = false
+                checkboxOmlx.isChecked = false
             }
         }
 
@@ -106,8 +122,8 @@ class SaveLANDialogFragment : DialogFragment() {
                 raw.isBlank() -> {
                     editTextUrl.error = "Please enter a LAN endpoint URL"
                 }
-                !checkboxOllama.isChecked && !checkboxLmStudio.isChecked && !checkboxLlamaCpp.isChecked && !checkboxMlxLm.isChecked && !checkboxHermesAgent.isChecked -> {
-                    Toast.makeText(requireContext(), "Please select Ollama, LM Studio, llama.cpp, MLX LM, or Hermes Agent", Toast.LENGTH_SHORT).show()
+                !checkboxOmlx.isChecked && !checkboxOllama.isChecked && !checkboxLmStudio.isChecked && !checkboxLlamaCpp.isChecked && !checkboxMlxLm.isChecked && !checkboxHermesAgent.isChecked -> {
+                    Toast.makeText(requireContext(), "Please select a server type", Toast.LENGTH_SHORT).show()
                 }
                 raw.startsWith("http://") || raw.startsWith("https://") || raw.contains("://") -> {
                     prefs.setLanEndpoint(raw)
@@ -119,6 +135,7 @@ class SaveLANDialogFragment : DialogFragment() {
                         checkboxLlamaCpp.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP
                         checkboxMlxLm.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_MLX_LM
                         checkboxHermesAgent.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_HERMES_AGENT
+                        checkboxOmlx.isChecked -> SharedPreferencesHelper.LAN_PROVIDER_OMLX
                         else -> SharedPreferencesHelper.LAN_PROVIDER_OLLAMA
                     }
                     prefs.setLanProvider(provider)

@@ -47,6 +47,7 @@ class MarkdownViewerFragment : Fragment() {
     }
 
     private var webView: WebView? = null
+    private var isWebViewDestroyed = false
     private var currentHtml: String = ""
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -100,7 +101,8 @@ class MarkdownViewerFragment : Fragment() {
                 setLayerType(View.LAYER_TYPE_HARDWARE, null)
             }
 
-            addJavascriptInterface(WebAppInterface(requireContext()), "Android")
+            //addJavascriptInterface(WebAppInterface(requireContext()), "Android")
+            addJavascriptInterface(WebAppInterface(requireContext().applicationContext), "Android")
 
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -179,13 +181,22 @@ class MarkdownViewerFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Detach the UI immediately
+        webView?.removeAllViews()
         super.onDestroyView()
-        webView?.apply {
-            stopLoading()
-            removeAllViews()
-            destroy()
+    }
+
+    override fun onDestroy() {
+        // Destroy the heavy engine when the fragment is truly gone
+        if (!isWebViewDestroyed) {
+            webView?.apply {
+                stopLoading()
+                destroy()
+                isWebViewDestroyed = true
+            }
+            webView = null
         }
-        webView = null
+        super.onDestroy()
     }
 
     class WebAppInterface(private val context: Context) {

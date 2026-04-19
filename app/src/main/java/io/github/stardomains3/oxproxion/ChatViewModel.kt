@@ -24,6 +24,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -1123,18 +1124,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "delete_files",
-                    description = "Deletes one or more files from the Download/oxproxion workspace folder. Use this when the user wants to remove files. Confirm with the user before deleting if they didn't explicitly ask for deletion.",
+                    description = "Deletes one or more files(up to 9) from the Download/oxproxion workspace folder. Use this when the user wants to remove files.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
                             putJsonObject("filepaths") {
                                 put("type", "array")
-                                putJsonArray("items") {
-                                    addJsonObject {
-                                        put("type", "string")
-                                    }
+                                putJsonObject("items") {
+                                    put("type", "string")
                                 }
-                                put("description", "List of file paths to delete (e.g., ['old_notes.txt', 'Skills/draft.json']). If only one file is requested, provide it as a single-element array. Must be relative paths from the workspace root.")
+                                put(
+                                    "description",
+                                    "List of file paths to delete. Always provide as an array, even if deleting just one file. " +
+                                            "Paths must be relative to the workspace root (e.g. ['notes.txt', 'Skills/draft.json'])."
+                                )
                             }
                         }
                         putJsonArray("required") { add(JsonPrimitive("filepaths")) }
@@ -1716,10 +1719,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 "delete_files" -> {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
-                        val filepathsJson = arguments["filepaths"]?.jsonArray
+                        val filepaths = parseFilepaths(arguments["filepaths"])
 
-                        if (filepathsJson != null && filepathsJson.isNotEmpty()) {
-                            val filepaths = filepathsJson.mapNotNull { it.jsonPrimitive.contentOrNull }
+                        if (filepaths.isNotEmpty()) {
                             deleteFilesViaSaf(filepaths)
                         } else {
                             "Error: No filepaths provided."
@@ -4838,6 +4840,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             "lm_studio" -> fetchLmStudioModels()
             "ollama" -> fetchOllamaModels()
             "mlx_lm" -> fetchLmStudioModels()  // If you have it; else emptyList()
+            "omlx" -> fetchoMLXModels()
             "hermes_agent" -> fetchHermesAgentModels()  // Hermes Agent uses OpenAI-compatible API
             else -> emptyList()
         }
@@ -4905,6 +4908,58 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }.sortedBy { it.displayName.lowercase() }
             } catch (e: Exception) {
                 // Log.e("LmStudioModels", "Failed to fetch LM Studio models", e)
+                throw e
+            }
+        }
+    }
+    private suspend fun fetchoMLXModels(): List<LlmModel> = withTimeout(10000) {
+        withContext(Dispatchers.IO) { // Fixed typo: Dispatchers
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint.isNullOrBlank()) {
+                throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
+            }
+            val apiKey = sharedPreferencesHelper.getLanApiKey()
+            try {
+                val response = httpClient.get("$lanEndpoint/v1/models") {
+                    timeout { requestTimeoutMillis = 10000 }
+                    // CRITICAL: You must include the Bearer token used in your curl command
+                    header("Authorization", "Bearer $apiKey")
+                    //  header("Origin", "http://192.168.68.69:1337")
+                }
+
+                if (!response.status.isSuccess()) {
+                    throw Exception("Server returned ${response.status}: ${response.status.description}") // Fixed typo: description
+                }
+
+                val responseBody = response.body<JsonObject>()
+                val modelsArray = responseBody["data"]?.jsonArray ?: return@withContext emptyList()
+
+                modelsArray.mapNotNull { modelJson ->
+                    try {
+                        val modelObj = modelJson.jsonObject
+                        // The ID is the name of the model in this API
+                        val name = modelObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+
+                        // NOTE: The server response does NOT contain a 'status' or 'description' field.
+                        // We cannot determine "isLoaded" from this specific JSON response.
+                        //val isLoaded = true
+                        //val description = ""
+
+                        LlmModel(
+                            displayName = name, // Since there's no description, just use the name
+                            apiIdentifier = name,
+                            isVisionCapable = false,
+                            isImageGenerationCapable = false,
+                            isReasoningCapable = false,
+                            created = System.currentTimeMillis() / 1000,
+                            isFree = true, // Based on your JSON keys like "qwen3-30b-a3b:free"
+                            isLANModel = true
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }.sortedBy { it.displayName.lowercase() }
+            } catch (e: Exception) {
                 throw e
             }
         }
@@ -5754,75 +5809,107 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    private fun parseFilepaths(element: JsonElement?): List<String> {
+        return when (element) {
+            is JsonArray -> {
+                element.mapNotNull { it.jsonPrimitive.contentOrNull?.trim() }
+                    .filter { it.isNotBlank() }
+            }
+            is JsonPrimitive -> {
+                if (!element.isString) return emptyList()
+
+                val content = element.content.trim()
+
+                // Case 1: LLM sent a stringified JSON array like: ["file1.txt", "file2.txt"]
+                if (content.startsWith("[") && content.endsWith("]")) {
+                    try {
+                        json.decodeFromString<List<String>>(content)
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                    } catch (e: Exception) {
+                        // Fallback: treat as single path
+                        listOf(content.removeSurrounding("\"").trim())
+                    }
+                }
+                // Case 2: Single filepath sent as string
+                else {
+                    listOf(content)
+                }
+            }
+            else -> emptyList()
+        }
+    }
     private suspend fun deleteFilesViaSaf(filepaths: List<String>): String {
         return withContext(Dispatchers.IO) {
             val uriString = sharedPreferencesHelper.getSafFolderUri()
-                ?: return@withContext "Error: Folder permission not granted. Ask the user to grant folder access."
+                ?: return@withContext "Error: Folder permission not granted. Please grant workspace access first."
 
-            try {
-                val context = getApplication<Application>().applicationContext
-                val treeUri = uriString.toUri()
-                val rootDocumentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
-                    ?: return@withContext "Error: Could not access the workspace folder."
+            val context = getApplication<Application>().applicationContext
+            val rootDocumentFile = DocumentFile.fromTreeUri(context, uriString.toUri())
+                ?: return@withContext "Error: Could not access the workspace folder."
 
-                val results = mutableListOf<String>()
-
-                for (filepath in filepaths) {
-                    // Security check: block backward slashes and parent directory traversal
-                    if (filepath.contains("\\") || filepath.contains("..")) {
-                        results.add("❌ '$filepath': Invalid path (backslashes or '..' not allowed)")
-                        continue
-                    }
-
-                    val pathParts = filepath.split("/")
-                    val actualFilename = pathParts.last()
-                    var currentDir = rootDocumentFile
-
-                    // Traverse directories if it's a nested path
-                    var pathError = false
-                    for (i in 0 until pathParts.size - 1) {
-                        val dirName = pathParts[i]
-                        if (dirName.isBlank()) continue
-
-                        val nextDir = currentDir.findFile(dirName)
-                        if (nextDir == null || !nextDir.isDirectory) {
-                            results.add("❌ '$filepath': Directory '$dirName' not found.")
-                            pathError = true
-                            break
-                        }
-                        currentDir = nextDir
-                    }
-
-                    if (pathError) continue
-
-                    // Find the file in the final directory
-                    val targetFile = currentDir.findFile(actualFilename)
-
-                    if (targetFile == null || !targetFile.isFile) {
-                        results.add("❌ '$filepath': File not found")
-                    } else {
-                        val deleted = targetFile.delete()
-                        if (deleted) {
-                            results.add("✅ '$filepath': Deleted")
-                        } else {
-                            results.add("❌ '$filepath': Delete failed")
-                        }
-                    }
-                }
-
-                val successCount = results.count { it.startsWith("✅") }
-                val summary = if (filepaths.size == 1) {
-                    results.first().removePrefix("✅ ").removePrefix("❌ ")
-                } else {
-                    "Deleted $successCount of ${filepaths.size} files"
-                }
-
-                _toastUiEvent.postValue(Event(summary))
-                results.joinToString("\n")
-
-            } catch (e: Exception) {
-                "Error accessing workspace: ${e.message}"
+            if (filepaths.size > 9) {
+                return@withContext "Error: Too many files (maximum 15 per request)."
             }
+
+            val results = mutableListOf<String>()
+            var successCount = 0
+
+            for (filepath in filepaths) {
+                // Security checks
+                if (filepath.contains("\\") || filepath.contains("..") || filepath.isBlank()) {
+                    results.add("❌ '$filepath': Invalid or dangerous path")
+                    continue
+                }
+
+                val pathParts = filepath.split("/").filter { it.isNotBlank() }
+                if (pathParts.isEmpty()) {
+                    results.add("❌ '$filepath': Invalid path")
+                    continue
+                }
+
+                val filename = pathParts.last()
+                var currentDir: DocumentFile = rootDocumentFile
+                var pathError = false
+
+                // Traverse directories
+                for (i in 0 until pathParts.size - 1) {
+                    val dirName = pathParts[i]
+                    val nextDir = currentDir.findFile(dirName)
+
+                    if (nextDir == null || !nextDir.isDirectory) {
+                        results.add("❌ '$filepath': Directory '$dirName' not found")
+                        pathError = true
+                        break
+                    }
+                    currentDir = nextDir
+                }
+
+                if (pathError) continue
+
+                // Attempt deletion
+                val targetFile = currentDir.findFile(filename)
+                if (targetFile == null || !targetFile.isFile) {
+                    results.add("❌ '$filepath': File not found")
+                } else {
+                    val deleted = targetFile.delete()
+                    if (deleted) {
+                        results.add("✅ '$filepath': Successfully deleted")
+                        successCount++
+                    } else {
+                        results.add("❌ '$filepath': Delete operation failed")
+                    }
+                }
+            }
+
+            val summary = if (filepaths.size == 1) {
+                results.first()
+            } else {
+                "Deleted $successCount of ${filepaths.size} files."
+            }
+
+            _toastUiEvent.postValue(Event(summary))
+            results.joinToString("\n")
         }
     }
 

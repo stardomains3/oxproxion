@@ -111,6 +111,13 @@
                 android:text="Hermes Agent"
                 android:textColor="#FFFFFF"
                 style="@style/Widget.App.CheckBox" />
+            <CheckBox
+                android:id="@+id/checkbox_olmx"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="oMLX"
+                android:textColor="#FFFFFF"
+                style="@style/Widget.App.CheckBox" />
 
         </LinearLayout>
 
