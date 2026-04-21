@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             supportFragmentManager.beginTransaction()
-                .add(R.id.fragment_container, chatFragment)
+                .add(R.id.fragment_container, chatFragment, "ChatFragment")
                 .commitNow()
         }
         // NEW: Auto‑apply "digital assistant" preset for assistant launches

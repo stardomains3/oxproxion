@@ -1280,6 +1280,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 viewModel.updateMessageAt(position, newContent)
             }
         }
+        parentFragmentManager.setFragmentResultListener("prompt_request", this) { _, bundle ->
+            val prompt = bundle.getString("prompt")
+            prompt?.let {
+                chatEditText.text.clear()
+                chatEditText.setText(it)
+                /*  chatEditText.postDelayed({
+                      sendChatButton.performClick()
+                  }, 100)*/
+            }
+        }
         chatRecyclerView.post { updateScrollProgress() }
 
         updateExtendedTopBarVisibility(sharedPreferencesHelper.getExtendedTopBarEnabled())

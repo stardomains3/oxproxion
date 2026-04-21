@@ -1,5 +1,6 @@
 package io.github.stardomains3.oxproxion
 
+
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -26,6 +27,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.util.Collections
+import kotlin.collections.remove
 
 class PromptLibraryFragment : Fragment() {
 
@@ -156,20 +158,32 @@ class PromptLibraryFragment : Fragment() {
 
     private fun setupRecyclerView(view: View) {
         val recyclerView = view.findViewById<RecyclerView>(R.id.prompt_recycler_view)
-        promptAdapter = PromptAdapter(prompts, onItemClick = { prompt ->
-            // Copy to clipboard
-            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("Prompt", prompt.prompt)
-            clipboard.setPrimaryClip(clip)
-            recyclerView.postDelayed({
-                parentFragmentManager.popBackStack()  // Pop PromptLibraryFragment
-                parentFragmentManager.popBackStack()  // Pop SettingsFragment → back to ChatFragment
-            }, 200)
-            Toast.makeText(requireContext(), "Copied to clipboard: ${prompt.title}", Toast.LENGTH_SHORT).show()
+        promptAdapter = PromptAdapter(
+            prompts,
+            onItemClick = { prompt ->
+                // Send to ChatFragment - set fragment result and clear back stack
+                parentFragmentManager.setFragmentResult("prompt_request", Bundle().apply {
+                    putString("prompt", prompt.prompt)
+                })
 
-        }, onMenuClick = { anchorView, prompt ->
-            showPopupMenu(anchorView, prompt)
-        })
+                // Clear all fragments and go back to ChatFragment
+                clearAllFragmentsAndGoToChat()
+            },
+            onCopyClick = { prompt ->
+                // Copy to clipboard
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Prompt", prompt.prompt)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(requireContext(), "Copied to clipboard: ${prompt.title}", Toast.LENGTH_SHORT).show()
+
+                // Disappear fragments back to ChatFragment
+                clearAllFragmentsAndGoToChat()
+            }
+            ,
+            onMenuClick = { anchorView, prompt ->
+                showPopupMenu(anchorView, prompt)
+            }
+        )
 
         recyclerView.apply {
             layoutManager = LinearLayoutManager(context)
@@ -190,6 +204,24 @@ class PromptLibraryFragment : Fragment() {
                     ItemTouchHelper.Callback.makeMovementFlags(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0)
             }
             ItemTouchHelper(callback).attachToRecyclerView(recyclerView)
+        }
+    }
+
+    private fun clearAllFragmentsAndGoToChat() {
+        // Pop all back stack entries to get back to ChatFragment
+        val backStackCount = parentFragmentManager.backStackEntryCount
+        for (i in 0 until backStackCount) {
+            parentFragmentManager.popBackStack()
+        }
+
+        // Show ChatFragment if it was hidden
+        val chatFragment = parentFragmentManager.findFragmentByTag("ChatFragment")
+            ?: parentFragmentManager.fragments.find { it is ChatFragment }
+
+        chatFragment?.let {
+            parentFragmentManager.beginTransaction()
+                .show(it)
+                .commit()
         }
     }
 

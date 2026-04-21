@@ -4,13 +4,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class PromptAdapter(
     private val prompts: MutableList<Prompt>,
-    private val onItemClick: (Prompt) -> Unit,
-    private val onMenuClick: (View, Prompt) -> Unit
+    private val onItemClick: (Prompt) -> Unit,      // For content area click - send to chat
+    private val onCopyClick: (Prompt) -> Unit,       // For copy button - copy to clipboard
+    private val onMenuClick: (View, Prompt) -> Unit  // For menu button
 ) : RecyclerView.Adapter<PromptAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -26,21 +28,26 @@ class PromptAdapter(
         holder.promptText.visibility = if (prompt.isExpanded) View.VISIBLE else View.GONE
         holder.expandIcon.rotation = if (prompt.isExpanded) 180f else 0f
 
+        // Expand/collapse only when expand icon is clicked
         holder.expandIcon.setOnClickListener {
             prompt.isExpanded = !prompt.isExpanded
             notifyItemChanged(position)
         }
 
-        holder.title.setOnClickListener { onItemClick(prompt) }
-        holder.promptText.setOnClickListener { onItemClick(prompt) }
-        holder.itemView.setOnClickListener { onItemClick(prompt) }
-        holder.copyButton.setOnClickListener { onItemClick(prompt) }
+        // Content area click - sends to chat
+        holder.contentArea.setOnClickListener { onItemClick(prompt) }
+
+        // Copy button - copies to clipboard
+        holder.copyButton.setOnClickListener { onCopyClick(prompt) }
+
+        // Menu button - shows edit/delete menu
         holder.menuButton.setOnClickListener { onMenuClick(holder.menuButton, prompt) }
     }
 
     override fun getItemCount() = prompts.size
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val contentArea: LinearLayout = view.findViewById(R.id.content_area)
         val title: TextView = view.findViewById(R.id.prompt_title)
         val promptText: TextView = view.findViewById(R.id.prompt_prompt)
         val menuButton: ImageView = view.findViewById(R.id.menu_button)

@@ -1,0 +1,2 @@
+- Button settings are now above the switch settings in the Settings screen.
+- Reworked the Prompt Library screen/functioning. Tapping the item itself takes you back to main chat screen and will enter that saved prompt into the prompt box. Copy button will take you back to main chat screen but only puts the saved prompt in your clipboard.
