@@ -1,6 +1,5 @@
 package io.github.stardomains3.oxproxion
 
-
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -208,11 +207,8 @@ class PromptLibraryFragment : Fragment() {
     }
 
     private fun clearAllFragmentsAndGoToChat() {
-        // Pop all back stack entries to get back to ChatFragment
-        val backStackCount = parentFragmentManager.backStackEntryCount
-        for (i in 0 until backStackCount) {
-            parentFragmentManager.popBackStack()
-        }
+        // Pop back to ChatFragment in one go
+        parentFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
 
         // Show ChatFragment if it was hidden
         val chatFragment = parentFragmentManager.findFragmentByTag("ChatFragment")

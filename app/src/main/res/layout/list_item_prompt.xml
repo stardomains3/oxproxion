@@ -4,100 +4,99 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:background="?attr/selectableItemBackground">
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardBackgroundColor="#121314"
         app:cardCornerRadius="8dp"
+        android:id="@+id/card_area"
         app:cardElevation="4dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <!-- Main content area - clickable to send to chat -->
-            <LinearLayout
-                android:id="@+id/content_area"
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
+                android:layout_height="wrap_content">
 
                 <TextView
                     android:id="@+id/prompt_title"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_toStartOf="@+id/expand_icon"
                     android:text="Title"
                     android:textColor="@android:color/white"
                     android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/prompt_prompt"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Prompt text"
-                    android:textColor="#E0E0E0"
-                    android:textSize="14sp"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <!-- Button bar - separate from content -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end"
-                android:padding="8dp">
-
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless" />
                 <ImageView
                     android:id="@+id/menu_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_toStartOf="@+id/expand_icon"
+                    android:layout_centerVertical="true"
                     android:src="@drawable/ic_editnote"
                     android:padding="8dp"
                     android:layout_marginEnd="8dp"
                     android:background="@drawable/br_circle"
                     android:foreground="?attr/selectableItemBackgroundBorderless"
-                    android:clickable="true"
-                    android:focusable="true"
                     app:tint="@android:color/white" />
-
                 <ImageView
                     android:id="@+id/expand_icon"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+
+                    android:layout_marginEnd="8dp"
+                    android:layout_toStartOf="@+id/copy_button"
                     android:src="@drawable/ic_arrow_downward"
                     android:rotation="0"
                     android:padding="8dp"
-                    android:layout_marginEnd="8dp"
                     android:background="@drawable/br_circle"
-                    android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Expand/collapse"
                     app:tint="@android:color/white" />
-
                 <ImageView
                     android:id="@+id/copy_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="12dp"
                     android:src="@drawable/ic_copi"
                     android:padding="8dp"
                     android:background="@drawable/br_circle"
-                    android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
                     app:tint="@android:color/white"
                     android:contentDescription="Copy prompt" />
-            </LinearLayout>
+
+
+
+
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/prompt_prompt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Prompt text"
+                android:textColor="#E0E0E0"
+                android:textSize="14sp"
+                android:visibility="gone" />
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>
