@@ -1,0 +1,3 @@
+- Added tools: Get Date & Time, Open App, List Search Apps, and Set Sound Mode.
+- Updated some dependencies.
+- If you use oxproxion as your Assistant app it will now start in its own instance and your normal instance will be unaffected by it.

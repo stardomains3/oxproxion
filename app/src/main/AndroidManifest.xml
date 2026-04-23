@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <queries>
+        <intent>
+            <action android:name="android.settings.SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
         <package android:name="com.google.android.apps.maps" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
@@ -73,6 +80,19 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+           <!-- <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>-->
+        </activity>
+        <activity
+            android:name=".AssistantActivity"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=":assistant_task"
+            android:launchMode="singleInstance"
+            android:exported="true"
+            android:theme="@style/Base.Theme.Oxproxion">
             <intent-filter>
                 <action android:name="android.intent.action.ASSIST" />
                 <category android:name="android.intent.category.DEFAULT" />

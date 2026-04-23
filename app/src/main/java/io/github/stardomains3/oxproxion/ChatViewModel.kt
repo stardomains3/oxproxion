@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -927,6 +928,79 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             Tool(
                 type = "function",
                 function = FunctionTool(
+                    name = "set_sound_mode",
+                    description = "Gets or sets the device sound mode (Ring, Vibrate, or Silent). " +
+                            "If 'mode' is provided, it changes the setting. " +
+                            "If 'mode' is omitted, it simply returns the current sound mode. " +
+                            "Use this when the user asks to silence the phone, turn volume on, or check the ringer status.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("mode") {
+                                put("type", "string")
+                                put("enum", buildJsonArray {
+                                    add("normal")
+                                    add("vibrate")
+                                    add("silent")
+                                })
+                                put("description", "The desired mode: 'normal' (ring), 'vibrate', or 'silent'. Leave empty to just check the current mode.")
+                            }
+                        }
+                        putJsonArray("required") {} // Mode is optional
+                    }
+                )
+            ),
+
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "open_app",
+                    description = "Launches an installed application or a specific Android Settings page. " +
+                            "1. For apps: Provide 'app_name' (e.g., 'Spotify') or 'package_name'. " +
+                            "2. For Settings: Provide 'settings_action' (e.g., 'android.provider.Settings.ACTION_WIFI_SETTINGS'). " +
+                            "If opening a settings page, do not provide app_name.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("app_name") {
+                                put("type", "string")
+                                put("description", "Common name of the app to launch (e.g., 'Chrome', 'Maps').")
+                            }
+                            putJsonObject("package_name") {
+                                put("type", "string")
+                                put("description", "Optional: Specific package ID (e.g., 'com.whatsapp').")
+                            }
+                            putJsonObject("settings_action") {
+                                put("type", "string")
+                                put("description", "Optional: Android Settings Intent Action string (e.g., 'android.provider.Settings.ACTION_SECURITY_SETTINGS' for Lock Screen settings). Use this if the user asks for a specific settings page.")
+                            }
+                        }
+                        putJsonArray("required") {} // No single required param, logic handles the combo
+                    }
+                )
+            ),
+
+// NEW TOOL
+            Tool(
+                type = "function",
+                function = FunctionTool(
+                    name = "search_list_apps",
+                    description = "Lists installed applications that match a search query. Returns the App Label and Package Name. Use this to find the exact package name if 'open_app' fails to find an app by name.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("query") {
+                                put("type", "string")
+                                put("description", "Search term to filter apps (e.g., 'chrome', 'cromite'). Searches both app names and package names.")
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("query")) }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
                     name = "process_plus_code",
                     description = "A utility to convert between Plus Codes and geographic coordinates. Use 'encode' to turn lat/long into a Plus Code, or 'decode' to turn a Plus Code back into coordinates.",
                     parameters = buildJsonObject {
@@ -1052,6 +1126,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             Tool(
                 type = "function",
                 function = FunctionTool(
+                    name = "get_current_datetime",
+                    description = "Gets the current date and time including day of week, date, time with seconds, and UTC offset. Returns (JSON string) both human-readable strings and structured numeric data, plus ISO 8601 formatted datetime with UTC offset",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            // No parameters needed - gets current device time
+                        }
+                        putJsonArray("required") {
+                            // Empty - no required parameters
+                        }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
                     name = "start_navigation",
                     description = "Launches Google Maps turn-by-turn navigation to a specified destination. You can specify the mode of transportation and things to avoid (like tolls or highways).",
                     parameters = buildJsonObject {
@@ -1144,6 +1234,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 )
             ),
+
             Tool(
                 type = "function",
                 function = FunctionTool(
@@ -1445,7 +1536,200 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         error
                     }
                 }
+                "open_app" -> {
+                    try {
+                        val context = getApplication<Application>().applicationContext
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val pm = context.packageManager
 
+                        val settingsAction = arguments["settings_action"]?.jsonPrimitive?.contentOrNull
+                        val appName = arguments["app_name"]?.jsonPrimitive?.contentOrNull?.trim()
+                        val packageName = arguments["package_name"]?.jsonPrimitive?.contentOrNull
+
+                        // 1. Handle Specific Settings Page
+                        if (!settingsAction.isNullOrBlank()) {
+                            try {
+                                val intent = Intent(settingsAction).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    // Some settings intents need this flag to work from non-activity context
+                                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                }
+                                context.startActivity(intent)
+                                "Successfully opened settings page: $settingsAction"
+                            } catch (e: Exception) {
+                                "Error opening settings page '$settingsAction'. It might not exist on this device. Error: ${e.message}"
+                            }
+                        }
+                        // 2. Handle Standard App Launch
+                        else {
+                            var resolvedPackage: String? = null
+
+                            // Try Package Name first
+                            if (!packageName.isNullOrBlank()) {
+                                resolvedPackage = try {
+                                    pm.getPackageInfo(packageName, 0).packageName
+                                } catch (e: Exception) { null }
+                            }
+
+                            // Try Fuzzy Name Match
+                            if (resolvedPackage == null && !appName.isNullOrBlank()) {
+                                val mainIntent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
+                                val apps = pm.queryIntentActivities(mainIntent, 0)
+
+                                val bestMatch = apps.map { it to it.loadLabel(pm).toString() }
+                                    .filter { (_, label) -> label.contains(appName, ignoreCase = true) }
+                                    .minByOrNull { (_, label) ->
+                                        when {
+                                            label.equals(appName, ignoreCase = true) -> 0
+                                            label.startsWith(appName, ignoreCase = true) -> 1
+                                            else -> 2
+                                        }
+                                    }?.first
+
+                                resolvedPackage = bestMatch?.activityInfo?.packageName
+                            }
+
+                            // Launch
+                            if (resolvedPackage != null) {
+                                val launchIntent = pm.getLaunchIntentForPackage(resolvedPackage)
+                                if (launchIntent != null) {
+                                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(launchIntent)
+                                    "Successfully launched '$appName' (Package: $resolvedPackage)."
+                                } else {
+                                    "Found package '$resolvedPackage', but it has no launcher activity."
+                                }
+                            } else {
+                                "Could not find an app named '$appName'. Try using 'search_list_apps' to find the package name."
+                            }
+                        }
+                    } catch (e: Exception) {
+                        "Error in open_app: ${e.localizedMessage}"
+                    }
+                }
+
+                "search_list_apps" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val query = arguments["query"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val context = getApplication<Application>().applicationContext
+                        val pm = context.packageManager
+
+                        val mainIntent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
+                        val apps = pm.queryIntentActivities(mainIntent, 0)
+
+                        val results = buildJsonArray {
+                            apps.forEach { resolveInfo ->
+                                val label = resolveInfo.loadLabel(pm).toString()
+                                val pkg = resolveInfo.activityInfo.packageName
+
+                                // Filter by query (search label and package name)
+                                if (label.contains(query, ignoreCase = true) || pkg.contains(query, ignoreCase = true)) {
+                                    add(buildJsonObject {
+                                        put("label", JsonPrimitive(label))
+                                        put("package", JsonPrimitive(pkg))
+                                    })
+                                }
+                            }
+                        }
+
+                        // FIXED: Use .size (property) instead of .size() (function)
+                        // FIXED: Use > 0 instead of > (implicit comparison issue)
+                        if (results.isNotEmpty()) {
+                            "Found matching apps: ${results.toString()}"
+                        } else {
+                            "No apps found matching '$query'."
+                        }
+                    } catch (e: Exception) {
+                        "Error listing apps: ${e.message}"
+                    }
+                }
+                "get_current_datetime" -> {
+                    try {
+                        val now = Date()
+                        val calendar = Calendar.getInstance()
+
+                        // Get day of week
+                        val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
+                        val dayOfWeek = dayFormat.format(now)
+
+                        // Get date components
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                        val fullFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+
+                        // Get timezone info
+                        val timeZone = calendar.timeZone
+                        val utcOffset = timeZone.getOffset(now.time) / 1000 / 60 // offset in minutes
+                        val utcOffsetHours = utcOffset / 60
+                        val utcOffsetMinutes = Math.abs(utcOffset) % 60
+                        val utcOffsetSign = if (utcOffset >= 0) "+" else "-"
+                        val utcOffsetString = String.format("%s%02d:%02d", utcOffsetSign, Math.abs(utcOffsetHours), utcOffsetMinutes)
+
+                        // Build structured response
+                        val resultJson = buildJsonObject {
+                            put("day_of_week", JsonPrimitive(dayOfWeek))
+                            put("date", JsonPrimitive(dateFormat.format(now)))
+                            put("time", JsonPrimitive(timeFormat.format(now)))
+                            put("datetime_iso", JsonPrimitive(fullFormat.format(now) + utcOffsetString))
+                            put("year", JsonPrimitive(calendar.get(Calendar.YEAR)))
+                            put("month", JsonPrimitive(calendar.get(Calendar.MONTH) + 1)) // Calendar months are 0-indexed
+                            put("day_of_month", JsonPrimitive(calendar.get(Calendar.DAY_OF_MONTH)))
+                            put("hour", JsonPrimitive(calendar.get(Calendar.HOUR_OF_DAY)))
+                            put("minute", JsonPrimitive(calendar.get(Calendar.MINUTE)))
+                            put("second", JsonPrimitive(calendar.get(Calendar.SECOND)))
+                            put("timezone_id", JsonPrimitive(timeZone.id))
+                            put("timezone_display", JsonPrimitive(timeZone.displayName))
+                            put("utc_offset", JsonPrimitive(utcOffsetString))
+                            put("is_daylight_time", JsonPrimitive(timeZone.inDaylightTime(now)))
+                        }
+
+                        resultJson.toString()
+                    } catch (e: Exception) {
+                        "Error getting date/time: ${e.message}"
+                    }
+                }
+                "set_sound_mode" -> {
+                    try {
+                        val context = getApplication<Application>().applicationContext
+                        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val targetMode = arguments["mode"]?.jsonPrimitive?.contentOrNull
+
+                        // Helper function to read current state
+                        fun getCurrentMode(): String {
+                            return when (audioManager.ringerMode) {
+                                AudioManager.RINGER_MODE_NORMAL -> "normal"
+                                AudioManager.RINGER_MODE_VIBRATE -> "vibrate"
+                                AudioManager.RINGER_MODE_SILENT -> "silent"
+                                else -> "unknown"
+                            }
+                        }
+
+                        if (targetMode.isNullOrBlank()) {
+                            // Just report current status
+                            "Current sound mode is: ${getCurrentMode()}."
+                        } else {
+                            // Change the mode
+                            val newMode = when (targetMode.lowercase()) {
+                                "normal" -> AudioManager.RINGER_MODE_NORMAL
+                                "vibrate" -> AudioManager.RINGER_MODE_VIBRATE
+                                "silent" -> AudioManager.RINGER_MODE_SILENT
+                                else -> -1
+                            }
+
+                            if (newMode != -1) {
+                                audioManager.ringerMode = newMode
+                                "Sound mode changed to '${targetMode.lowercase()}'. Current mode is now: ${getCurrentMode()}."
+                            } else {
+                                "Error: Invalid mode specified. Use 'normal', 'vibrate', or 'silent'."
+                            }
+                        }
+                    } catch (e: Exception) {
+                        "Error changing sound mode: ${e.localizedMessage}"
+                    }
+                }
                 "set_alarm" -> {
                     try {
                         val arguments =

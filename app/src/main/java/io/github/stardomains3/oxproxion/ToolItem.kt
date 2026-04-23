@@ -109,6 +109,30 @@ data class ToolItem(
                 displayName = "Start Navigation",
                 description = "Launches Google Maps turn-by-turn navigation. Options include driving, walking, bicycling, or transit modes, plus route avoidance (e.g., no tolls or highways).",
                 isEnabled = "start_navigation" in enabledSet
+            ),
+            ToolItem(
+                name = "get_current_datetime",
+                displayName = "Get Date & Time",
+                description = "Returns current date and time with day, date, time (including seconds), timezone, and UTC offset information",
+                isEnabled = "get_current_datetime" in enabledSet
+            ),
+            ToolItem(
+                name = "open_app",
+                displayName = "App Launcher / Settings",
+                description = "Opens apps by name/package OR opens specific Android settings pages.",
+                isEnabled = "open_app" in enabledSet
+            ),
+            ToolItem(
+                name = "search_list_apps",
+                displayName = "Search/List Installed Apps",
+                description = "Searches for installed apps by name or package to find the correct ID for launching.",
+                isEnabled = "search_list_apps" in enabledSet
+            ),
+            ToolItem(
+                name = "set_sound_mode",
+                displayName = "Sound Mode",
+                description = "Gets or sets the device ringer mode (Normal, Vibrate, Silent).",
+                isEnabled = "set_sound_mode" in enabledSet
             )
 
             // Add more tools here as your app grows
