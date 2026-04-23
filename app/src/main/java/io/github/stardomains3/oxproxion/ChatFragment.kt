@@ -221,6 +221,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private var currentCameraUri: Uri? = null
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var locationPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var notificationPolicyLauncher: ActivityResultLauncher<Intent>
     private lateinit var imagePicker: ActivityResultLauncher<Intent>  // Renamed for clarity (gallery picker)
     private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
     private lateinit var layoutManager: LinearLayoutManager
@@ -279,6 +280,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             if (!isGranted) {
                 Toast.makeText(requireContext(), "Location permission is required for this tool", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        notificationPolicyLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // You could re-check the permission here and update the UI if necessary,
+            // but usually, the user just grants it in Settings and comes back.
         }
 
         cameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -3593,7 +3601,22 @@ $cleanContent
                 val currentItem = mutableItems[stableIndex]
                 val newState = !currentItem.isEnabled
 
-                // --- NEW: Intercept get_location if turning ON ---
+                // --- INTERCEPT: set_sound_mode ---
+                if (currentItem.name == "set_sound_mode" && newState) {
+                    val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+                    // Check if we already have permission
+                    if (!notificationManager.isNotificationPolicyAccessGranted) {
+                        // Permission not granted, open settings
+                        val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                        // Using the launcher defined in onCreate
+                        notificationPolicyLauncher.launch(intent)
+                        return@setOnClickListener // Stop here, don't toggle checkbox yet
+                    }
+                }
+                // ---------------------------------
+
+                // --- INTERCEPT: get_location ---
                 if (currentItem.name == "get_location" && newState) {
                     val hasPermission = ContextCompat.checkSelfPermission(
                         requireContext(),
@@ -3601,12 +3624,11 @@ $cleanContent
                     ) == PackageManager.PERMISSION_GRANTED
 
                     if (!hasPermission) {
-                        // Permission not granted yet, ask the system for it
                         locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                        return@setOnClickListener // Don't toggle the checkbox yet
+                        return@setOnClickListener
                     }
                 }
-                // -----------------------------------------------
+                // -------------------------------
 
                 // Normal toggle behavior
                 mutableItems[stableIndex] = currentItem.copy(isEnabled = newState)
@@ -3633,6 +3655,7 @@ $cleanContent
         val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
         titleView?.paintFlags = titleView.paintFlags.or(Paint.UNDERLINE_TEXT_FLAG)
     }
+
 
     private fun showWebSearchEngineDialog() {
         val engines = listOf(

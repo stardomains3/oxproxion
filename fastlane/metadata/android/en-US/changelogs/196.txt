@@ -1,0 +1,1 @@
+- Fix for asking for permissions for the set_sound_mode tool.
