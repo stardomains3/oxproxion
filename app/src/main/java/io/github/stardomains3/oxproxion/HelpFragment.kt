@@ -1,12 +1,15 @@
 package io.github.stardomains3.oxproxion
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
@@ -15,6 +18,9 @@ import android.text.style.URLSpan
 import android.text.util.Linkify
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
@@ -28,8 +34,23 @@ import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.image.coil.CoilImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
 import kotlin.math.roundToInt
+import androidx.core.net.toUri
 
 class HelpFragment : Fragment(R.layout.fragment_help) {
+    private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        folderPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocumentTree()
+        ) { uri ->
+            if (uri != null) {
+                val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
+                SharedPreferencesHelper(requireContext()).saveSafFolderUri(uri.toString())
+                Toast.makeText(requireContext(), "Folder updated! Tools should now work.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -142,6 +163,28 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
                         .codeBlockBackgroundColor(Color.argb(128, 0, 0, 0))
                         .blockQuoteColor(Color.BLACK)
                         .isLinkUnderlined(true)
+                }
+            })
+            .usePlugin(object : AbstractMarkwonPlugin() {
+                override fun afterSetText(textView: android.widget.TextView) {
+                    val spannable = textView.text as? Spannable ?: return
+                    val spans = spannable.getSpans(0, spannable.length, ClickableSpan::class.java)
+                    for (span in spans) {
+                        val start = spannable.getSpanStart(span)
+                        val end = spannable.getSpanEnd(span)
+                        val text = spannable.subSequence(start, end).toString()
+                        if (text.contains("re-select")) {
+                            spannable.removeSpan(span)
+                            spannable.setSpan(object : ClickableSpan() {
+                                override fun onClick(widget: View) {
+                                    val downloadsUri =
+                                        "content://com.android.externalstorage.documents/document/primary%3ADownload".toUri()
+
+                                    folderPickerLauncher.launch(downloadsUri)
+                                }
+                            }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    }
                 }
             })
             .build()
@@ -363,6 +406,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   If you make a preset titled "Digital Assistant"(case-insensitive), and have oxproxion as your system digital assistant in your Android settings(Settings->Apps->Default apps), this preset will be applied for when you use it as the system digital assistant.
             *   **Variable Substitution**: Use `{{oxdate}}` (yyyy-MM-dd), `{{oxtime}}` (HH:mm:ss), `{{oxdatetime}}` (ISO), or `{{oxhdt}}` (human-readable) in prompts/system messages. Auto-replaces with current date/time on send.
             *   GitHub Changelogs: <br>[https://github.com/stardomains3/oxproxion/releases](https://github.com/stardomains3/oxproxion/releases)
+            *   If tools are not working, you may not have selected the correct folder. The app requires the **Download/oxproxion** folder for tools to work. [Click here to re-select it.](action://reselect-folder)
+
             
             ## Hermes Agent Info:
             

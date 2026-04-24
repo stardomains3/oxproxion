@@ -24,6 +24,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val prefs = SharedPreferencesHelper(requireContext())
 
         val viewModel: ChatViewModel by activityViewModels()
+        val toolsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.toolsButton)
         val copyOrOpenSwitch = view.findViewById<MaterialSwitch>(R.id.copyOropenSwitch)
         val showCitationsSwitch = view.findViewById<MaterialSwitch>(R.id.showCitationsSwitch)
         val expandableInputSwitch = view.findViewById<MaterialSwitch>(R.id.expandableInputSwitch)
@@ -72,6 +73,13 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         apiKeyButton.setOnClickListener {
             val dialog = SaveApiDialogFragment()
             dialog.show(childFragmentManager, "SaveApiDialogFragment")
+        }
+        toolsButton.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, ToolsFragment())
+                .addToBackStack(null)
+                .commit()
         }
         braveApiKeyButton.setOnClickListener {
             val dialog = SaveBraveApiDialogFragment()

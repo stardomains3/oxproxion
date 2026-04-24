@@ -1,0 +1,2 @@
+- Tools management now has its own screen. Access from long press tools button or the new button in the Settings screen.
+- If you didn't select the Download/oxproxion folder for the workspace for when asked initially (and therefore tools aren't working), you can select again via a link in the Help screen.

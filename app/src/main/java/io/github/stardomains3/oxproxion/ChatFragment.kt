@@ -1673,7 +1673,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             showWebSearchEngineDialog()
             true
         }
-        toolsButton.setOnLongClickListener {
+       /* toolsButton.setOnLongClickListener {
             if (!hasFolderPermission()) {
                 val folderPath = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
                 if (!folderPath.exists()) folderPath.mkdirs()
@@ -1686,6 +1686,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 showToolsSelectionDialog()
             }
             true   // consume the long‑click
+        }*/
+
+        toolsButton.setOnLongClickListener {
+            // Simply open the ToolsFragment
+            // The ToolsFragment will handle creating the folder and checking permissions
+            hideMenu()
+
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, ToolsFragment())
+                .addToBackStack(null)
+                .commit()
+
+            true // consume the long-click
         }
 
         toolsButton.setOnClickListener {
