@@ -1,0 +1,1 @@
+- Some fixes for the Chat Memory feature introduced in v2.1.88
