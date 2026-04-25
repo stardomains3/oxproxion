@@ -308,6 +308,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Prompt Library Button** {{ic_prompts}}: Opens the Prompt Library Screen
             *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
             *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key.
+             *  **Chat Memory : Allows the user to control context by limiting the amount of past messages sent in chat.
             *   **Brave Search API Key Button** {{ic_key}} : Opens a dialog to enter your Brave Search API key. The option for the tool will appear when long-pressing tools button. Allows for local or cloud models to have Brave search results injected into context.
             *   **OpenRouter Transforms** : To help with prompts that exceed the maximum context size of a model, OpenRouter supports a custom parameter called transforms. https://openrouter.ai/docs/guides/features/message-transforms
             *   **Extended Top Bar** : Allows the reasoning, web search, streaming, tools, presets, and setting buttons to be on chat screen all the time below the top bar for convenient access. Also includes a Home button to bring to Android Home screen.

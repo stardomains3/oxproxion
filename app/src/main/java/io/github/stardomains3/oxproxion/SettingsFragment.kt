@@ -24,6 +24,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val prefs = SharedPreferencesHelper(requireContext())
 
         val viewModel: ChatViewModel by activityViewModels()
+        val chatMemoryButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.chatMemoryButton)
         val toolsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.toolsButton)
         val copyOrOpenSwitch = view.findViewById<MaterialSwitch>(R.id.copyOropenSwitch)
         val showCitationsSwitch = view.findViewById<MaterialSwitch>(R.id.showCitationsSwitch)
@@ -58,6 +59,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         copyOrOpenSwitch.isChecked = prefs.getUseCopyButton()
         scrollButtonsSwitch.isChecked = viewModel.isScrollersEnabled.value ?: false
         autoBackSwitch.isChecked = prefs.getAutoBack()
+        val memoryCount = prefs.getChatMemoryCount()
+        chatMemoryButton.text = if (memoryCount == Int.MAX_VALUE) "All messages" else "$memoryCount messages"
         animateBarOnErrorSwitch.isChecked = prefs.getAnimateBarOnError()
         copyOrDismissSwitch.isChecked = prefs.getUseCopyButton2()
         expandableInputSwitch.isChecked = viewModel.isExpandableInputEnabled.value ?: false
@@ -84,6 +87,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         braveApiKeyButton.setOnClickListener {
             val dialog = SaveBraveApiDialogFragment()
             dialog.show(childFragmentManager, SaveBraveApiDialogFragment.TAG)
+        }
+        chatMemoryButton.setOnClickListener {
+            val dialog = ChatMemoryDialogFragment()
+            dialog.show(childFragmentManager, "ChatMemoryDialogFragment")
         }
         promptsButton.setOnClickListener {
             parentFragmentManager.beginTransaction()

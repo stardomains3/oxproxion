@@ -1,0 +1,1 @@
+- Added option in settings for to allow the user to control context by limiting amount of past messages sent in chat.

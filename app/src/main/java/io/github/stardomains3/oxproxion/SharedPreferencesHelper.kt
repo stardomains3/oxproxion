@@ -39,6 +39,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_ENABLED_TOOLS = "enabled_tools"
         private const val KEY_TOOLS_ENABLED = "tools_enabled_preference"
         const val LAN_PROVIDER_OMLX = "omlx"
+        private const val KEY_CHAT_MEMORY_COUNT = "chat_memory_count"
         private const val KEY_ANIMATE_BAR_ON_ERROR = "animate_bar_on_error"
         private const val SAF_FOLDER_URI = "saffolderuri"
         private const val KEY_USE_COPY_BUTTON2 = "use_copy_button2"
@@ -202,6 +203,12 @@ class SharedPreferencesHelper(context: Context) {
             "reasoning_effort",
             effort
         )
+    }
+    fun saveChatMemoryCount(count: Int) {
+        mainPrefs.edit { putInt(KEY_CHAT_MEMORY_COUNT, count) }
+    }
+    fun getChatMemoryCount(): Int {
+        return mainPrefs.getInt(KEY_CHAT_MEMORY_COUNT, Int.MAX_VALUE) // Default to All messages
     }
     fun saveDisableWebSearchAfterSend(enabled: Boolean) {
         mainPrefs.edit { putBoolean(KEY_DISABLE_WEB_SEARCH_AFTER_SEND, enabled) }

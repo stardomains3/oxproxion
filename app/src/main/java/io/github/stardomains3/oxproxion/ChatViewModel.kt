@@ -750,6 +750,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         messagesForApiRequest.add(userMessage)
+        //new for msg count
+        val memoryCount = sharedPreferencesHelper.getChatMemoryCount()
+        if (messagesForApiRequest.size > memoryCount) {
+            // Keep system message if present, then keep last N messages
+            val systemMessages = messagesForApiRequest.filter { it.role == "system" }
+            val recentMessages = messagesForApiRequest.filter { it.role != "system" }
+                .takeLast(memoryCount - systemMessages.size)
+
+            messagesForApiRequest.clear()
+            messagesForApiRequest.addAll(systemMessages)
+            messagesForApiRequest.addAll(recentMessages)
+        }
 
         val uiMessages = _chatMessages.value?.toMutableList() ?: mutableListOf()
         uiMessages.add(userMessage)
@@ -826,7 +838,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         messagesForApiRequest.addAll(currentMessages.take(userMessageIndex))
         messagesForApiRequest.add(userMessage)
+        //new for msg count
+        val memoryCount = sharedPreferencesHelper.getChatMemoryCount()
+        if (messagesForApiRequest.size > memoryCount) {
+            // Keep system message if present, then keep last N messages
+            val systemMessages = messagesForApiRequest.filter { it.role == "system" }
+            val recentMessages = messagesForApiRequest.filter { it.role != "system" }
+                .takeLast(memoryCount - systemMessages.size)
 
+            messagesForApiRequest.clear()
+            messagesForApiRequest.addAll(systemMessages)
+            messagesForApiRequest.addAll(recentMessages)
+        }
         val uiMessages = _chatMessages.value?.toMutableList() ?: mutableListOf()
         uiMessages.add(THINKING_MESSAGE)
         _chatMessages.value = uiMessages
