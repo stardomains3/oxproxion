@@ -1600,13 +1600,27 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                                 layoutManager.scrollToPosition(chatAdapter.itemCount - 1)
                             }
                         }
-
-                        // Optional: Notification update
-                        /*if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
-                            val apiIdentifier = viewModel.activeChatModel.value ?: "Unknown Model"
-                            val displayName = viewModel.getModelDisplayName(apiIdentifier)
-                            ForegroundService.updateNotificationStatusSilently(displayName, "Message deleted.")
-                        }*/
+                    }
+                    .setCancelable(true)
+                    .show()
+            },
+            onRegenMessage = { position ->
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Regenerate this response?")
+                    .setMessage("This will remove this response and all following messages, then generate a new response. This action cannot be undone.\n\nProceed?")
+                    .setNegativeButton("Cancel") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setPositiveButton("Regenerate") { _, _ ->
+                        val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
+                        viewModel.truncateHistory(position)
+                        viewModel.sendContinuation(systemMessage)
+                        hideMenu()
+                        chatRecyclerView.post {
+                            if (chatAdapter.itemCount > 0) {
+                                layoutManager.scrollToPosition(chatAdapter.itemCount - 1)
+                            }
+                        }
                     }
                     .setCancelable(true)
                     .show()

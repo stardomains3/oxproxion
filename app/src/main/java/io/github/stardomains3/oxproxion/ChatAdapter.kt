@@ -52,6 +52,7 @@ class ChatAdapter(
     private val onEditMessage: (Int, String) -> Unit,
     private val onRedoMessage: (Int, JsonElement) -> Unit,
     private val onDeleteMessage: (Int) -> Unit,
+    private val onRegenMessage: (Int) -> Unit,
     private val onEditAssistantMessage: (Int, String) -> Unit,
     private val onSaveMarkdown: (Int, String) -> Unit,
     private val onCaptureItemToBitmap: (Int, String) -> Unit,
@@ -544,6 +545,8 @@ class ChatAdapter(
         private val collapseToggleButton: ImageButton = itemView.findViewById(R.id.collapseToggleButton)
         private val saveFileButton: ImageButton = itemView.findViewById(R.id.saveFileButton)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
+        private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
+        private val regenButton: ImageButton = itemView.findViewById(R.id.regenButton)
         // Configuration for "Long Message" detection
         private val CHAR_THRESHOLD = 350
 
@@ -711,6 +714,12 @@ class ChatAdapter(
                 // Pass the position and the raw text to the fragment
                 val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
                 onEditAssistantMessage(bindingAdapterPosition, fullRawMarkdown)
+            }
+            deleteButton.setOnClickListener {
+                onDeleteMessage(bindingAdapterPosition)
+            }
+            regenButton.setOnClickListener {
+                onRegenMessage(bindingAdapterPosition)
             }
             copyButton.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

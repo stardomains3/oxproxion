@@ -5,7 +5,6 @@
     android:layout_height="wrap_content"
     android:paddingVertical="4dp">
 
-    <!-- Inner group for icon + message, pinned to left with max 95% width -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/aiGroup"
         android:layout_width="0dp"
@@ -27,7 +26,6 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintHorizontal_bias="0.0">
 
-            <!-- NEW: ImageView for generated images -->
             <ImageView
                 android:id="@+id/generatedImageView"
                 android:layout_width="wrap_content"
@@ -62,143 +60,157 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Buttons moved below messageContainer, at bottom edge OLD color #454545-->
-        <ImageButton
-            android:id="@+id/copyButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginBottom="4dp"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Copy text"
-            android:padding="4dp"
-            android:src="@drawable/ic_tune"
-            app:tint="#777777"
+        <HorizontalScrollView
+            android:id="@+id/buttonScrollView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:overScrollMode="never"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
-        <ImageButton
-            android:id="@+id/editButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Edit message"
-            android:padding="4dp"
-            app:layout_constraintStart_toEndOf="@id/copyButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer"
-            android:src="@drawable/ic_edit"
-            android:visibility="visible"
-            app:tint="#777777" />
-        <ImageButton
-            android:id="@+id/aipdfButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Make PDF"
-            android:padding="4dp"
-            android:src="@drawable/ic_pdfnew"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/editButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
-        <ImageButton
-            android:id="@+id/markdownButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Make MD"
-            android:padding="4dp"
-            android:src="@drawable/ic_markdown"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/aipdfButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
-        <ImageButton
-            android:id="@+id/pngButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Make MD"
-            android:padding="4dp"
-            android:src="@drawable/ic_png"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/markdownButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
-        <ImageButton
-            android:id="@+id/htmlButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="View in HTML (scrollable code/tables)"
-            android:padding="4dp"
-            android:src="@drawable/ic_html"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/pngButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/messageContainer">
 
-        <ImageButton
-            android:id="@+id/shareButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Share text"
-            android:padding="4dp"
-            android:src="@drawable/ic_share"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/htmlButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingBottom="4dp">
 
-        <!-- ttsButton -->
-        <ImageButton
-            android:id="@+id/ttsButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Speak text"
-            android:padding="4dp"
-            android:src="@drawable/ic_volume_up"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/shareButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
-        <ImageButton
-            android:id="@+id/saveFileButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Save as file"
-            android:padding="4dp"
-            android:src="@drawable/ic_filesave"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/ttsButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
-        <ImageButton
-            android:id="@+id/collapseToggleButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Toggle expand"
-            android:padding="4dp"
-            android:src="@drawable/ic_expand_more"
-            android:visibility="visible"
-            app:tint="#777777"
-            app:layout_constraintStart_toEndOf="@id/saveFileButton"
-            app:layout_constraintTop_toBottomOf="@id/messageContainer" />
+                <ImageButton
+                    android:id="@+id/copyButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Copy text"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_tune"
+                    app:tint="#777777" />
 
+                <ImageButton
+                    android:id="@+id/editButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Edit message"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_edit"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/deleteButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Delete message"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_trash"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/regenButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Regenerate response"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_redo"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/aipdfButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Make PDF"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_pdfnew"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/markdownButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Make MD"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_markdown"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/pngButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Make PNG"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_png"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/htmlButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="View in HTML (scrollable code/tables)"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_html"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/shareButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Share text"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_share"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/ttsButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Speak text"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_volume_up"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/saveFileButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Save as file"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_filesave"
+                    app:tint="#777777" />
+
+                <ImageButton
+                    android:id="@+id/collapseToggleButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Toggle expand"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_expand_more"
+                    android:visibility="gone"
+                    app:tint="#777777" />
+
+            </LinearLayout>
+        </HorizontalScrollView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
