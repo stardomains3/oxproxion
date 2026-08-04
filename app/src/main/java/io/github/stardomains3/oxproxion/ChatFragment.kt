@@ -1926,6 +1926,13 @@ $cleanContent
                     attachmentPreviewContainer.visibility = View.GONE
                     pendingFiles.clear()
                     updateAttachmentButton()
+                } else {
+                    val messages = viewModel.chatMessages.value
+                    val lastMessage = messages?.lastOrNull()
+                    if (messages.isNullOrEmpty() || lastMessage?.role == "assistant") {
+                        hideMenu()
+                        viewModel.sendContinuation(substitutedSystemPrompt)
+                    }
                 }
             }
         }

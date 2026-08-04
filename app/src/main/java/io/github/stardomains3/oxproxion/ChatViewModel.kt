@@ -1215,6 +1215,87 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    fun sendContinuation(systemMessage: String? = null) {
+        toolCallsHandledForTurn = false
+        toolRecursionDepth = 0
+
+        activeChatUrl = "https://openrouter.ai/api/v1/chat/completions"
+        activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
+
+        if (activeModelIsLan()) {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint == null) {
+                Toast.makeText(
+                    getApplication<Application>().applicationContext,
+                    "Please configure LAN endpoint in settings",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+            activeChatUrl = "$lanEndpoint/v1/chat/completions"
+            val lanKey = sharedPreferencesHelper.getLanApiKey()
+            activeChatApiKey = if (lanKey.isNullOrBlank()) "any-non-empty-string" else lanKey
+        }
+
+        val thinkingMessage = THINKING_MESSAGE
+        val messagesForApiRequest = mutableListOf<FlexibleMessage>()
+
+        if (systemMessage != null) {
+            messagesForApiRequest.add(
+                FlexibleMessage(role = "system", content = JsonPrimitive(systemMessage))
+            )
+        }
+
+        _chatMessages.value?.let { history ->
+            messagesForApiRequest.addAll(history)
+        }
+
+        val memoryCount = sharedPreferencesHelper.getChatMemoryCount()
+        if (messagesForApiRequest.size > memoryCount) {
+            val systemMessages = messagesForApiRequest.filter { it.role == "system" }
+            val recentMessages = messagesForApiRequest.filter { it.role != "system" }
+                .takeLast(memoryCount - systemMessages.size)
+            messagesForApiRequest.clear()
+            messagesForApiRequest.addAll(systemMessages)
+            messagesForApiRequest.addAll(recentMessages)
+        }
+
+        val uiMessages = _chatMessages.value?.toMutableList() ?: mutableListOf()
+        uiMessages.add(thinkingMessage)
+        _chatMessages.value = uiMessages
+        _isAwaitingResponse.value = true
+        _userScrolledDuringStream.value = false
+
+        networkJob = viewModelScope.launch {
+            try {
+                val modelForRequest =
+                    _activeChatModel.value ?: throw IllegalStateException("No active chat model")
+
+                if (activeModelIsLan()) {
+                    if (_isStreamingEnabled.value == true) {
+                        handleStreamedResponseLAN(modelForRequest, messagesForApiRequest, thinkingMessage)
+                    } else {
+                        handleNonStreamedResponseLAN(modelForRequest, messagesForApiRequest, thinkingMessage)
+                    }
+                } else {
+                    if (_isStreamingEnabled.value == true) {
+                        handleStreamedResponse(modelForRequest, messagesForApiRequest, thinkingMessage)
+                    } else {
+                        handleNonStreamedResponse(modelForRequest, messagesForApiRequest, thinkingMessage)
+                    }
+                }
+            } catch (e: Throwable) {
+                handleError(e, thinkingMessage)
+            } finally {
+                _isAwaitingResponse.postValue(false)
+                if (_userScrolledDuringStream.value != true) {
+                    _scrollToBottomEvent.postValue(Event(Unit))
+                }
+                networkJob = null
+            }
+        }
+    }
+
     private fun buildTools(): List<Tool> {
         val allTools = listOf(
             Tool(
