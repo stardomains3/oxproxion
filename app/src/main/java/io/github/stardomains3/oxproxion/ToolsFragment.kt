@@ -105,8 +105,13 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         val braveApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("brave_search_api_key")
         val hasBraveKey = braveApiKey.isNotEmpty()
         allItems = allItems.filter { item ->
-            if (item.name == "brave_search" || item.name == "find_nearby_places") hasBraveKey else true
+            if (item.name == "brave_search" || item.name == "brave_news" || item.name == "find_nearby_places") {
+                hasBraveKey
+            } else {
+                true
+            }
         }
+
 
         // Check Permissions
         val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager

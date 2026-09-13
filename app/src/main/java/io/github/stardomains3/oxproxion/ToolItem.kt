@@ -29,14 +29,20 @@ data class ToolItem(
             ),
             ToolItem(
                 name = "brave_search",
-                displayName = "Brave Search",
-                description = "Search the web or filter for news with Brave Search API. Supports freshness filters and SafeSearch.",
+                displayName = "Brave Web Search",
+                description = "AI-optimized web search returning extracted page content (text, tables, code). Customizable: freshness (day/week/month/year/date range), result count (1-50), context size (1K-32K tokens), relevance threshold (strict/balanced/lenient), and SafeSearch.",
                 isEnabled = "brave_search" in enabledSet
+            ),
+            ToolItem(
+                name = "brave_news",
+                displayName = "Brave News",
+                description = "Dedicated news index for recent articles from trusted outlets. Customizable: freshness (day/week/month/year/date range), article count (1-50), and SafeSearch.",
+                isEnabled = "brave_news" in enabledSet
             ),
             ToolItem(
                 name = "find_nearby_places",
                 displayName = "Brave Place Search",
-                description = "Searches for businesses, landmarks, and POIs via Brave Place Search — by location name or coordinates",
+                description = "Finds businesses, landmarks, and POIs by location name or coordinates. Customizable: search query, location (name or lat/long), and radius in meters (default 5000).",
                 isEnabled = "find_nearby_places" in enabledSet
             ),
             ToolItem(

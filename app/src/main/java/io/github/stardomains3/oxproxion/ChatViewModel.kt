@@ -1469,6 +1469,43 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             Tool(
                 type = "function",
                 function = FunctionTool(
+                    name = "brave_news",
+                    description = "Search a dedicated news index for recent articles from trusted outlets worldwide. Returns article titles, publishers, publication ages, and summaries. Use this for breaking news, current events, recent developments, and anything time-sensitive. For general web research use brave_search instead.",
+                    parameters = buildJsonObject {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            putJsonObject("query") {
+                                put("type", "string")
+                                put("description", "The news search query (1-400 chars, max 50 words). Be specific and concise.")
+                            }
+                            putJsonObject("freshness") {
+                                put("type", "string")
+                                put(
+                                    "description",
+                                    "Time filter for articles. Valid values: 'pd' (past day), 'pw' (past week), 'pm' (past month), 'py' (past year), or a date range like '2024-01-01to2024-06-30'. Leave blank for no time filter. Strongly recommended for news queries."
+                                )
+                            }
+                            putJsonObject("count") {
+                                put("type", "integer")
+                                put("description", "Number of articles to return, 1-50. Default 20.")
+                            }
+                            putJsonObject("safesearch") {
+                                put("type", "string")
+                                put("enum", buildJsonArray {
+                                    add("off")
+                                    add("moderate")
+                                    add("strict")
+                                })
+                                put("description", "Adult content filter. Default 'moderate'.")
+                            }
+                        }
+                        putJsonArray("required") { add(JsonPrimitive("query")) }
+                    }
+                )
+            ),
+            Tool(
+                type = "function",
+                function = FunctionTool(
                     name = "get_location",
                     description = "Gets the user's current precise location, including Plus Code, latitude/longitude, timestamp, accuracy, and map links (Apple, Google, OpenStreetMap). Use when the user asks where they are, to share their location, or for any task requiring their current coordinates.",
                     parameters = buildJsonObject {
@@ -1615,44 +1652,45 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "brave_search",
-                    description = "Search the web using Brave Search API. Returns ranked results with titles, URLs, and relevant text snippets. Use 'web' type for general knowledge, facts, how-tos, product info. Use 'news' type when the user asks about current events, breaking news, recent developments, or anything time-sensitive. The 'freshness' parameter is especially useful with 'news' to filter results by recency. SafeSearch is moderate by default but can be set to strict or off.",
+                    description = "Search the web and get pre-extracted page content optimized for AI. Returns actual text chunks from relevant pages (not just snippets), including tables, code, and structured data. Use this for factual questions, research, how-tos, technical questions, and any query where you need real content to answer from. For breaking news use brave_news. For finding physical places use brave_places.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
                             putJsonObject("query") {
                                 put("type", "string")
-                                put(
-                                    "description",
-                                    "The search query (1-400 chars, max 50 words). Be specific and concise."
-                                )
-                            }
-                            putJsonObject("type") {
-                                put("type", "string")
-                                put(
-                                    "description",
-                                    "Search type: 'web' for general search (default), 'news' for recent news articles and current events."
-                                )
+                                put("description", "The search query (1-400 chars, max 50 words). Be specific and concise.")
                             }
                             putJsonObject("freshness") {
                                 put("type", "string")
-                                put(
-                                    "description",
-                                    "Time filter for results. Valid values: 'pd' (past day), 'pw' (past week), 'pm' (past month), 'py' (past year), or a date range like '2024-01-01to2024-06-30'. Leave blank for no time filter. Particularly useful with type=news."
-                                )
-                            }
-                            putJsonObject("safesearch") {
-                                put("type", "string")
-                                put(
-                                    "description",
-                                    "Adult content filter. Valid values: 'off', 'moderate' (default), 'strict'."
-                                )
+                                put("description", "Time filter. 'pd' (past day), 'pw' (past week), 'pm' (past month), 'py' (past year), or 'YYYY-MM-DDtoYYYY-MM-DD'. Leave blank for no filter.")
                             }
                             putJsonObject("count") {
                                 put("type", "integer")
-                                put(
-                                    "description",
-                                    "Number of results to return, between 1 and 20. Default is 10."
-                                )
+                                put("description", "Max URLs to consider, 1-50. Default 10. Use 5 for simple factual lookups, 50 for deep research.")
+                            }
+                            putJsonObject("max_tokens") {
+                                put("type", "integer")
+                                put("description", "Approximate max tokens of extracted content to return, 1024-32768. Default 4096. Use 2048 for simple factual lookups, 8192 for standard research, 16384+ for deep multi-source research. Higher values = more context but slower and more expensive.")
+                            }
+
+                            putJsonObject("threshold") {
+                                put("type", "string")
+                                put("enum", buildJsonArray {
+                                    add("strict")
+                                    add("balanced")
+                                    add("lenient")
+                                    add("disabled")
+                                })
+                                put("description", "Relevance threshold. 'strict' for precision (fewer, more relevant), 'lenient' for recall (more, possibly less relevant). Leave blank for API default.")
+                            }
+                            putJsonObject("safesearch") {
+                                put("type", "string")
+                                put("enum", buildJsonArray {
+                                    add("off")
+                                    add("moderate")
+                                    add("strict")
+                                })
+                                put("description", "Adult content filter. Default 'moderate'.")
                             }
                         }
                         putJsonArray("required") { add(JsonPrimitive("query")) }
@@ -2427,18 +2465,36 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
                         val query = arguments["query"]?.jsonPrimitive?.content
-                        val type = arguments["type"]?.jsonPrimitive?.contentOrNull ?: "web"
                         val freshness = arguments["freshness"]?.jsonPrimitive?.contentOrNull
-                        val safesearch = arguments["safesearch"]?.jsonPrimitive?.contentOrNull ?: "moderate"
                         val count = arguments["count"]?.jsonPrimitive?.intOrNull ?: 10
+                        val maxTokens = arguments["max_tokens"]?.jsonPrimitive?.intOrNull ?: 4096
+                        val threshold = arguments["threshold"]?.jsonPrimitive?.contentOrNull
+                        val safesearch = arguments["safesearch"]?.jsonPrimitive?.contentOrNull ?: "moderate"
 
                         if (query.isNullOrBlank()) {
                             "Error: No search query provided."
                         } else {
-                            searchBrave(query, type, freshness, safesearch, count)
+                            searchBraveLlmContext(query, freshness, count, maxTokens, threshold, safesearch)
                         }
                     } catch (e: Exception) {
-                        "Error: Failed to search with Brave – ${e.message}"
+                        "Error: Failed to search with Brave LLM Context – ${e.message}"
+                    }
+                }
+                "brave_news" -> {
+                    try {
+                        val arguments = json.decodeFromString<JsonObject>(toolCall.function.arguments)
+                        val query = arguments["query"]?.jsonPrimitive?.content
+                        val freshness = arguments["freshness"]?.jsonPrimitive?.contentOrNull
+                        val count = arguments["count"]?.jsonPrimitive?.intOrNull ?: 20
+                        val safesearch = arguments["safesearch"]?.jsonPrimitive?.contentOrNull ?: "moderate"
+
+                        if (query.isNullOrBlank()) {
+                            "Error: No news query provided."
+                        } else {
+                            searchBraveNews(query, freshness, count, safesearch)
+                        }
+                    } catch (e: Exception) {
+                        "Error: Failed to search Brave News – ${e.message}"
                     }
                 }
 
@@ -3066,6 +3122,203 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 sb.toString()
             } catch (e: Exception) {
                 "Error: Brave Place Search failed – ${e.message}"
+            }
+        }
+    }
+    private suspend fun searchBraveLlmContext(
+        query: String,
+        freshness: String?,
+        count: Int,
+        maxTokens: Int,
+        threshold: String?,
+        safesearch: String
+    ): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val apiKey = sharedPreferencesHelper.getApiKeyFromPrefs("brave_search_api_key")
+
+
+                val urlBuilder = StringBuilder("https://api.search.brave.com/res/v1/llm/context").apply {
+                    append("?q=").append(java.net.URLEncoder.encode(query, "UTF-8"))
+                    append("&count=").append(count.coerceIn(1, 50))
+                    append("&maximum_number_of_tokens=").append(maxTokens.coerceIn(1024, 32768))
+
+                    val safe = if (safesearch in listOf("off", "moderate", "strict")) safesearch else "moderate"
+                    append("&safesearch=").append(safe)
+                    if (!freshness.isNullOrBlank()) {
+                        append("&freshness=").append(java.net.URLEncoder.encode(freshness, "UTF-8"))
+                    }
+                    if (!threshold.isNullOrBlank() && threshold in listOf("strict", "balanced", "lenient", "disabled")) {
+                        append("&context_threshold_mode=").append(threshold)
+                    }
+                    append("&enable_source_metadata=true")
+                }
+
+                val response = httpClient.get(urlBuilder.toString()) {
+                    header("Accept", "application/json")
+                    header("X-Subscription-Token", apiKey)
+                }
+
+                if (!response.status.isSuccess()) {
+                    val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details" }
+                    return@withContext "Brave LLM Context Error: ${response.status} – $errorBody"
+                }
+
+                val data = response.body<JsonObject>()
+                val generic = data["grounding"]?.jsonObject?.get("generic")?.jsonArray
+                val sources = data["sources"]?.jsonObject
+
+                if (generic == null || generic.isEmpty()) {
+                    return@withContext "No relevant content found for: $query"
+                }
+
+                val sb = StringBuilder()
+                sb.appendLine("## Web Context for: \"$query\"")
+                if (!freshness.isNullOrBlank()) {
+                    val freshnessLabel = when (freshness) {
+                        "pd" -> "Past Day"
+                        "pw" -> "Past Week"
+                        "pm" -> "Past Month"
+                        "py" -> "Past Year"
+                        else -> "Date Range: $freshness"
+                    }
+                    sb.appendLine("Freshness: $freshnessLabel")
+                }
+                sb.appendLine()
+
+                generic.forEachIndexed { index, element ->
+                    val item = element.jsonObject
+                    val url = item["url"]?.jsonPrimitive?.content ?: ""
+                    val title = item["title"]?.jsonPrimitive?.content ?: "Untitled"
+                    val snippets = item["snippets"]?.jsonArray
+                        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                        ?.filter { it.isNotBlank() }
+                        ?: emptyList()
+
+                    // Look up source metadata (age, hostname)
+                    val sourceMeta = sources?.get(url)?.jsonObject
+                    val hostname = sourceMeta?.get("hostname")?.jsonPrimitive?.contentOrNull ?: ""
+                    val ageArray = sourceMeta?.get("age")?.jsonArray
+                    // age array: [full date, YYYY-MM-DD, relative age, ISO 8601]
+                    val age = ageArray?.getOrNull(2)?.jsonPrimitive?.contentOrNull
+                        ?: ageArray?.getOrNull(1)?.jsonPrimitive?.contentOrNull
+                        ?: ""
+
+                    sb.appendLine("### ${index + 1}. $title")
+                    if (hostname.isNotBlank()) sb.appendLine("Source: $hostname")
+                    if (age.isNotBlank()) sb.appendLine("Age: $age")
+                    sb.appendLine("URL: $url")
+                    sb.appendLine()
+                    snippets.forEach { snippet ->
+                        sb.appendLine(snippet)
+                        sb.appendLine()
+                    }
+                    sb.appendLine("---")
+                    sb.appendLine()
+                }
+
+                sb.toString()
+            } catch (e: Exception) {
+                "Error: Brave LLM Context failed – ${e.message}"
+            }
+        }
+    }
+    private suspend fun searchBraveNews(
+        query: String,
+        freshness: String?,
+        count: Int,
+        safesearch: String
+    ): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val apiKey = sharedPreferencesHelper.getApiKeyFromPrefs("brave_search_api_key")
+
+                val urlBuilder = StringBuilder("https://api.search.brave.com/res/v1/news/search").apply {
+                    append("?q=").append(java.net.URLEncoder.encode(query, "UTF-8"))
+                    append("&count=").append(count.coerceIn(1, 50))
+
+
+                    val safe = if (safesearch in listOf("off", "moderate", "strict")) safesearch else "moderate"
+                    append("&safesearch=").append(safe)
+                    if (!freshness.isNullOrBlank()) {
+                        append("&freshness=").append(java.net.URLEncoder.encode(freshness, "UTF-8"))
+                    }
+                    append("&extra_snippets=true")
+                }
+
+                val response = httpClient.get(urlBuilder.toString()) {
+                    header("Accept", "application/json")
+                    header("X-Subscription-Token", apiKey)
+                }
+
+                if (!response.status.isSuccess()) {
+                    val errorBody = try { response.bodyAsText() } catch (ex: Exception) { "No details" }
+                    return@withContext "Brave News Error: ${response.status} – $errorBody"
+                }
+
+                val data = response.body<JsonObject>()
+
+                // News endpoint returns results at the TOP LEVEL (not nested under "news")
+                val resultsArray = data["results"]?.jsonArray ?: JsonArray(listOf())
+
+                if (resultsArray.isEmpty()) {
+                    return@withContext "No news articles found for: $query"
+                }
+
+                val sb = StringBuilder()
+                sb.appendLine("## Brave News Results for: \"$query\"")
+                if (!freshness.isNullOrBlank()) {
+                    val freshnessLabel = when (freshness) {
+                        "pd" -> "Past Day"
+                        "pw" -> "Past Week"
+                        "pm" -> "Past Month"
+                        "py" -> "Past Year"
+                        else -> "Date Range: $freshness"
+                    }
+                    sb.appendLine("Freshness filter: $freshnessLabel")
+                }
+                sb.appendLine()
+
+                resultsArray.forEachIndexed { index, element ->
+                    val result = element.jsonObject
+                    val title = result["title"]?.jsonPrimitive?.content ?: "Untitled"
+                    val url = result["url"]?.jsonPrimitive?.content ?: ""
+                    val description = result["description"]?.jsonPrimitive?.content
+                        ?: result["snippets"]?.jsonArray?.firstOrNull()?.jsonPrimitive?.content
+                        ?: ""
+
+                    val extraSnippets = result["extra_snippets"]?.jsonArray
+                        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                        ?.filter { it.isNotBlank() }
+                        ?: emptyList()
+
+                    val publisher = result["meta_url"]?.jsonObject?.get("hostname")?.jsonPrimitive?.content
+                        ?: result["profile"]?.jsonObject?.get("name")?.jsonPrimitive?.content
+                        ?: ""
+
+                    // News uses "age" (e.g. "2 hours ago"); fall back to "page_age" (ISO date)
+                    val pageAge = result["age"]?.jsonPrimitive?.content
+                        ?: result["page_age"]?.jsonPrimitive?.content
+                        ?: ""
+
+                    val breaking = result["breaking"]?.jsonPrimitive?.booleanOrNull == true
+
+                    sb.appendLine("### ${index + 1}. $title${if (breaking) " 🚨 BREAKING" else ""}")
+                    if (publisher.isNotBlank()) sb.appendLine("Source: $publisher")
+                    if (pageAge.isNotBlank()) sb.appendLine("Published: $pageAge")
+                    sb.appendLine("URL: $url")
+                    if (description.isNotBlank()) sb.appendLine("Summary: $description")
+                    if (extraSnippets.isNotEmpty()) {
+                        extraSnippets.forEach { snippet ->
+                            sb.appendLine("  • $snippet")
+                        }
+                    }
+                    sb.appendLine()
+                }
+
+                sb.toString()
+            } catch (e: Exception) {
+                "Error: Brave News failed – ${e.message}"
             }
         }
     }

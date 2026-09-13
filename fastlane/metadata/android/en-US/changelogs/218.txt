@@ -1,0 +1,3 @@
+- Dependencies: Updated some dependencies.
+- Brave Search: Migrated brave_search to LLM Context API (supports pre-extracted content and up to 50 results).
+- Brave News: Replaced news filtering with new brave_news tool via /res/v1/news/search.
