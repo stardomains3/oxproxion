@@ -287,19 +287,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     pingInterval(56, TimeUnit.SECONDS)
                     retryOnConnectionFailure(true)
                     connectionPool(okhttp3.ConnectionPool(3, 90, TimeUnit.SECONDS))
-                    // --- START SSL BYPASS (Strictly for LAN) ---
-                    val trustAllCerts = object : X509TrustManager {
-                        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-                    }
-                    val sslContext = SSLContext.getInstance("SSL")
-                    sslContext.init(null, arrayOf(trustAllCerts), SecureRandom())
-
-                    sslSocketFactory(sslContext.socketFactory, trustAllCerts)
-                    hostnameVerifier { _, _ -> true }
-                    // --- END SSL BYPASS ---
-
                     addInterceptor(CompressionInterceptor(Gzip))
                     addInterceptor(BrotliInterceptor)
                     readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
