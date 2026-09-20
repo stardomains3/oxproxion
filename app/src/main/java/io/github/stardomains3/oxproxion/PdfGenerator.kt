@@ -41,9 +41,9 @@ import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.ext.tables.TableTheme
 import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
-//import io.noties.markwon.syntax.Prism4jThemeDarkula
-//import io.noties.markwon.syntax.SyntaxHighlightPlugin
-//import io.noties.prism4j.Prism4j
+import io.noties.markwon.syntax.Prism4jThemeDarkula
+import io.noties.markwon.syntax.SyntaxHighlightPlugin
+import io.noties.prism4j.Prism4j
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -68,10 +68,10 @@ class PdfGenerator(private val context: Context) {
     //private val markwon = Markwon.builder(context)
     //  .build()
 
-    //val prism4j = Prism4j(ExampleGrammarLocator())
+    val prism4j = Prism4j(ExampleGrammarLocator())
     // val theme = Prism4jThemeDefault.create()
-    //val theme = Prism4jThemeDarkula.create()
-    //val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
+    val theme = Prism4jThemeDarkula.create()
+    val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
     val customTheme = TableTheme.buildWithDefaults(context) // Or TableTheme.buildWithDefaults(context) if you want default values first
         .tableBorderColor(Color.LTGRAY)
         .tableBorderWidth(2)
@@ -84,7 +84,7 @@ class PdfGenerator(private val context: Context) {
     private val markwon = Markwon.builder(context)
         .usePlugin(HtmlPlugin.create())
         .usePlugin(StrikethroughPlugin.create())
-       // .usePlugin(syntaxHighlightPlugin)
+       .usePlugin(syntaxHighlightPlugin)
         // .usePlugin(TablePlugin.create(context))
         .usePlugin(TablePlugin.create(customTheme))
 

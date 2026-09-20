@@ -66,6 +66,7 @@ class LanModelsFragment : Fragment() {
             "mlx_lm" -> "MLX LM Models"
             "ollama" -> "Ollama Models"
             "omlx" -> "oMLX Models"
+            "nativ" -> "Nativ Models"
             "hermes_agent" -> "Hermes Agent Model"
             else -> "LAN Models"
         }
@@ -121,6 +122,7 @@ class LanModelsFragment : Fragment() {
                     "mlx_lm" -> "No MLX LM models found.\nMake sure MLX LM server is running and has models loaded."
                     "ollama" -> "No Ollama models found.\nMake sure Ollama is installed and has models pulled."
                     "omlx" -> "No oMLX models found.\nMake sure oMLX is installed and has models pulled."
+                    "nativ" -> "No Nativ models found.\nMake sure Nativ is installed and has models pulled."
                     "hermes_agent" -> "No Hermes Agent models found.\nMake sure Hermes Agent server is running and has models loaded."
                     else -> "No models found."
                 }

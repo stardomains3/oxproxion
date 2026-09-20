@@ -28,8 +28,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 37
-        versionCode = 218
-        versionName = "2.2.3"
+        versionCode = 219
+        versionName = "2.2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -96,6 +96,8 @@ dependencies {
     implementation(libs.markwon.taskList)
     implementation(libs.markwon.image.coil)
     implementation(libs.markwon.strikethrough)
+    implementation(libs.markwon.syntax.highlight)
+    implementation(libs.prism4j.core)
     // Removed: markwon.syntax.highlight, prism4j.core, kapt(prism4j.bundler)
 
     // Core / UI

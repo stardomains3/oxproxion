@@ -68,7 +68,19 @@ class Transactivity : AppCompatActivity() {
         btnCopy.visibility = View.GONE
         etTranscription.setText("")
 
+
+
         btnQuit.setOnClickListener {
+            if (isRecording) {
+                try {
+                    mediaRecorder?.stop()
+                } catch (_: Exception) {}
+                try {
+                    mediaRecorder?.release()
+                } catch (_: Exception) {}
+                mediaRecorder = null
+                isRecording = false
+            }
             finish()
         }
 
@@ -130,6 +142,7 @@ class Transactivity : AppCompatActivity() {
             etTranscription.setText("Listening...")
             btnAction.visibility = View.VISIBLE
             btnAction.text = "Stop / Transcribe"
+            btnQuit.visibility = View.VISIBLE
 
         } catch (e: Exception) {
             Log.e("Transactivity", "Failed to start recording", e)

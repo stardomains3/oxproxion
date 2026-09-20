@@ -107,9 +107,9 @@ import io.noties.markwon.image.coil.CoilImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
 import io.noties.markwon.movement.MovementMethodPlugin
 import io.noties.markwon.simple.ext.SimpleExtPlugin
-//import io.noties.markwon.syntax.Prism4jThemeDarkula
-//import io.noties.markwon.syntax.SyntaxHighlightPlugin
-//import io.noties.prism4j.Prism4j
+import io.noties.markwon.syntax.Prism4jThemeDarkula
+import io.noties.markwon.syntax.SyntaxHighlightPlugin
+import io.noties.prism4j.Prism4j
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -609,9 +609,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 ttsAvailable = false
             }
         }
-        //val prism4j = Prism4j(ExampleGrammarLocator())
-        //val theme = Prism4jThemeDarkula.create()
-        //val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
+        val prism4j = Prism4j(ExampleGrammarLocator())
+        val theme = Prism4jThemeDarkula.create()
+        val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
 
 // ✅ CRITICAL: Custom table theme FIRST
         val customTableTheme = TableTheme.buildWithDefaults(requireContext())
@@ -637,7 +637,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 "#F8F8F8".toColorInt()
             ))
 
-         //   .usePlugin(syntaxHighlightPlugin)
+           .usePlugin(syntaxHighlightPlugin)
 
             // ✅ Images AFTER table/syntax
             .usePlugin(CoilImagesPlugin.create(requireContext()))

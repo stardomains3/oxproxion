@@ -5863,6 +5863,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             "ollama" -> fetchOllamaModels()
             "mlx_lm" -> fetchLmStudioModels()  // If you have it; else emptyList()
             "omlx" -> fetchoMLXModels()
+            "nativ" -> fetchNativModels()
             "hermes_agent" -> fetchHermesAgentModels()  // Hermes Agent uses OpenAI-compatible API
             else -> emptyList()
         }
@@ -5886,7 +5887,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    suspend fun fetchLmStudioModels(): List<LlmModel> = withTimeout(10000) {  // 10s MAX total
+    suspend fun fetchLmStudioModels(): List<LlmModel> = withTimeout(10000.milliseconds) {  // 10s MAX total
         withContext(Dispatchers.IO) {
             val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
             if (lanEndpoint.isNullOrBlank()) {
@@ -5934,7 +5935,52 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    private suspend fun fetchoMLXModels(): List<LlmModel> = withTimeout(10000) {
+    private suspend fun fetchNativModels(): List<LlmModel> = withTimeout(10000.milliseconds) {
+        withContext(Dispatchers.IO) {
+            val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
+            if (lanEndpoint.isNullOrBlank()) {
+                throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
+            }
+            val apiKey = sharedPreferencesHelper.getLanApiKey()
+            try {
+                val response = httpClient.get("$lanEndpoint/v1/models") {
+                    timeout { requestTimeoutMillis = 10000 }
+                    header("Authorization", "Bearer $apiKey")
+                }
+
+                if (!response.status.isSuccess()) {
+                    throw Exception("Server returned ${response.status}: ${response.status.description}")
+                }
+
+                val responseBody = response.body<JsonObject>()
+                val modelsArray = responseBody["data"]?.jsonArray ?: return@withContext emptyList()
+
+                modelsArray.mapNotNull { modelJson ->
+                    try {
+                        val modelObj = modelJson.jsonObject
+                        val name = modelObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+
+                        LlmModel(
+                            displayName = name,
+                            apiIdentifier = name,
+                            isVisionCapable = false,
+                            isImageGenerationCapable = false,
+                            isReasoningCapable = false,
+                            created = System.currentTimeMillis() / 1000,
+                            isFree = true,
+                            isLANModel = true
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }.sortedBy { it.displayName.lowercase() }
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
+    private suspend fun fetchoMLXModels(): List<LlmModel> = withTimeout(10000.milliseconds) {
         withContext(Dispatchers.IO) { // Fixed typo: Dispatchers
             val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
             if (lanEndpoint.isNullOrBlank()) {
@@ -5987,7 +6033,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     // NEW: Hermes Agent models fetch - uses OpenAI-compatible API
-    private suspend fun fetchHermesAgentModels(): List<LlmModel> = withTimeout(10000) {
+    private suspend fun fetchHermesAgentModels(): List<LlmModel> = withTimeout(10000.milliseconds) {
         withContext(Dispatchers.IO) {
             val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
             if (lanEndpoint.isNullOrBlank()) {
@@ -6040,7 +6086,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    suspend fun fetchOllamaModels(): List<LlmModel> = withTimeout(10000) {  // 10s MAX total
+    suspend fun fetchOllamaModels(): List<LlmModel> = withTimeout(10000.milliseconds) {  // 10s MAX total
         withContext(Dispatchers.IO) {
             val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
             if (lanEndpoint == null) {
@@ -6092,7 +6138,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun fetchLlamaCppModels(): List<LlmModel> = withTimeout(10000) {
+    private suspend fun fetchLlamaCppModels(): List<LlmModel> = withTimeout(10000.milliseconds) {
         withContext(Dispatchers.IO) {
             val lanEndpoint = sharedPreferencesHelper.getLanEndpoint()
             if (lanEndpoint.isNullOrBlank()) {

@@ -1,0 +1,4 @@
+- Added support for Nativ, a Mac-only inference server. https://github.com/Blaizzy/nativ It supports the transcription endpoint in addition to text/vision.
+- Added Quit button for Transcription preset for when recording.
+- Updated some dependencies.
+- Found a way to bring back code highlighting in the normal chat interface

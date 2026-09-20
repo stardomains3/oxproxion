@@ -60,6 +60,8 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_ENABLED_TOOLS = "enabled_tools"
         private const val KEY_TOOLS_ENABLED = "tools_enabled_preference"
         const val LAN_PROVIDER_OMLX = "omlx"
+        const val LAN_PROVIDER_NATIV = "nativ"
+
         private const val KEY_CHAT_MEMORY_COUNT = "chat_memory_count"
         private const val KEY_ANIMATE_BAR_ON_ERROR = "animate_bar_on_error"
         private const val SAF_FOLDER_URI = "saffolderuri"
