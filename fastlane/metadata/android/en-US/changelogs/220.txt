@@ -1,0 +1,7 @@
+### Changed
+- Updated some dependencies
+
+### Added
+- Implement crash-recovery draft persistence for active chat
+  - Continuously persist the current chat to a rolling draft file
+  - Restore draft on cold start so chats survive OS kills, force-stops, and reboots

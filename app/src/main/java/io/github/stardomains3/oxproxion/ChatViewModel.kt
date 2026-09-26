@@ -2,6 +2,7 @@ package io.github.stardomains3.oxproxion
 
 import android.Manifest
 import android.app.Application
+import kotlinx.serialization.builtins.ListSerializer
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
@@ -62,7 +63,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -71,6 +74,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -99,6 +103,7 @@ import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
 import org.commonmark.renderer.text.TextContentRenderer
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.URLEncoder
@@ -167,6 +172,25 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val allModels = getBuiltInModels() + customModels
         val model = allModels.find { it.apiIdentifier == modelIdentifier }
         return model?.isVisionCapable ?: false
+    }
+    private fun writeDraft(messages: List<FlexibleMessage>) {
+        try {
+            val encoded = json.encodeToString(
+                ListSerializer(FlexibleMessage.serializer()),
+                messages
+            )
+            val tmp = File(draftFile.parentFile, "${draftFile.name}.tmp")
+            tmp.writeText(encoded)
+
+            // Atomic replace. On Android's filesDir (ext4/f2fs) renameTo replaces
+            // the destination atomically. If it fails, we give up and keep the
+            // previous good draft — we never write the live file directly.
+            if (!tmp.renameTo(draftFile)) {
+                tmp.delete()
+            }
+        } catch (_: Exception) {
+            // Never crash on draft save.
+        }
     }
     fun isLanModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
@@ -382,6 +406,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isScrollProgressEnabled: LiveData<Boolean> = _isScrollProgressEnabled
     private val _lanModels = MutableLiveData<List<LlmModel>>()
     val lanModels: LiveData<List<LlmModel>> = _lanModels
+    private val draftFile: File
+        get() = File(getApplication<Application>().filesDir, "draft_chat.json")
+    private val draftObserver = androidx.lifecycle.Observer<List<FlexibleMessage>> { messages ->
+        if (messages != null) draftUpdates.tryEmit(messages)
+    }
+
+    // Conflated channel: if the writer is busy, new values replace the buffered one.
+// Guarantees we always persist the LATEST state, never queue up stale writes.
+    private val draftUpdates = MutableSharedFlow<List<FlexibleMessage>>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     private var lanFetchJob: Job? = null
 
@@ -512,6 +549,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        _chatMessages.removeObserver(draftObserver)   // ← add this
         httpClient.close()
         lanHttpClient.close()
         lanTranscriptionHttpClient.close()
