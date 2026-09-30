@@ -2,6 +2,7 @@ package io.github.stardomains3.oxproxion
 
 import android.graphics.Color import android.view.LayoutInflater import android.view.View import android.view.ViewGroup import android.view.WindowManager import android.widget.ImageView import android.widget.PopupWindow import android.widget.TextView import androidx.core.graphics.drawable.toDrawable import androidx.recyclerview.widget.RecyclerView
 import androidx.core.view.isVisible
+import kotlin.toString
 
 class PresetAdapter( private val onItemClicked: (Preset) -> Unit, private val onItemEdit: (Preset) -> Unit, private val onItemDelete: (Preset) -> Unit ) : RecyclerView.Adapter<PresetAdapter.PresetVH>() {
 
@@ -58,6 +59,8 @@ class PresetAdapter( private val onItemClicked: (Preset) -> Unit, private val on
             append(if (preset.tools) "On" else "Off")
             append(" • Web Search: ")
             append(if (preset.webSearch) "On" else "Off")
+            append(" • Msgs: ")
+            append(if (preset.chatMemoryCount == Int.MAX_VALUE) "All" else preset.chatMemoryCount.toString())
         }
        // updateSubtitle(holder, preset)
         holder.subtitleContainer.visibility = if (preset.isExpanded) View.VISIBLE else View.GONE

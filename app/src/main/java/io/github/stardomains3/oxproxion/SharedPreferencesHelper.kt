@@ -56,6 +56,8 @@ class SharedPreferencesHelper(context: Context) {
 
         const val LAN_PROVIDER_HERMES_AGENT = "hermes_agent"  // NEW - Hermes Agent provider
         private const val KEY_AUTO_BACK = "auto_back_enabled"
+        private const val KEY_WEB_FETCH_ENGINE = "web_fetch_engine"
+        private const val KEY_WEB_FETCH_MAX_USES = "web_fetch_max_uses"
         private const val KEY_VOLUME_SCROLL = "volume_scroll_enabled"
         private const val KEY_ENABLED_TOOLS = "enabled_tools"
         private const val KEY_TOOLS_ENABLED = "tools_enabled_preference"
@@ -156,6 +158,17 @@ class SharedPreferencesHelper(context: Context) {
             saveCustomModels(oldModels)
         }
     }
+    fun getWebFetchEngine(): String =
+        mainPrefs.getString(KEY_WEB_FETCH_ENGINE, "openrouter") ?: "openrouter"
+
+    fun saveWebFetchEngine(engine: String) =
+        mainPrefs.edit { putString(KEY_WEB_FETCH_ENGINE, engine) }
+
+    fun getWebFetchMaxUses(): Int =
+        mainPrefs.getInt(KEY_WEB_FETCH_MAX_USES, 0)  // 0 = unset (no limit)
+
+    fun saveWebFetchMaxUses(maxUses: Int) =
+        mainPrefs.edit { putInt(KEY_WEB_FETCH_MAX_USES, maxUses) }
 
     private fun migrateSystemMessages() {
         val oldJson = mainPrefs.getString(KEY_CUSTOM_SYSTEM_MESSAGES, null)

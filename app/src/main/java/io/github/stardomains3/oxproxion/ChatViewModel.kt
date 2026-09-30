@@ -74,7 +74,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -545,6 +544,33 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         llmService = LlmService(httpClient, activeChatUrl)
         activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
         _sortOrder.value = sharedPreferencesHelper.getSortOrder()
+        // 1. Restore draft on cold start
+        if (draftFile.exists()) {
+            try {
+                val restored = json.decodeFromString(
+                    ListSerializer(FlexibleMessage.serializer()),
+                    draftFile.readText()
+                )
+                if (restored.isNotEmpty()) _chatMessages.value = restored
+            } catch (_: Exception) {
+                // Corrupt draft — delete it so we don't fail on every launch
+                runCatching { draftFile.delete() }
+            }
+        }
+
+// 2. Background writer coroutine
+        viewModelScope.launch(Dispatchers.IO) {
+            draftUpdates.collect { messages ->
+                if (messages.isEmpty()) {
+                    runCatching { draftFile.delete() }
+                } else {
+                    writeDraft(messages)
+                }
+            }
+        }
+
+// 3. Observe every mutation — using the stored observer so we can remove it
+        _chatMessages.observeForever(draftObserver)
     }
 
     override fun onCleared() {
@@ -1570,6 +1596,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 )
             ),
             Tool(
+                type = "openrouter:web_fetch",
+                parameters = buildJsonObject {
+                    put("engine", sharedPreferencesHelper.getWebFetchEngine())
+                    val maxUses = sharedPreferencesHelper.getWebFetchMaxUses()
+                    if (maxUses > 0) put("max_uses", maxUses)
+                }
+            ),
+            Tool(
                 type = "function",
                 function = FunctionTool(
                     name = "start_navigation",
@@ -1891,15 +1925,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Handle prefs for enabling/disabling tools
         val hasStoredPrefs = sharedPreferencesHelper.hasEnabledToolsStored()
 
-
-        // If no prefs stored yet (first use), enable all tools
-        if (!hasStoredPrefs) return allTools
-
-        // Otherwise, load and filter by user's explicit choices (empty stored set → no tools)
-        val enabledToolNames = sharedPreferencesHelper.getEnabledTools()
-        return allTools.filter { tool ->
-            tool.function?.name in enabledToolNames
+// First use: enable everything (including server tools)
+        if (!hasStoredPrefs) {
+            return if (activeModelIsLan()) {
+                allTools.filter { it.function != null }  // LAN: function tools only
+            } else {
+                allTools
+            }
         }
+
+// Otherwise, load and filter by user's explicit choices
+        val enabledToolNames = sharedPreferencesHelper.getEnabledTools()
+        val filtered = allTools.filter { tool ->
+            when {
+                tool.function != null -> tool.function.name in enabledToolNames
+                else -> tool.type in enabledToolNames  // server tools keyed by "openrouter:web_fetch"
+            }
+        }
+// Never send server tools to LAN endpoints
+        return if (activeModelIsLan()) filtered.filter { it.function != null } else filtered
+
     }
     private suspend fun handleToolCalls(
         toolCalls: List<ToolCall>,

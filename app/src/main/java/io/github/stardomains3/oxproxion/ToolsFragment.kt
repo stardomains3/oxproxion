@@ -20,8 +20,8 @@ import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import com.google.android.material.materialswitch.MaterialSwitch
 import androidx.core.net.toUri
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
-import kotlin.collections.remove
 
 class ToolsFragment : Fragment(R.layout.fragment_tools) {
 
@@ -180,7 +180,13 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                     checkBox.toggle()
                 }
             }
-
+// Web Fetch settings via long-press (only for the server tool)
+            if (item.name == "openrouter:web_fetch") {
+                row.setOnLongClickListener {
+                    showWebFetchEngineDialog()
+                    true
+                }
+            }
             checkBox.setOnCheckedChangeListener { _, isChecked ->
                 val currentEnabled = sharedPreferencesHelper.getEnabledTools().toMutableSet()
                 if (isChecked) currentEnabled.add(item.name) else currentEnabled.remove(item.name)
@@ -231,6 +237,60 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         thumbTintList = thumbTintSelector
         thumbTintMode = PorterDuff.Mode.SRC_ATOP
         trackTintMode = PorterDuff.Mode.SRC_ATOP
+    }
+    private fun showWebFetchEngineDialog() {
+        val engines = listOf(
+            "openrouter" to "OpenRouter (Free, direct HTTP fetch)",
+            "exa" to "Exa ($1/1k fetches, better extraction)",
+            "parallel" to "Parallel ($1/1k fetches, highest quality)",
+            "firecrawl" to "Firecrawl (BYOK — your Firecrawl credits)",
+            "native" to "Native (Provider's built-in fetch, if available)",
+            "auto" to "Auto (Native if available, falls back to Exa — may bill)"
+        )
+
+        val currentEngine = sharedPreferencesHelper.getWebFetchEngine()
+        var selectedEngine = currentEngine
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Web Fetch Engine")
+            .setSingleChoiceItems(
+                engines.map { it.second }.toTypedArray(),
+                engines.indexOfFirst { it.first == currentEngine }.takeIf { it >= 0 } ?: 0
+            ) { _, which -> selectedEngine = engines[which].first }
+            .setPositiveButton("Next") { _, _ ->
+                sharedPreferencesHelper.saveWebFetchEngine(selectedEngine)
+                showWebFetchMaxUsesDialog()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showWebFetchMaxUsesDialog() {
+        // 0 = no limit; 1-10 = caps fetches per request
+        val options = listOf(0, 1, 2, 3, 4, 5, 6, 8, 10)
+        val optionLabels = options.map {
+            if (it == 0) "No limit" else "$it ${if (it == 1) "fetch" else "fetches"} per request"
+        }.toTypedArray()
+
+        val currentMax = sharedPreferencesHelper.getWebFetchMaxUses()
+        var selectedMax = currentMax
+
+        MaterialAlertDialogBuilder(
+            requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Max Fetches Per Request\n(Higher values increase token usage)")
+            .setSingleChoiceItems(
+                optionLabels,
+                options.indexOf(currentMax).takeIf { it >= 0 } ?: 0
+            ) { _, which -> selectedMax = options[which] }
+            .setPositiveButton("Save") { _, _ ->
+                sharedPreferencesHelper.saveWebFetchMaxUses(selectedMax)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun refreshUI() {

@@ -14,6 +14,7 @@ data class Preset(
     val conversationMode: Boolean,
     val tools: Boolean = false,
     val webSearch: Boolean = false,
+    val chatMemoryCount: Int = Int.MAX_VALUE,   // NEW — Int.MAX_VALUE == "All messages"
     // UI‑only flag – will NOT be serialised or persisted
     @Transient
     var isExpanded: Boolean = false

@@ -22,6 +22,9 @@ class PresetEditFragment : Fragment() {
     private lateinit var viewModel: ChatViewModel
     private lateinit var prefs: SharedPreferencesHelper
     private lateinit var toolbar: MaterialToolbar
+    private lateinit var chatMemoryButton: MaterialButton
+    private var selectedChatMemoryCount: Int = Int.MAX_VALUE
+
 
     private var editingPreset: Preset? = null
     private lateinit var toolsSwitch: MaterialSwitch
@@ -62,6 +65,15 @@ class PresetEditFragment : Fragment() {
         // Load data if editing
         if (editingPreset != null) {
             populateEditData(editingPreset!!)
+        }
+        // Setup click listeners
+        chatMemoryButton.setOnClickListener {
+            val dialog = PresetChatMemoryDialogFragment.newInstance(selectedChatMemoryCount)
+            dialog.onSelected = { count ->
+                selectedChatMemoryCount = count
+                chatMemoryButton.text = formatMemoryLabel(count)
+            }
+            dialog.show(childFragmentManager, "PresetChatMemoryDialogFragment")
         }
 
         // Setup click listeners
@@ -127,6 +139,9 @@ class PresetEditFragment : Fragment() {
         streamingSwitch.isChecked = false // default: off
         reasoningSwitch.isChecked = true // default: on
         conversationSwitch.isChecked = false // default: off
+        chatMemoryButton = view.findViewById(R.id.buttonChatMemory)
+        chatMemoryButton.text = formatMemoryLabel(selectedChatMemoryCount)
+
     }
 
     private fun setupToolbar() {
@@ -190,6 +205,8 @@ class PresetEditFragment : Fragment() {
             it.title == preset.systemMessage.title && it.prompt == preset.systemMessage.prompt
         }?.title ?: preset.systemMessage.title
         systemMessageAutoComplete.setText(systemMessageTitle, false)
+        selectedChatMemoryCount = preset.chatMemoryCount
+        chatMemoryButton.text = formatMemoryLabel(preset.chatMemoryCount)
 
         // Set toggles
         toolsSwitch.isChecked = preset.tools
@@ -284,7 +301,8 @@ class PresetEditFragment : Fragment() {
             reasoning = reasoning,
             conversationMode = conversationMode,
             tools = tools,
-            webSearch = webSearch
+            webSearch = webSearch,
+            chatMemoryCount = selectedChatMemoryCount   // NEW
         )
 
         val repo = PresetRepository(requireContext())
@@ -295,6 +313,9 @@ class PresetEditFragment : Fragment() {
             android.widget.Toast.LENGTH_SHORT).show()
         parentFragmentManager.popBackStack()
     }
+    private fun formatMemoryLabel(count: Int): String =
+        if (count == Int.MAX_VALUE) "Chat Memory: All messages"
+        else "Chat Memory: $count messages"
 
     companion object {
         private const val ARG_PRESET_ID = "preset_id"

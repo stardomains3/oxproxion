@@ -28,6 +28,12 @@ data class ToolItem(
                 isEnabled = "get_location" in enabledSet
             ),
             ToolItem(
+                name = "openrouter:web_fetch",
+                displayName = "Web Fetch (Server)",
+                description = "OpenRouter fetches URL/PDF content server-side using the free engine and feeds it to the AI. Works with OpenRouter models only. Long-press this to set options.",
+                isEnabled = "openrouter:web_fetch" in enabledSet
+            ),
+            ToolItem(
                 name = "brave_search",
                 displayName = "Brave Web Search",
                 description = "AI-optimized web search returning extracted page content (text, tables, code). Customizable: freshness (day/week/month/year/date range), result count (1-50), context size (1K-32K tokens), relevance threshold (strict/balanced/lenient), and SafeSearch.",

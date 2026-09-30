@@ -12,6 +12,8 @@ object PresetManager {
 
         // Apply system message (it was already validated to exist before calling this)
         prefs.saveSelectedSystemMessage(preset.systemMessage)
+        prefs.saveChatMemoryCount(preset.chatMemoryCount)
+
 
         // Apply streaming/reasoning/conversation toggles
         prefs.saveStreamingPreference(preset.streaming)
@@ -42,6 +44,7 @@ object PresetManager {
             systemMessage = prefs.getSelectedSystemMessage(),
             streaming = prefs.getStreamingPreference(),
             reasoning = prefs.getReasoningPreference(),
+            chatMemoryCount = prefs.getChatMemoryCount(),
             conversationMode = prefs.getConversationModeEnabled(),
             tools = prefs.getToolsPreference(),
             webSearch = prefs.getWebSearchBoolean()
@@ -57,6 +60,8 @@ object PresetManager {
         // Restore model
         viewModel.setModel(snapshot.modelIdentifier)
         prefs.savePreferenceModelnewchat(snapshot.modelIdentifier)
+        prefs.saveChatMemoryCount(snapshot.chatMemoryCount)
+
 
         // Restore system message
         prefs.saveSelectedSystemMessage(snapshot.systemMessage)
@@ -81,5 +86,6 @@ data class AssistantStateSnapshot(
     val reasoning: Boolean,
     val conversationMode: Boolean,
     val tools: Boolean,
-    val webSearch: Boolean
+    val webSearch: Boolean,
+    val chatMemoryCount: Int   // NEW
 )

@@ -215,7 +215,8 @@ data class ImageData(
 @Serializable
 data class Tool(
     val type: String,
-    val function: FunctionTool? = null
+    val function: FunctionTool? = null,
+    val parameters: JsonObject? = null  // NEW: server tool config
 )
 
 @Serializable
