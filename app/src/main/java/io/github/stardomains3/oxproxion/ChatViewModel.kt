@@ -1604,6 +1604,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
             ),
             Tool(
+                type = "openrouter:datetime",
+                parameters = buildJsonObject {
+                    // Use device timezone if it's a proper IANA name; otherwise let it default to UTC
+                    val tzId = java.util.TimeZone.getDefault().id
+                    if (tzId.contains("/")) put("timezone", tzId)
+                }
+            ),
+            Tool(
                 type = "function",
                 function = FunctionTool(
                     name = "start_navigation",

@@ -30,8 +30,14 @@ data class ToolItem(
             ToolItem(
                 name = "openrouter:web_fetch",
                 displayName = "Web Fetch (Server)",
-                description = "OpenRouter fetches URL/PDF content server-side using the free engine and feeds it to the AI. Works with OpenRouter models only. Long-press this to set options.",
+                description = "OpenRouter fetches URL/PDF content server-side and feeds it to the AI. Works with OpenRouter models only. Long-press this to set options.",
                 isEnabled = "openrouter:web_fetch" in enabledSet
+            ),
+            ToolItem(
+                name = "openrouter:datetime",
+                displayName = "Date & Time (Server)",
+                description = "OpenRouter gives the model the current date and time (in your device's timezone). Useful for scheduling and time-sensitive questions.",
+                isEnabled = "openrouter:datetime" in enabledSet
             ),
             ToolItem(
                 name = "brave_search",

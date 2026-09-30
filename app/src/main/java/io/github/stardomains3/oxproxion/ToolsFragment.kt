@@ -240,12 +240,12 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
     }
     private fun showWebFetchEngineDialog() {
         val engines = listOf(
-            "openrouter" to "OpenRouter (Free, direct HTTP fetch)",
-            "exa" to "Exa ($1/1k fetches, better extraction)",
-            "parallel" to "Parallel ($1/1k fetches, highest quality)",
+            "openrouter" to "OpenRouter (Direct HTTP fetch)",
+            "exa" to "Exa($)",
+            "parallel" to "Parallel($)",
             "firecrawl" to "Firecrawl (BYOK — your Firecrawl credits)",
             "native" to "Native (Provider's built-in fetch, if available)",
-            "auto" to "Auto (Native if available, falls back to Exa — may bill)"
+            "auto" to "Auto (Native if available, falls back to Exa($))"
         )
 
         val currentEngine = sharedPreferencesHelper.getWebFetchEngine()
