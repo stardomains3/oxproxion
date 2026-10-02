@@ -1,187 +1,200 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="@drawable/rounded_dialog_bg"
+    android:padding="20dp"
+    android:minWidth="320dp">
 
+    <!-- Scrollable Form Area -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/dialog_title_lan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Set LAN Endpoint"
+                android:textColor="#C2C2C2"
+                android:textAppearance="?attr/textAppearanceHeadline6"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Example: http://10.0.0.23:11434"
+                android:textColor="#8A8A8A"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Edit field -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter LAN endpoint URL"
+                app:boxStrokeColor="#C2C2C2"
+                app:hintTextColor="#C2C2C2"
+                app:boxBackgroundMode="outline">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_lan_url"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"
+                    android:imeOptions="actionDone"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Provider Selection Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Select Provider:"
+                android:textColor="#C2C2C2"
+                android:textSize="14sp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#2C2C2E"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp">
+
+                <CheckBox
+                    android:id="@+id/checkbox_ollama"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ollama"
+                    android:textColor="#FFFFFF"
+                    style="@style/Widget.App.CheckBox"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_lm_studio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LM Studio"
+                    android:textColor="#FFFFFF"
+                    style="@style/Widget.App.CheckBox"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_llama_cpp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="llama.cpp"
+                    android:textColor="#FFFFFF"
+                    style="@style/Widget.App.CheckBox"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_mlx_lm"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MLX LM"
+                    android:textColor="#FFFFFF"
+                    style="@style/Widget.App.CheckBox"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_hermes_agent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hermes Agent"
+                    android:textColor="#FFFFFF"
+                    style="@style/Widget.App.CheckBox"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_olmx"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="oMLX"
+                    android:textColor="#FFFFFF"
+                    style="@style/Widget.App.CheckBox"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_nativ"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nativ"
+                    android:textColor="#FFFFFF"
+                    style="@style/Widget.App.CheckBox" />
+            </LinearLayout>
+
+            <!-- LAN API Key Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="LAN API Key (optional)"
+                android:textColor="#C2C2C2"
+                android:textSize="14sp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter if Required"
+                app:boxStrokeColor="#C2C2C2"
+                app:hintTextColor="#C2C2C2"
+                app:boxBackgroundMode="outline"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_lan_api_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:imeOptions="actionDone"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Pinned Bottom Actions (Never scrolls out of view) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp"
-        android:background="@drawable/rounded_dialog_bg"
-        android:minWidth="320dp"
-        android:minHeight="200dp">
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="12dp">
 
-        <TextView
-            android:id="@+id/dialog_title_lan"
-            android:layout_width="match_parent"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_cancel_lan"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Set LAN Endpoint"
             android:textColor="#C2C2C2"
-            android:textAppearance="?attr/textAppearanceHeadline6"
-            android:layout_marginBottom="16dp" />
+            android:text="Cancel" />
 
-        <TextView
-            android:layout_width="match_parent"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_save_lan"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Example: http://10.0.0.23:11434"
-            android:textColor="#8A8A8A"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Edit field -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Enter LAN endpoint URL"
-            app:boxStrokeColor="#C2C2C2"
-            app:hintTextColor="#C2C2C2"
-            app:boxBackgroundMode="outline">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_lan_url"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textUri"
-                android:imeOptions="actionDone"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Provider Selection Section -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Select Provider:"
             android:textColor="#C2C2C2"
-            android:textSize="14sp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#2C2C2E"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp">
-
-            <CheckBox
-                android:id="@+id/checkbox_ollama"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Ollama"
-                android:textColor="#FFFFFF"
-                style="@style/Widget.App.CheckBox"
-                android:layout_marginBottom="8dp" />
-
-            <CheckBox
-                android:id="@+id/checkbox_lm_studio"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="LM Studio"
-                android:textColor="#FFFFFF"
-                style="@style/Widget.App.CheckBox"
-                android:layout_marginBottom="8dp" />
-
-            <CheckBox
-                android:id="@+id/checkbox_llama_cpp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="llama.cpp"
-                android:textColor="#FFFFFF"
-                style="@style/Widget.App.CheckBox"
-                android:layout_marginBottom="8dp" />
-
-            <!-- NEW: MLX LM Checkbox -->
-            <CheckBox
-                android:id="@+id/checkbox_mlx_lm"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="MLX LM"
-                android:textColor="#FFFFFF"
-                style="@style/Widget.App.CheckBox" />
-            <CheckBox
-                android:id="@+id/checkbox_hermes_agent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Hermes Agent"
-                android:textColor="#FFFFFF"
-                style="@style/Widget.App.CheckBox" />
-            <CheckBox
-                android:id="@+id/checkbox_olmx"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="oMLX"
-                android:textColor="#FFFFFF"
-                style="@style/Widget.App.CheckBox" />
-            <CheckBox
-                android:id="@+id/checkbox_nativ"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Nativ"
-                android:textColor="#FFFFFF"
-                style="@style/Widget.App.CheckBox" />
-
-
-        </LinearLayout>
-
-        <!-- NEW: LAN API Key Section -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="LAN API Key (optional)"
-            android:textColor="#C2C2C2"
-            android:textSize="14sp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Enter if Required"
-            app:boxStrokeColor="#C2C2C2"
-            app:hintTextColor="#C2C2C2"
-            app:boxBackgroundMode="outline"
-            android:layout_marginBottom="16dp">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_lan_api_key"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text"
-                android:imeOptions="actionDone"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/button_cancel_lan"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="#C2C2C2"
-                android:text="Cancel" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/button_save_lan"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="#C2C2C2"
-                android:layout_marginStart="8dp"
-                android:text="Save" />
-        </LinearLayout>
+            android:layout_marginStart="8dp"
+            android:text="Save" />
     </LinearLayout>
-</ScrollView>
+
+</LinearLayout>

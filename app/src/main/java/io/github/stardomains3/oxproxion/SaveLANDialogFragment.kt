@@ -126,4 +126,15 @@ class SaveLANDialogFragment : DialogFragment() {
 
         editTextUrl.requestFocus()
     }
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.let { window ->
+            val metrics = resources.displayMetrics
+            val maxHeight = (metrics.heightPixels * 0.80).toInt() // Max 80% screen height
+            val maxWidth = (metrics.widthPixels * 0.90).toInt()   // 90% screen width
+
+            window.setLayout(maxWidth, maxHeight)
+        }
+    }
+
 }

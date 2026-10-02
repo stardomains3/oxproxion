@@ -4,14 +4,11 @@ import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.PorterDuff
 import android.os.Bundle
-import android.view.View
 import android.widget.EditText
 import androidx.core.graphics.toColorInt
-import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
-import kotlin.toString
 
 class EditModelDialogFragment : DialogFragment() {
 
@@ -24,26 +21,31 @@ class EditModelDialogFragment : DialogFragment() {
         val builder = MaterialAlertDialogBuilder(requireActivity())
         val view = layoutInflater.inflate(R.layout.dialog_add_model, null)
 
-        val editName      = view.findViewById<EditText>(R.id.editModelName)
-        val editApiId     = view.findViewById<EditText>(R.id.editApiIdentifier)
-        val switchVision  = view.findViewById<MaterialSwitch>(R.id.switchVisionCapable)
-        val switchReason  = view.findViewById<MaterialSwitch>(R.id.switchReasoningCapable)
-        val switchLan     = view.findViewById<MaterialSwitch>(R.id.switchLanModel)
-        val switchImage   = view.findViewById<MaterialSwitch>(R.id.switchImageGen)
-        val switchTranscription = view.findViewById<MaterialSwitch>(R.id.switchTranscription) // NEW
-        val switchIsFree  = view.findViewById<MaterialSwitch>(R.id.switchIsFree)
+        val editName            = view.findViewById<EditText>(R.id.editModelName)
+        val editApiId           = view.findViewById<EditText>(R.id.editApiIdentifier)
+        val switchVision        = view.findViewById<MaterialSwitch>(R.id.switchVisionCapable)
+        val switchReason        = view.findViewById<MaterialSwitch>(R.id.switchReasoningCapable)
+        val switchLan           = view.findViewById<MaterialSwitch>(R.id.switchLanModel)
+        val switchImage         = view.findViewById<MaterialSwitch>(R.id.switchImageGen)
+        val switchTranscription = view.findViewById<MaterialSwitch>(R.id.switchTranscription)
+        val switchIsFree        = view.findViewById<MaterialSwitch>(R.id.switchIsFree)
 
         /* ----------  tint styling  ---------- */
         val thumbTint = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)),
-            intArrayOf("#000000".toColorInt(), "#686868".toColorInt()))
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf("#000000".toColorInt(), "#686868".toColorInt())
+        )
         val trackTint = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)),
-            intArrayOf("#a0610a".toColorInt(), "#000000".toColorInt()))
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf("#a0610a".toColorInt(), "#000000".toColorInt())
+        )
 
-        // Added switchTranscription and switchIsFree to the styling list
         listOf(switchVision, switchReason, switchLan, switchImage, switchTranscription, switchIsFree).forEach {
             it.thumbTintList  = thumbTint
             it.trackTintList  = trackTint
@@ -58,18 +60,18 @@ class EditModelDialogFragment : DialogFragment() {
             val created = args.getLong("created", 0L)
             val isFree = args.getBoolean("isFree", false)
             val isImageGen = args.getBoolean("isImageGenerationCapable", false)
-            val isTranscription = args.getBoolean("isTranscription", false) // NEW
+            val isTranscription = args.getBoolean("isTranscription", false)
             if (!dn.isNullOrBlank() && !id.isNullOrBlank()) {
                 LlmModel(
-                    displayName  = dn,
-                    apiIdentifier = id,
-                    isVisionCapable = args.getBoolean("isVisionCapable", false),
-                    isReasoningCapable = args.getBoolean("isReasoningCapable", false),
+                    displayName              = dn,
+                    apiIdentifier            = id,
+                    isVisionCapable          = args.getBoolean("isVisionCapable", false),
+                    isReasoningCapable       = args.getBoolean("isReasoningCapable", false),
                     isImageGenerationCapable = isImageGen,
-                    isTranscription = isTranscription, // NEW
-                    created = created,
-                    isLANModel = args.getBoolean("isLANModel", false),
-                    isFree = isFree
+                    isTranscription          = isTranscription,
+                    created                  = created,
+                    isLANModel               = args.getBoolean("isLANModel", false),
+                    isFree                   = isFree
                 )
             } else null
         }
@@ -77,12 +79,12 @@ class EditModelDialogFragment : DialogFragment() {
         existingModel?.let { m ->
             editName.setText(m.displayName)
             editApiId.setText(m.apiIdentifier)
-            switchVision.isChecked = m.isVisionCapable
-            switchReason.isChecked = m.isReasoningCapable
-            switchLan.isChecked    = m.isLANModel
-            switchImage.isChecked  = m.isImageGenerationCapable
-            switchTranscription.isChecked = m.isTranscription // NEW
-            switchIsFree.isChecked = m.isFree
+            switchVision.isChecked        = m.isVisionCapable
+            switchReason.isChecked        = m.isReasoningCapable
+            switchLan.isChecked           = m.isLANModel
+            switchImage.isChecked         = m.isImageGenerationCapable
+            switchTranscription.isChecked = m.isTranscription
+            switchIsFree.isChecked        = m.isFree
             builder.setTitle("Edit Model")
         } ?: builder.setTitle("Add Model")
 
@@ -94,25 +96,25 @@ class EditModelDialogFragment : DialogFragment() {
 
                 if (name.isBlank() || id.isBlank()) return@setPositiveButton
 
-                val vision    = switchVision.isChecked
-                val reasoning = switchReason.isChecked
-                val isLan     = switchLan.isChecked
-                val isImage   = switchImage.isChecked
-                val isTranscription = switchTranscription.isChecked // NEW
-                val isFree    = switchIsFree.isChecked
+                val vision          = switchVision.isChecked
+                val reasoning       = switchReason.isChecked
+                val isLan           = switchLan.isChecked
+                val isImage         = switchImage.isChecked
+                val isTranscription = switchTranscription.isChecked
+                val isFree          = switchIsFree.isChecked
 
                 val createdTimestamp = existingModel?.created ?: (System.currentTimeMillis() / 1000)
 
                 val newModel = LlmModel(
-                    displayName  = name,
-                    apiIdentifier= id,
-                    isVisionCapable     = vision,
+                    displayName              = name,
+                    apiIdentifier            = id,
+                    isVisionCapable          = vision,
                     isImageGenerationCapable = isImage,
-                    isReasoningCapable  = reasoning,
-                    isTranscription = isTranscription, // NEW
-                    created = createdTimestamp,
-                    isLANModel         = isLan,
-                    isFree = isFree
+                    isReasoningCapable       = reasoning,
+                    isTranscription          = isTranscription,
+                    created                  = createdTimestamp,
+                    isLANModel               = isLan,
+                    isFree                   = isFree
                 )
 
                 existingModel?.let { old -> onModelUpdated?.invoke(old, newModel) }
@@ -121,5 +123,16 @@ class EditModelDialogFragment : DialogFragment() {
             .setNegativeButton("Cancel", null)
 
         return builder.create()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.let { window ->
+            val metrics = resources.displayMetrics
+            val maxHeight = (metrics.heightPixels * 0.85).toInt()
+            val maxWidth = (metrics.widthPixels * 0.90).toInt()
+
+            window.setLayout(maxWidth, maxHeight)
+        }
     }
 }

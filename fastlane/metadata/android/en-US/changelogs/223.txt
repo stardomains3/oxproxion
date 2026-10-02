@@ -1,0 +1,1 @@
+- Fixed a couple app screens that wouldn't scroll for smaller phone screens.
