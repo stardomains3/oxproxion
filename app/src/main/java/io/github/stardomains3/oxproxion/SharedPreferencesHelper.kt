@@ -163,7 +163,12 @@ class SharedPreferencesHelper(context: Context) {
 
     fun saveWebFetchEngine(engine: String) =
         mainPrefs.edit { putString(KEY_WEB_FETCH_ENGINE, engine) }
+    fun getPushToTalkEnabled(): Boolean =
+        mainPrefs.getBoolean("push_to_talk_enabled", false)
 
+    fun savePushToTalkEnabled(enabled: Boolean) {
+        mainPrefs.edit { putBoolean("push_to_talk_enabled", enabled) }
+    }
     fun getWebFetchMaxUses(): Int =
         mainPrefs.getInt(KEY_WEB_FETCH_MAX_USES, 0)  // 0 = unset (no limit)
 

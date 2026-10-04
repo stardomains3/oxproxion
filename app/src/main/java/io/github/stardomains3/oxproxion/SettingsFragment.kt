@@ -27,10 +27,29 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val prefs = SharedPreferencesHelper(requireContext())
 
         val viewModel: ChatViewModel by activityViewModels()
-
+        val watermarkSttSwitch = view.findViewById<MaterialSwitch>(R.id.watermarkSttSwitch)
+        val pushToTalkRow = view.findViewById<View>(R.id.pushToTalkRow)
+        val pushToTalkSwitch = view.findViewById<MaterialSwitch>(R.id.pushToTalkSwitch)
+        pushToTalkSwitch.isChecked = prefs.getPushToTalkEnabled()
+        pushToTalkSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.savePushToTalkEnabled(isChecked)
+        }
+        fun updatePttRowVisibility() {
+            // PTT only makes sense if a transcription backend is configured
+            val hasTranscription = when (prefs.getVoiceInputProvider()) {
+                "cloud" -> true
+                "lan" -> prefs.getVoiceInputModel().isNotBlank()
+                else -> false  // "off"
+            }
+            pushToTalkRow.visibility = if (hasTranscription) View.VISIBLE else View.GONE
+            if (!hasTranscription && prefs.getPushToTalkEnabled()) {
+                pushToTalkSwitch.isChecked = false
+                prefs.savePushToTalkEnabled(false)  // force-off if backend removed
+            }
+        }
+        updatePttRowVisibility()
         val themeToggleGroup = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.themeToggleGroup)
         val inferenceParamsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.inferenceParamsButton)
-        val watermarkSttSwitch = view.findViewById<MaterialSwitch>(R.id.watermarkSttSwitch)
         val chatMemoryButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.chatMemoryButton)
         val toolsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.toolsButton)
         val animateBarOnErrorSwitch = view.findViewById<MaterialSwitch>(R.id.animateBarOnErrorSwitch)
@@ -71,7 +90,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             SharedPreferencesHelper.THEME_DARK -> themeToggleGroup.check(R.id.btnThemeDark)
             else -> themeToggleGroup.check(R.id.btnThemeSystem)
         }
-        watermarkSttSwitch.isChecked = prefs.getWatermarkSttEnabled()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
         copyOrDismissSwitch.isChecked = prefs.getUseCopyButton2()
         animateBarOnErrorSwitch.isChecked = prefs.getAnimateBarOnError()
@@ -83,6 +101,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
         extendedTopBarSwitch.isChecked = prefs.getExtendedTopBarEnabled()
         copyOrOpenSwitch.isChecked = prefs.getUseCopyButton()
+        watermarkSttSwitch.isChecked = prefs.getWatermarkSttEnabled()
         autoDisableWebSearchSwitch.isChecked = prefs.getDisableWebSearchAfterSend()
         openRouterTransformsSwitch.isChecked = prefs.getOpenRouterTransformsEnabled()
         showCitationsSwitch.isChecked = prefs.getShowCitations()
@@ -103,10 +122,12 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 .addToBackStack(null)
                 .commit()
         }
+
         braveApiKeyButton.setOnClickListener {
             val dialog = SaveBraveApiDialogFragment()
             dialog.show(childFragmentManager, SaveBraveApiDialogFragment.TAG)
         }
+
         chatMemoryButton.setOnClickListener {
             val dialog = ChatMemoryDialogFragment()
             dialog.show(childFragmentManager, "ChatMemoryDialogFragment")
@@ -117,9 +138,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         extendedDockSwitch.setOnCheckedChangeListener { _, isChecked ->
             viewModel.toggleExtendedDock()  // VM saves + notifies Chat
-        }
-        watermarkSttSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.saveWatermarkSttEnabled(isChecked)
         }
         copyOrDismissSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveUseCopyButton2(isChecked)  // true = Copy button, false = Dismiss button
@@ -191,7 +209,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             viewModel.toggleExtendedTopBar()  // VM saves + notifies Chat
         }
 
-
+        watermarkSttSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveWatermarkSttEnabled(isChecked)
+        }
         scrollProgressSwitch.setOnCheckedChangeListener { _, isChecked -> viewModel.toggleScrollProgress() }
         viewModel.isScrollProgressEnabled.observe(viewLifecycleOwner) { enabled -> scrollProgressSwitch.isChecked = enabled }
         creditsButton.setOnClickListener {
@@ -261,6 +281,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         voiceModelEdit.doAfterTextChanged { text ->
             prefs.setVoiceInputModel(text?.toString() ?: "")
+            updatePttRowVisibility()   // ← ADD
         }
 
 // Save provider on toggle change
@@ -272,12 +293,14 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                     else -> "lan"
                 }
                 prefs.setVoiceInputProvider(provider)
+                updatePttRowVisibility()   // ← ADD
             }
         }
         // 🔥 STYLE ALL SWITCHES (your exact code → reusable)
         listOf(
             R.id.watermarkSttSwitch,
-                    R.id.scrollButtonsSwitch,
+            R.id.pushToTalkSwitch,   // ← ADD
+            R.id.scrollButtonsSwitch,
             R.id.volumeScrollSwitch,
             R.id.expandableInputSwitch,
             R.id.scrollProgressSwitch,
@@ -328,3 +351,4 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         trackTintMode = PorterDuff.Mode.SRC_ATOP
     }
 }
+

@@ -138,6 +138,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var textToSpeech: TextToSpeech
     private var isSpeaking = false
     private var isShare = false
+    private lateinit var pttButton: MaterialButton
+    private var fromPtt = false
+
     private lateinit var chatFrameView: FrameLayout
     private var dimOverlay: View? = null
     private var currentSpeakingPosition = -1
@@ -245,8 +248,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     )
     private var isScrollersEnabled = false     // 🔥 Cache → NO prefs/VM in onScroll
     private var isScrollProgressEnabled = false
+    private lateinit var chatInputRow: LinearLayout
+
     private var lastContentLength = 0
     private var hasScrolled = false
+    private var iconAnimator: ValueAnimator? = null
     private var mediaRecorder: MediaRecorder? = null
     private var voiceRecordFile: File? = null
     private var isRecording = false
@@ -450,6 +456,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
         streamButton = view.findViewById(R.id.streamButton)
         reasoningButton = view.findViewById(R.id.reasoningButton)
+        chatInputRow = view.findViewById(R.id.chatInputRow)
+
         webSearchButton = view.findViewById(R.id.webSearchButton)
         toolsButton = view.findViewById(R.id.toolsButton)
         fontsButton = view.findViewById(R.id.fontsButton)
@@ -1323,6 +1331,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         if (sharedPreferencesHelper.getKeepScreenOnPreference()) {
             requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
+        pttButton = view.findViewById(R.id.pttButton)
+        setupPttButton()
+
         val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         if (notificationManager != null) {
             val channels = notificationManager.notificationChannels
@@ -1414,27 +1425,30 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private fun setInputExpandedState(expanded: Boolean) {
         val containerParams = chatInputContainer.layoutParams
         val editParams = chatEditText.layoutParams as LinearLayout.LayoutParams
+        val rowParams = chatInputRow.layoutParams as LinearLayout.LayoutParams   // ← NEW
 
-        // 1. Define the order for EXPANDED (Left-to-Right)
-        // Send button is last to make it rightmost
         val expandedOrder = listOf(
             menuButton, resetChatButton, speechButton, clearButton,
             utilityButton, systemMessageButton, sendChatButton
         )
-
-        // 2. Define the order for COLLAPSED (Top-to-Bottom)
         val leftCollapsed = listOf(menuButton, speechButton, clearButton, resetChatButton)
-        // Send button is first to make it stay at the top
         val rightCollapsed = listOf(sendChatButton, utilityButton, systemMessageButton)
 
         if (expanded) {
             containerParams.height = LinearLayout.LayoutParams.MATCH_PARENT
-            editParams.height = 0
+
+            // Row takes all vertical space EXCEPT the button strip below it
+            rowParams.height = 0
+            rowParams.weight = 1f                                                // ← NEW
+
+            editParams.width = 0
             editParams.weight = 1f
+            editParams.height = LinearLayout.LayoutParams.MATCH_PARENT
             chatEditText.maxLines = Integer.MAX_VALUE
+
+
             chatFrameView.visibility = View.GONE
 
-            // Use the horizontal order
             expandedOrder.forEach { btn ->
                 moveView(btn, expandedButtonContainer)
                 val params = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -1448,18 +1462,23 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
 
         } else {
             containerParams.height = LinearLayout.LayoutParams.WRAP_CONTENT
+
+            // Restore your XML default (match_parent behaves like wrap_content
+            // inside the wrap_content container when collapsed)
+            rowParams.height = LinearLayout.LayoutParams.MATCH_PARENT
+            rowParams.weight = 0f                                                // ← NEW
+
+            editParams.width = 0
+            editParams.weight = 1f
             editParams.height = LinearLayout.LayoutParams.MATCH_PARENT
-            editParams.weight = 0f
             chatEditText.maxLines = 5
+
             chatFrameView.visibility = View.VISIBLE
 
-            // Restore Left side in order
             leftCollapsed.forEach { btn ->
                 moveView(btn, leftButtonContainer)
                 applyCollapsedParams(btn)
             }
-
-            // Restore Right side in order (Send will be added first, so it sits at the top)
             rightCollapsed.forEach { btn ->
                 moveView(btn, rightButtonContainer)
                 applyCollapsedParams(btn)
@@ -1469,8 +1488,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             leftButtonContainer.visibility = View.VISIBLE
             rightButtonContainer.visibility = View.VISIBLE
         }
+
         chatInputContainer.layoutParams = containerParams
         chatEditText.layoutParams = editParams
+        chatInputRow.layoutParams = rowParams                                    // ← NEW
     }
 
     // Helper to keep the code clean
@@ -2789,11 +2810,25 @@ $cleanContent
         }
         speechButton.setOnClickListener {
             hideTempCopyButton()
+
+            // PTT mode: this button's only job is turning PTT off
+            if (isPttMode()) {
+                sharedPreferencesHelper.savePushToTalkEnabled(false)
+                updatePttButtonVisibility()
+                Toast.makeText(requireContext(), "Push to Talk off", Toast.LENGTH_SHORT).show()
+
+                // If we were in expanded PTT mode, collapse back to normal input
+                if (viewModel.isExpandableInputEnabled.value == true) {
+                    setInputExpandedState(false)
+                }
+                chatEditText.clearFocus()
+                return@setOnClickListener
+            }
+
+            // Normal mode: existing behavior unchanged
             if (isRecording) {
-                // If already recording, a single tap stops it
                 stopVoiceRecording()
             } else {
-                // If not recording, check permissions and start
                 if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                     permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 } else {
@@ -2801,6 +2836,7 @@ $cleanContent
                 }
             }
         }
+
         speechButton.setOnLongClickListener {
             hideTempCopyButton()
             if (isRecording) {
@@ -3115,18 +3151,27 @@ $cleanContent
         }
     }
     private fun updateButtonVisibility() {
-        // If both buttons are already gone (extended OFF), do nothing
         if (clearButton.isGone && speechButton.isGone) return
 
         val hasText = !chatEditText.text.isNullOrEmpty()
-        if (hasText) {
-            clearButton.visibility = View.VISIBLE
-            speechButton.visibility = View.GONE
-        } else {
-            clearButton.visibility = View.GONE
+
+        if (isPttMode()) {
+            // PTT mode: speechButton = "back to text" toggle, ALWAYS visible
+            speechButton.setIconResource(R.drawable.ic_keyboard)
             speechButton.visibility = View.VISIBLE
+            clearButton.visibility = if (hasText) View.VISIBLE else View.GONE
+        } else {
+            speechButton.setIconResource(R.drawable.ic_mic)
+            if (hasText) {
+                clearButton.visibility = View.VISIBLE
+                speechButton.visibility = View.GONE
+            } else {
+                clearButton.visibility = View.GONE
+                speechButton.visibility = View.VISIBLE
+            }
         }
     }
+
     override fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
@@ -3278,6 +3323,80 @@ $cleanContent
             showAttachedFiles()
             true
         }
+    }
+    private fun animatePttIcon(targetSizeDp: Float, targetColorHex: String) {
+        iconAnimator?.cancel()
+
+        val density = resources.displayMetrics.density
+        val startSize = pttButton.iconSize
+        val endSize = (targetSizeDp * density).toInt()
+
+        iconAnimator = ValueAnimator.ofInt(startSize, endSize).apply {
+            duration = 180
+            addUpdateListener { animator ->
+                pttButton.iconSize = animator.animatedValue as Int
+            }
+            start()
+        }
+        pttButton.iconTint = ColorStateList.valueOf(targetColorHex.toColorInt())
+    }
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupPttButton() {
+        updatePttButtonVisibility()
+
+        pttButton.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.parent?.requestDisallowInterceptTouchEvent(true)
+                    if (ContextCompat.checkSelfPermission(
+                            requireContext(), Manifest.permission.RECORD_AUDIO
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    } else {
+                        startVoiceRecording()
+                        fromPtt = true
+                        // Grow the icon to 52dp and turn it red/active
+                        animatePttIcon(96f, "#ff0002")
+                    }
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    v.parent?.requestDisallowInterceptTouchEvent(true)
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.parent?.requestDisallowInterceptTouchEvent(false)
+                    // Return to normal 32dp and original gray tint
+                    animatePttIcon(32f, "#A8A8A8")
+                    if (isRecording) stopVoiceRecording()
+                    true
+                }
+                else -> false
+            }
+        }
+        pttButton.setOnLongClickListener { true }
+    }
+
+
+    private fun isPttMode(): Boolean =
+        sharedPreferencesHelper.getPushToTalkEnabled() &&
+                sharedPreferencesHelper.getVoiceInputProvider() != "off"
+
+    private fun updatePttButtonVisibility() {
+        if (!::pttButton.isInitialized) return
+        val ptt = isPttMode()
+
+        pttButton.visibility = if (ptt) View.VISIBLE else View.GONE
+
+        // PTT owns the whole input area — text box hidden whenever PTT is on.
+        // This is correct in BOTH states:
+        //   collapsed PTT  -> GONE (PTT fills the row)
+        //   expanded PTT   -> GONE (PTT fills the screen)
+        //   expanded normal-> VISIBLE (full-height text box, as before)
+        chatEditText.visibility = if (ptt) View.GONE else View.VISIBLE
+
+        updateButtonVisibility()   // keep the keyboard-toggle icon in sync
     }
 
     private fun setupPlusButtonListener() {
@@ -3447,6 +3566,7 @@ $cleanContent
         super.onHiddenChanged(hidden)
         if (!hidden) {  // Fragment is now visible
             updateSystemMessageButtonState()
+            updatePttButtonVisibility()
            // chatEditText.requestFocus()
             viewModel.checkAdvancedReasoningStatus()
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
@@ -4286,9 +4406,13 @@ $cleanContent
             }
 
             isRecording = true
-            speechButton.setIconResource(R.drawable.ic_stop_circle) // Red mic or recording indicator
-            speechButton.isSelected = true
-            Toast.makeText(requireContext(), "Recording...", Toast.LENGTH_SHORT).show()
+            recordStartMs = System.currentTimeMillis()   // ← ADD THIS
+            if (!isPttMode()) {
+                speechButton.setIconResource(R.drawable.ic_stop_circle)
+                speechButton.isSelected = true
+            }
+
+           // Toast.makeText(requireContext(), "Recording...", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             //Log.e("ChatFragment", "Failed to start recording", e)
             Toast.makeText(requireContext(), "Recording failed: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -4331,8 +4455,10 @@ $cleanContent
         }
 
         // 2. Reset UI
-        speechButton.setIconResource(R.drawable.ic_mic)
-        speechButton.isSelected = false
+        if (!isPttMode()) {
+            speechButton.setIconResource(R.drawable.ic_mic)
+            speechButton.isSelected = false
+        }
 
         // 3. Process or cleanup the recorded file
         val file = voiceRecordFile
@@ -4420,14 +4546,19 @@ $cleanContent
                 )
 
                 if (!transcribedText.isNullOrBlank()) {
-                    /*if (fromWater) {
-                        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("Transcribed Text", transcribedText)
-                        clipboard.setPrimaryClip(clip)
-                    }*/
+                    /* if (fromWater) {
+                         val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                         val clip = ClipData.newPlainText("Transcribed Text", transcribedText)
+                         clipboard.setPrimaryClip(clip)
+                     }*/
                     chatEditText.setText(transcribedText)
                     chatEditText.setSelection(transcribedText.length)
-                    showCopyButton(transcribedText)
+                    if (fromPtt) {
+                        hideTempCopyButton()
+                        sendChatButton.performClick()   // ← PTT: transcribe then auto-send
+                    } else {
+                        showCopyButton(transcribedText)
+                    }
                 } else {
                     Toast.makeText(requireContext(), "Transcription failed", Toast.LENGTH_SHORT).show()
                 }
@@ -4443,6 +4574,7 @@ $cleanContent
                 }
                 voiceRecordFile = null
                 fromWater = false
+                fromPtt = false
             }
         }
     }
