@@ -17,8 +17,8 @@ object MarkdownRenderer {
         StrikethroughExtension.create(),
         TaskListItemsExtension.create(),
         AutolinkExtension.create(),
-        HeadingAnchorExtension.create(),
         FootnotesExtension.create(),
+        HeadingAnchorExtension.create(),
         InsExtension.create()
     )
     private val parser: Parser = Parser.builder()
@@ -99,6 +99,7 @@ object MarkdownRenderer {
             background: #f6f8fa; 
             border: 1px solid #e1e4e8;
         }
+        
         pre { 
             margin: 0; 
             padding: 16px; 
@@ -303,6 +304,25 @@ object MarkdownRenderer {
                 position: relative; margin: 12px 0; border-radius: 8px; overflow: hidden;
                 background: #22272e; border: 1px solid #444;
             }
+            .lang-label {
+                position: absolute;
+                top: 8px;
+                left: 12px;
+                font-size: 11px;
+                font-family: monospace;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #8b949e;
+                background: rgba(255, 255, 255, 0.07);
+                padding: 3px 8px;
+                border-radius: 4px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                user-select: none;
+                pointer-events: none;
+                z-index: 100;
+            }
+            
             pre { margin: 0; }
             pre code.hljs {
                 padding: 40px 16px 16px 16px !important;
@@ -394,17 +414,36 @@ object MarkdownRenderer {
         val js = """
         <script src="highlight.min.js"></script>
         <script>
-            hljs.highlightAll();
             (function() {
                 var wrappers = document.querySelectorAll('.code-wrapper');
                 wrappers.forEach(function(wrapper) {
+                    var code = wrapper.querySelector('pre code');
+                    var detectedLang = '';
+
+                    if (code) {
+                        // 1. Try CommonMark's standard class: class="language-xyz"
+                        var match = code.className.match(/(?:^|\s)language-([a-zA-Z0-9_+-]+)(?:\s|$)/);
+                        if (match && match[1]) {
+                            detectedLang = match[1];
+                        }
+                    }
+
+                    // 2. Insert badge if a language was specified
+                    if (detectedLang && detectedLang !== 'undefined') {
+                        var badge = document.createElement('span');
+                        badge.className = 'lang-label';
+                        badge.textContent = detectedLang;
+                        wrapper.appendChild(badge);
+                    }
+
+                    // 3. Insert Copy Button
                     var btn = document.createElement('button');
                     btn.className = 'copy-btn';
                     btn.textContent = '📋 Copy';
                     btn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         var pre = wrapper.querySelector('pre');
-                        var textToCopy = pre.textContent; 
+                        var textToCopy = pre ? pre.textContent : ''; 
                         if (window.Android && window.Android.copyToClipboard) {
                             window.Android.copyToClipboard(textToCopy);
                             showFeedback(btn);
@@ -414,14 +453,24 @@ object MarkdownRenderer {
                     });
                     wrapper.appendChild(btn);
                 });
+
                 function showFeedback(btn) {
                     btn.textContent = '✅ Copied!';
                     btn.style.background = '#2a5a2a';
-                    setTimeout(function() { btn.textContent = '📋 Copy'; btn.style.background = '#333'; }, 2000);
+                    setTimeout(function() { 
+                        btn.textContent = '📋 Copy'; 
+                        btn.style.background = '#333'; 
+                    }, 2000);
+                }
+
+                // Run highlight after extracting the language tags
+                if (window.hljs) {
+                    hljs.highlightAll();
                 }
             })();
         </script>
         """.trimIndent()
+
 
         val katexInit = """
 <script>
@@ -462,5 +511,5 @@ object MarkdownRenderer {
         </html>
         """.trimIndent()
     }
-}
 
+}

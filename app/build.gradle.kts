@@ -18,6 +18,9 @@ configurations.all {
             because("The library moved from com.atlassian.commonmark to org.commonmark, causing duplicate classes")
         }
     }
+    resolutionStrategy {
+        force("org.commonmark:commonmark:${libs.versions.commonmark.get()}")
+    }
 }
 
 android {
@@ -28,8 +31,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 37
-        versionCode = 224
-        versionName = "2.2.9"
+        versionCode = 225
+        versionName = "2.2.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -123,6 +126,9 @@ dependencies {
     implementation(libs.commonmark.footnotes)
     implementation(libs.commonmark.heading.anchor)
     implementation(libs.commonmark.ext.ins)
+    implementation(libs.commonmark.core)
+    implementation(libs.commonmark.gfm.tables)
+    implementation(libs.commonmark.gfm.strikethrough)
 
     // Networking / Serialization
     implementation(libs.gson)

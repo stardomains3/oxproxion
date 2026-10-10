@@ -5387,7 +5387,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val rawText = getMessageText(message.content).trim()
 
                 // Fix table spacing and convert to HTML
-                val fixedText = ensureTableSpacing(rawText)
+                //val fixedText = ensureTableSpacing(rawText)
+                val fixedText = rawText
                 val contentHtml = markdownToHtmlFragment(fixedText)
 
                 // We use a simple div with NO margin/padding for the container
@@ -6475,7 +6476,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val rawText = getMessageText(message.content).trim()
 
                 // ✅ 1. Apply the fix to the raw Markdown first
-                val fixedText = ensureTableSpacing(rawText)
+               // old val fixedText = ensureTableSpacing(rawText)
+                val fixedText = rawText
 
                 // ✅ 2. Then convert that fixed Markdown to HTML
                 val contentHtml = markdownToHtmlFragment(fixedText)
@@ -6537,7 +6539,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 // 2. ✅ APPLY THE FIX HERE
                 // This ensures the table inside this specific message gets its newline
-                val contentText = ensureTableSpacing(rawText)
+              //  val contentText = ensureTableSpacing(rawText)
+                val contentText = rawText
+
 
                 when (message.role) {
                     "user" -> {
@@ -6556,7 +6560,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    private fun ensureTableSpacing(markdown: String): String {
+   /* private fun ensureTableSpacing(markdown: String): String {
         // Split into mutable list of lines to manipulate them
         val lines = markdown.lines().toMutableList()
 
@@ -6589,7 +6593,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         // Reassemble the string
         return lines.joinToString("\n")
-    }
+    }*/
 
     // ✅ ViewModel: Update ONLY `buildFullPrintStyledHtml()` (add link wrapping – rest unchanged)
     private fun buildFullPrintStyledHtml(innerHtml: String): String {

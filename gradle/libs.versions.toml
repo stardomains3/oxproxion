@@ -22,14 +22,14 @@ material = "1.14.0"
 constraintlayout = "2.2.2"
 navigationFragmentKtx = "2.10.2"
 navigationUiKtx = "2.10.2"
-kotlinSerializationPlugin = "2.4.20"
+kotlinSerializationPlugin = "2.4.21"
 kspPlugin = "2.3.6"
 okhttp = "5.5.0"
 roomRuntime = "2.8.5"
 coil = "2.7.0"
 prism4j = "2.0.0"
 biometric = "1.1.0"
-commonmark = "0.30.0"
+commonmark = "0.30.1"
 documentfile = "1.1.0"
 [libraries]
 openlocationcode = { group = "com.google.openlocationcode", name = "openlocationcode", version.ref = "openlocationcode" }
@@ -82,6 +82,9 @@ commonmark-autolink = { group = "org.commonmark", name = "commonmark-ext-autolin
 commonmark-footnotes = { group = "org.commonmark", name = "commonmark-ext-footnotes", version.ref = "commonmark" }
 commonmark-heading-anchor = { group = "org.commonmark", name = "commonmark-ext-heading-anchor", version.ref = "commonmark" }
 commonmark-ext-ins = { group = "org.commonmark", name = "commonmark-ext-ins", version.ref = "commonmark" }
+commonmark-core = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
+commonmark-gfm-tables = { group = "org.commonmark", name = "commonmark-ext-gfm-tables", version.ref = "commonmark" }
+commonmark-gfm-strikethrough = { group = "org.commonmark", name = "commonmark-ext-gfm-strikethrough", version.ref = "commonmark" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 
 

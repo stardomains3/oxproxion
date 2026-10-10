@@ -258,7 +258,8 @@ class ChatAdapter(
         val rawText = reasoningText + text
 
         // 3. Run Regex (Expensive)
-        val fullText = ensureTableSpacing(rawText)
+        //val fullText = ensureTableSpacing(rawText)
+        val fullText = rawText
 
         // 4. Render Markdown with Safety (Expensive)
         val renderedContent = try {
@@ -278,13 +279,13 @@ class ChatAdapter(
         return renderedContent
     }
 
-    private fun ensureTableSpacing(md: String): String {
+    /*private fun ensureTableSpacing(md: String): String {
         val pattern = Regex(
             """(^[\t >]*([-+*]|\d+\.)\s+(?:\\\$\\\[ ?[ xX]?\\]\\\s+)?[^\n]*)\n(?=\|)""",
             RegexOption.MULTILINE
         )
         return md.replace(pattern) { "${it.value}\n\n" }
-    }
+    }*/
 
     // --- VIEW HOLDER LOGIC ---
 
@@ -695,13 +696,15 @@ class ChatAdapter(
 
             // 6. BUTTON LISTENERS (Lazy Calculation)
             htmlButton.setOnClickListener {
-                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown = reasoningText + text
                 if (fullRawMarkdown.isNotBlank()) {
                     onShowMarkdown.invoke(fullRawMarkdown)
                 }
             }
             htmlButton.setOnLongClickListener {
-                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown = reasoningText + text
                 if (fullRawMarkdown.isNotBlank()) {
                     onSaveHtml.invoke(fullRawMarkdown)
                     true // Consume long press
@@ -709,7 +712,8 @@ class ChatAdapter(
             }
             editButton.setOnClickListener {
                 // Pass the position and the raw text to the fragment
-                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+              //  val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown = reasoningText + text
                 onEditAssistantMessage(bindingAdapterPosition, fullRawMarkdown)
             }
             copyButton.setOnClickListener {
@@ -719,7 +723,8 @@ class ChatAdapter(
             }
 
             copyButton.setOnLongClickListener {
-                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+             //   val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown = reasoningText + text
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Markdown", fullRawMarkdown)
                 clipboard.setPrimaryClip(clip)
@@ -737,7 +742,8 @@ class ChatAdapter(
             }
 
             shareButton.setOnLongClickListener {
-                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown = reasoningText + text
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, fullRawMarkdown)
@@ -777,7 +783,8 @@ class ChatAdapter(
             }
 
             aipdfButton.setOnClickListener {
-                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown = reasoningText + text
                 CoroutineScope(Dispatchers.Main).launch {
                     val pdfUri = withContext(Dispatchers.IO) {
                         try {
@@ -844,7 +851,8 @@ class ChatAdapter(
             }
 
             markdownButton.setOnClickListener {
-                val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                //val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown = reasoningText + text
                 onSaveMarkdown(bindingAdapterPosition, fullRawMarkdown)
             }
 
