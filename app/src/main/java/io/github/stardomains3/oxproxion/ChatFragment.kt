@@ -165,6 +165,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private var selectedAudioBytes: ByteArray? = null
     private var selectedAudioFormat: String? = null
     private var doVolScroll: Boolean = false
+
+    private var pttRestIconPx: Int = 0
     private var fromWater: Boolean = false
     private lateinit var plusButton: MaterialButton
     private lateinit var btnDecreaseFont: MaterialButton
@@ -3239,6 +3241,15 @@ $cleanContent
             .start()
 
     }
+    private fun applyPttRestIconSize() {
+        pttButton.post {
+            val shortestSide = minOf(pttButton.width, pttButton.height)
+            // Icon = ~45% of the button, but never smaller than 64dp
+            val minPx = (64 * resources.displayMetrics.density).toInt()
+            pttRestIconPx = (shortestSide * 0.45f).toInt().coerceAtLeast(minPx)
+            pttButton.iconSize = pttRestIconPx
+        }
+    }
     private fun hideMenu() {
         dimOverlay?.visibility = View.GONE
         headerContainer.visibility = View.GONE
@@ -3324,12 +3335,16 @@ $cleanContent
             true
         }
     }
-    private fun animatePttIcon(targetSizeDp: Float, targetColorHex: String) {
+    private fun animatePttIcon(scaleUp: Boolean, targetColorHex: String) {
         iconAnimator?.cancel()
 
-        val density = resources.displayMetrics.density
         val startSize = pttButton.iconSize
-        val endSize = (targetSizeDp * density).toInt()
+        val endSize = if (scaleUp) {
+            (pttRestIconPx * 1.4f).toInt()          // pressed: 40% bigger
+        } else {
+            if (pttRestIconPx > 0) pttRestIconPx     // released: back to computed rest size
+            else (64 * resources.displayMetrics.density).toInt()
+        }
 
         iconAnimator = ValueAnimator.ofInt(startSize, endSize).apply {
             duration = 180
@@ -3340,6 +3355,7 @@ $cleanContent
         }
         pttButton.iconTint = ColorStateList.valueOf(targetColorHex.toColorInt())
     }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPttButton() {
         updatePttButtonVisibility()
@@ -3357,7 +3373,7 @@ $cleanContent
                         startVoiceRecording()
                         fromPtt = true
                         // Grow the icon to 52dp and turn it red/active
-                        animatePttIcon(96f, "#ff0002")
+                        animatePttIcon(scaleUp = true, targetColorHex = "#ff0002")
                     }
                     true
                 }
@@ -3368,7 +3384,7 @@ $cleanContent
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     v.parent?.requestDisallowInterceptTouchEvent(false)
                     // Return to normal 32dp and original gray tint
-                    animatePttIcon(32f, "#A8A8A8")
+                    animatePttIcon(scaleUp = false, targetColorHex = "#A8A8A8")
                     if (isRecording) stopVoiceRecording()
                     true
                 }
@@ -3395,6 +3411,7 @@ $cleanContent
         //   expanded PTT   -> GONE (PTT fills the screen)
         //   expanded normal-> VISIBLE (full-height text box, as before)
         chatEditText.visibility = if (ptt) View.GONE else View.VISIBLE
+        if (ptt) applyPttRestIconSize()   // ← size the icon once the button is actually laid out
 
         updateButtonVisibility()   // keep the keyboard-toggle icon in sync
     }

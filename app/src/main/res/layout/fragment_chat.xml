@@ -1053,7 +1053,7 @@
                         android:contentDescription="Push to talk"
                         app:backgroundTint="@color/button_background_col"
                         app:cornerRadius="24dp"
-                        app:icon="@drawable/ic_iconpage"
+                        app:icon="@drawable/ptt"
                         app:iconGravity="textStart"
                         app:iconPadding="0dp"
                         app:iconSize="32dp"
