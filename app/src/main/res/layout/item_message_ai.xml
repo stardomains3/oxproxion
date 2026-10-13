@@ -14,6 +14,65 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_percent="1.0"
         app:layout_constraintHorizontal_bias="0.0">
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/reasoningContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_reasoning"
+            android:padding="8dp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/reasoningHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thinking"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#9E9E9E"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageButton
+                android:id="@+id/reasoningCopyButton"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Copy reasoning"
+                android:padding="2dp"
+                android:src="@drawable/ic_tune"
+                app:tint="#777777"
+                app:layout_constraintEnd_toStartOf="@id/reasoningToggleButton"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageButton
+                android:id="@+id/reasoningToggleButton"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Toggle reasoning"
+                android:padding="2dp"
+                android:src="@drawable/ic_expand_more"
+                app:tint="#777777"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/reasoningTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#9E9E9E"
+                android:textIsSelectable="true"
+                android:textSize="13sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/reasoningHeader" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/messageContainer"
@@ -21,9 +80,12 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_ai_message"
             android:padding="10dp"
+            android:layout_marginTop="16dp"
+            app:layout_goneMarginTop="0dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+
+            app:layout_constraintTop_toBottomOf="@id/reasoningContainer"
             app:layout_constraintHorizontal_bias="0.0">
 
             <ImageView

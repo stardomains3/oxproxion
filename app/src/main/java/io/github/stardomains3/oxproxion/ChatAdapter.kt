@@ -44,7 +44,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
 class ChatAdapter(
-    private val scope: CoroutineScope,
+    private val scope: CoroutineScope, // <--- 1. REQUIRED: Pass viewLifecycleOwner.lifecycleScope here
     private val markwon: Markwon,
     private val onSpeakText: (String, Int) -> Unit,
     private val onSynthesizeToWavFile: (String, Int) -> Unit,
@@ -61,42 +61,125 @@ class ChatAdapter(
     private val onCollapse: () -> Unit,
     private val onSaveAsFile: (String) -> Unit
 
+
+
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    // --- STATE & CACHE ---
-    // Changed to Map to use stable keys (content hash) instead of unstable positions
     private val collapsedStates = mutableMapOf<String, Boolean>()
-    // The "Baked" Cache for Markdown CharSequences
     private val renderCache = HashMap<FlexibleMessage, CharSequence>()
-
     private val noCopyFactory = NoCopySpannableFactory.getInstance()
     var isSpeaking = false
     var currentSpeakingPosition = -1
     private var currentTypeface: Typeface = Typeface.DEFAULT
-
-    // OPTIMIZATION: Conflated Channel for throttling updates
-    private val updateChannel = Channel<FlexibleMessage>(Channel.CONFLATED)
     private val messages = mutableListOf<FlexibleMessage>()
     private var isUserApplyingEdit: Boolean = false
     private var editTargetPosition: Int = -1
     private var currentFontScale: Int = 100
+
+    // 2. OPTIMIZATION: Conflated Channel for throttling
+    private val updateChannel = Channel<FlexibleMessage>(Channel.CONFLATED)
+
     init {
-        // OPTIMIZATION: Consumer loop
+        // 3. OPTIMIZATION: Consumer loop
         scope.launch(Dispatchers.Main) {
             for (newMessage in updateChannel) {
                 if (messages.isNotEmpty()) {
                     messages[messages.size - 1] = newMessage
-                    // Send "STREAMING" payload to update ONLY text (avoids full re-bind)
+                    // Send "STREAMING" payload to avoid full re-bind
                     notifyItemChanged(messages.size - 1, "STREAMING")
                 }
-                // Throttle updates to ~20fps (50ms)
+                // Throttle updates to ~20fps
                 delay(50)
             }
         }
     }
 
-    // --- PUBLIC METHODS ---
+    companion object {
+        const val VIEW_TYPE_USER = 1
+        const val VIEW_TYPE_ASSISTANT = 2
+        const val VIEW_TYPE_THINKING = 3
+        const val VIEW_TYPE_HIDDEN = 4
+    }
 
+    // --- DATA HELPERS ---
+    fun flagEditUpdate(position: Int) {
+        isUserApplyingEdit = true
+        editTargetPosition = position
+    }
+    fun updateFontSize(scalePercent: Int) {
+        currentFontScale = scalePercent.coerceIn(50, 200) // clamp 50%-200%
+        notifyDataSetChanged()
+    }
+    private fun getMessageText(content: JsonElement): String {
+        if (content is JsonPrimitive) return content.content
+        if (content is JsonArray) {
+            return content.firstNotNullOfOrNull { item ->
+                (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull == "text" }?.get("text")?.jsonPrimitive?.content
+            } ?: ""
+        }
+        return ""
+    }
+
+    private fun getImageBase64(content: JsonElement): String? {
+        if (content is JsonArray) {
+            return content.firstNotNullOfOrNull { item ->
+                (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull == "image_url" }?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.content?.substringAfter(",")
+            }
+        }
+        return null
+    }
+    private fun getPreRenderedContent(message: FlexibleMessage): CharSequence {
+        // 1. Check Cache
+        if (renderCache.containsKey(message)) {
+            return renderCache[message]!!
+        }
+
+        // 2. Extract Text (JSON Logic)
+        val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
+            // Show a clean, formatted indicator of what tool was used
+            "🔧 **Tool Used:** ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+        } else {
+            getMessageText(message.content)
+        }
+
+        //  val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
+        // val rawText = reasoningText + text
+
+        // 3. Run Regex (Expensive)
+        // val fullText = ensureTableSpacing(rawText)
+        //val fullText = rawText
+        val fullText = text
+
+
+        // 4. Render Markdown with Safety (Expensive)
+        val renderedContent = try {
+            // Note: Use toMarkdown() instead of setMarkdown() to get the CharSequence
+            markwon.toMarkdown(fullText)
+        } catch (e: RuntimeException) {
+            // 5. Prism4j Crash Handler
+            if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
+                // Fallback: Return the plain text so the app doesn't crash
+                fullText
+            } else {
+                // If it's a different error, we still want to know
+                throw e
+            }
+        }
+
+        // 6. Save to Cache
+        renderCache[message] = renderedContent
+
+        return renderedContent
+    }
+
+
+    /*private fun ensureTableSpacing(md: String): String {
+        val pattern = Regex(
+            """(^[\t >]*([-+*]|\d+\.)\s+(?:\\\$\\\[ ?[ xX]?\\]\\\s+)?[^\n]*)\n(?=\|)""",
+            RegexOption.MULTILINE
+        )
+        return md.replace(pattern) { "${it.value}\n\n" }
+    }*/
     fun clearCache() {
         renderCache.clear()
         collapsedStates.clear()
@@ -104,6 +187,21 @@ class ChatAdapter(
     fun getLatestPlainText(): String? {
         return messages.lastOrNull()?.let { getMessageText(it.content) }
     }
+
+    /*  ANDROID STUDIO gives issues with this but never had prob. grok 4.1 said above it good private fun ensureTableSpacing(md: String): String {
+         // Detect any list marker (unordered, ordered, task) followed by a table start
+         val pattern = Regex("""(^[\t >]*([-+*]|\d+\.)\s+(?:$$[ xX]$$\s+)?[^\n]*)\n(?=\|)""")
+         return md.replace(pattern) { matchResult ->
+             "${matchResult.value}\n\n"
+         }
+     }*/
+
+    /* old works keep lumo gave above as improvement private fun ensureTableSpacing(markdown: String): String {
+        val pattern = Regex("([^\\n])\\n(\\s*\\|.*\\|\\n)(\\s*\\|[\\s:-]+\\|)")
+        return markdown.replace(pattern, "$1\n\n$2$3")
+    }*/
+
+    // --- PUBLIC METHODS ---
 
     fun updateTtsState(speaking: Boolean, position: Int) {
         isSpeaking = speaking
@@ -134,13 +232,11 @@ class ChatAdapter(
             }
         }
     }
-
     fun setMessages(newMessages: List<FlexibleMessage>) {
         if (isUserApplyingEdit) {
             applyEditUpdate(newMessages)
             return // Stop here, don't run the rest
         }
-        // Clear cache if loading a fresh list or switching chats
         if (newMessages.isEmpty() || (messages.isEmpty() && newMessages.isNotEmpty())) {
             renderCache.clear()
         }
@@ -151,14 +247,14 @@ class ChatAdapter(
             return
         }
 
-        // PERFECT CASE: Only 1 new message added
+        // Case 1: PERFECT - Only 1 new message added
         if (messages.size == newMessages.size - 1 &&
             messages == newMessages.dropLast(1)) {
             addMessage(newMessages.last())
             return
         }
 
-        // STREAMING CASE: Same size, only last message content changed
+        // Case 2: STREAMING - Same size, only last message content changed
         if (messages.size == newMessages.size &&
             messages.dropLast(1) == newMessages.dropLast(1)) {
             updateLastMessage(newMessages.last())
@@ -178,6 +274,7 @@ class ChatAdapter(
     private fun applyEditUpdate(newMessages: List<FlexibleMessage>) {
         // 3. Use the stored position directly (Fast!)
         val index = editTargetPosition
+
         // Safety check: ensure index is valid
         if (index != -1 && index < messages.size && index < newMessages.size) {
             val oldMsg = messages[index]
@@ -191,7 +288,8 @@ class ChatAdapter(
             // 6. Notify
             notifyItemChanged(index)
         }
-        // 7. Reset BOTH flags
+
+        // 4. Reset the flag
         isUserApplyingEdit = false
         editTargetPosition = -1
     }
@@ -203,99 +301,29 @@ class ChatAdapter(
         }
     }
 
+    // 4. OPTIMIZATION: Send to channel instead of direct update
     fun updateLastMessage(newMessage: FlexibleMessage) {
         if (messages.isNotEmpty()) {
             val oldMessage = messages.last()
-            renderCache.remove(oldMessage) // Invalidate cache for the streaming message
+            renderCache.remove(oldMessage)
         }
         updateChannel.trySend(newMessage)
+
     }
-
-    // --- DATA HELPERS ---
-    fun flagEditUpdate(position: Int) {
-        isUserApplyingEdit = true
-        editTargetPosition = position
-    }
-    fun updateFontSize(scalePercent: Int) {
-        currentFontScale = scalePercent.coerceIn(50, 200) // clamp 50%-200%
-        notifyDataSetChanged()
-    }
-    private fun getMessageText(content: JsonElement): String {
-        if (content is JsonPrimitive) return content.content
-        if (content is JsonArray) {
-            return content.firstNotNullOfOrNull { item ->
-                (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull == "text" }?.get("text")?.jsonPrimitive?.content
-            } ?: ""
-        }
-        return ""
-    }
-
-    private fun getImageBase64(content: JsonElement): String? {
-        if (content is JsonArray) {
-            return content.firstNotNullOfOrNull { item ->
-                (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull == "image_url" }?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.content?.substringAfter(",")
-            }
-        }
-        return null
-    }
-
-    // --- OPTIMIZED BAKING FUNCTION ---
-    private fun getPreRenderedContent(message: FlexibleMessage): CharSequence {
-        // 1. Check Cache
-        if (renderCache.containsKey(message)) {
-            return renderCache[message]!!
-        }
-
-        // 2. Extract Text (JSON Logic)
-        val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
-            // Show a clean, formatted indicator of what tool was used
-            "🔧 **Tool Used:** ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
-        } else {
-            getMessageText(message.content)
-        }
-
-        val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
-        val rawText = reasoningText + text
-
-        // 3. Run Regex (Expensive)
-        //val fullText = ensureTableSpacing(rawText)
-        val fullText = rawText
-
-        // 4. Render Markdown with Safety (Expensive)
-        val renderedContent = try {
-            markwon.toMarkdown(fullText)
-        } catch (e: RuntimeException) {
-            // 5. Prism4j Crash Handler
-            if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
-                fullText // Fallback: Return the plain text
-            } else {
-                throw e
-            }
-        }
-
-        // 6. Save to Cache
-        renderCache[message] = renderedContent
-
-        return renderedContent
-    }
-
-    /*private fun ensureTableSpacing(md: String): String {
-        val pattern = Regex(
-            """(^[\t >]*([-+*]|\d+\.)\s+(?:\\\$\\\[ ?[ xX]?\\]\\\s+)?[^\n]*)\n(?=\|)""",
-            RegexOption.MULTILINE
-        )
-        return md.replace(pattern) { "${it.value}\n\n" }
-    }*/
 
     // --- VIEW HOLDER LOGIC ---
 
-    companion object {
-        const val VIEW_TYPE_USER = 1
-        const val VIEW_TYPE_ASSISTANT = 2
-        const val VIEW_TYPE_THINKING = 3
-        const val VIEW_TYPE_HIDDEN = 4
-    }
-
+    /*override fun getItemViewType(position: Int): Int {
+        val message = messages[position]
+        return when (message.role) {
+            "user" -> VIEW_TYPE_USER
+            "assistant" -> {
+                val content = (message.content as? JsonPrimitive)?.content ?: ""
+                if (content == "working...") VIEW_TYPE_THINKING else VIEW_TYPE_ASSISTANT
+            }
+            else -> VIEW_TYPE_ASSISTANT
+        }
+    }*/
     override fun getItemViewType(position: Int): Int {
         val message = messages[position]
 
@@ -330,9 +358,11 @@ class ChatAdapter(
                 view.findViewById<TextView>(R.id.messageTextView)
                     .setSpannableFactory(noCopyFactory)
                 UserViewHolder(view, markwon)
+                //UserViewHolder(view, markwon)
             }
             else -> {
                 val view = inflater.inflate(R.layout.item_message_ai, parent, false)
+                // AssistantViewHolder(view, markwon, onSpeakText, onSynthesizeToWavFile)
                 view.findViewById<TextView>(R.id.messageTextView)
                     .setSpannableFactory(noCopyFactory)
                 AssistantViewHolder(view, markwon, onSpeakText, onSynthesizeToWavFile)
@@ -340,13 +370,16 @@ class ChatAdapter(
         }
     }
 
+    // 5. OPTIMIZATION: Intercept Payloads for partial updates
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
         if (payloads.isNotEmpty()) {
+            // If we are just streaming text, perform a lightweight update
             if (payloads.first() == "STREAMING" && holder is AssistantViewHolder) {
                 holder.bindTextOnly(messages[position])
                 return
             }
         }
+        // Otherwise do the heavy lifting
         super.onBindViewHolder(holder, position, payloads)
     }
 
@@ -355,7 +388,7 @@ class ChatAdapter(
         var contentText = getMessageText(message.content)
 
         if (message.role == "assistant" && message.toolCalls != null && contentText.isBlank()) {
-            contentText = "🔧 **Tool Used:** ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+            contentText = "🔧 **Tool Used:**  ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
         }
 
         when (holder) {
@@ -382,10 +415,13 @@ class ChatAdapter(
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
         private val collapseToggleButton: ImageButton = itemView.findViewById(R.id.collapseToggleButton)
 
+
         fun bind(message: FlexibleMessage) {
             messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
+
             val rawUserContent = getMessageText(message.content)
+
             val pos = bindingAdapterPosition
             collapseToggleButton.visibility = View.GONE
 
@@ -401,23 +437,24 @@ class ChatAdapter(
                 val isLongMessage = rawLines > MAX_LINES_THRESHOLD || charLength > MAX_CHARS_THRESHOLD
 
                 if (isLongMessage) {
-                    // Use stable key (content hash) instead of position
-                    val msgKey = rawUserContent.hashCode().toString()
-                    val isCollapsed = collapsedStates.getOrDefault(msgKey, true)
-
+                    val msgKey = rawUserContent.hashCode().toString() // Stable!
+                    val isCollapsed = collapsedStates.getOrDefault(msgKey, true)  // User: collapsed
                     val displayContent = if (isCollapsed) {
                         if (charLength > MAX_CHARS_THRESHOLD) {
+                            // Char-truncate (paragraphs) + word-break
                             val cutOffIndex =
                                 rawUserContent.take(MAX_CHARS_THRESHOLD).lastIndexOf(' ')
                             val safeIndex = if (cutOffIndex > 0) cutOffIndex else MAX_CHARS_THRESHOLD
                             rawUserContent.take(safeIndex) + "...(continued)"
                         } else {
+                            // Line-truncate (lists/code)
                             rawUserContent.lines().take(MAX_LINES_THRESHOLD).joinToString("\n") + "\n\n**...(continued)**"
                         }
                     } else {
                         rawUserContent
                     }
 
+                    // YOUR original try-catch (Prism4j-safe!)
                     try {
                         markwon.setMarkdown(messageTextView, displayContent)
                     } catch (e: RuntimeException) {
@@ -434,10 +471,11 @@ class ChatAdapter(
                     )
                     collapseToggleButton.setOnClickListener {
                         collapsedStates[msgKey] = !isCollapsed
-                        this@ChatAdapter.notifyItemChanged(pos)
+                        this@ChatAdapter.notifyItemChanged(bindingAdapterPosition)
                         onCollapse()
                     }
                 } else {
+                    // Short: full Markwon
                     try {
                         markwon.setMarkdown(messageTextView, rawUserContent)
                     } catch (e: RuntimeException) {
@@ -449,6 +487,7 @@ class ChatAdapter(
                     }
                 }
             } else {
+                // Non-user: full
                 try {
                     markwon.setMarkdown(messageTextView, rawUserContent)
                 } catch (e: RuntimeException) {
@@ -460,7 +499,7 @@ class ChatAdapter(
                 }
             }
 
-            // ... (Image and Button logic) ...
+            // ... (Keep the rest of your existing image/button logic below exactly as it was) ...
             val imageUriStr = message.imageUri
             if (!imageUriStr.isNullOrEmpty()) {
                 try {
@@ -471,6 +510,7 @@ class ChatAdapter(
                         .build()
                     ImageLoader(itemView.context).enqueue(request)
                     imageView.visibility = View.VISIBLE
+
                     imageView.setOnClickListener {
                         try {
                             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -497,7 +537,7 @@ class ChatAdapter(
                 imageView.visibility = View.GONE
             }
 
-            copyButtonuser.setOnClickListener {
+            copyButtonuser.setOnClickListener { //rawUserContent
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Text", rawUserContent)
                 clipboard.setPrimaryClip(clip)
@@ -523,12 +563,18 @@ class ChatAdapter(
         }
     }
 
+
     inner class AssistantViewHolder(
         itemView: View,
         private val markwon: Markwon,
         private val onSpeakText: (String, Int) -> Unit,
         private val onSynthesizeToWavFile: (String, Int) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
+        private val reasoningContainer: ConstraintLayout = itemView.findViewById(R.id.reasoningContainer)
+        private val reasoningTextView: TextView = itemView.findViewById(R.id.reasoningTextView)
+        private val reasoningToggleButton: ImageButton = itemView.findViewById(R.id.reasoningToggleButton)
+        private val reasoningCopyButton: ImageButton = itemView.findViewById(R.id.reasoningCopyButton)
+        private val reasoningHeader: TextView = itemView.findViewById(R.id.reasoningHeader)
 
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val copyButton: ImageButton = itemView.findViewById(R.id.copyButton)
@@ -545,21 +591,44 @@ class ChatAdapter(
         private val collapseToggleButton: ImageButton = itemView.findViewById(R.id.collapseToggleButton)
         private val saveFileButton: ImageButton = itemView.findViewById(R.id.saveFileButton)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
-        // Configuration for "Long Message" detection
         private val CHAR_THRESHOLD = 350
-
+        // 6. OPTIMIZATION: Lightweight bind for streaming
         fun bindTextOnly(message: FlexibleMessage) {
-            val text = getMessageText(message.content)
+            /*un rleaiable text only
+               val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
+                   "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
+               } else {
+                   getMessageText(message.content)
+               }
+
+               val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
+               val rawText = reasoningText + text
+               val fullText = ensureTableSpacing(rawText)
+
+               try {
+                   markwon.setMarkdown(messageTextView, fullText)
+               } catch (e: RuntimeException) {
+                   if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
+                       messageTextView.text = fullText
+                   }
+               }
+                */
+            /*val text = getMessageText(message.content)
             val reasoning = message.reasoning
+            // Logic: Only add newlines if we actually have reasoning text
             val displayText = if (!reasoning.isNullOrBlank()) {
                 "$reasoning\n\n$text"
             } else {
                 text
             }
-            messageTextView.text = displayText
+            messageTextView.text = displayText*/
+            messageTextView.text = getMessageText(message.content)
+            bindReasoning(message)
+
         }
 
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
+            bindReasoning(message)
             messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
 
@@ -567,7 +636,6 @@ class ChatAdapter(
             val finalContent = getPreRenderedContent(message)
             // messageTextView.text = finalContent
             markwon.setParsedMarkdown(messageTextView, finalContent as android.text.Spanned)
-
             // 2. LOGIC TEXT (Fast extraction)
             val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
                 "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
@@ -576,10 +644,17 @@ class ChatAdapter(
             }
 
             // --- NEW COLLAPSE LOGIC (INSTANT, NO POST DELAY) ---
+            // We use the raw text length to decide if it's collapsible.
+            // This is O(1) speed (instant), vs waiting for layout.
             if (text.length > CHAR_THRESHOLD) {
+                // Use a stable key for the map (message content hash is good enough here)
                 val msgKey = text.hashCode().toString()
-                val isCollapsed = collapsedStates.getOrDefault(msgKey, false) // Default Expanded (false)
 
+                // Default to FALSE (Expanded) for AI, or TRUE (Collapsed) if you prefer.
+                // Your previous code suggested AI starts expanded (false).
+                val isCollapsed = collapsedStates.getOrDefault(msgKey, false)
+
+                // Apply state immediately
                 applyCollapseState(isCollapsed)
 
                 collapseToggleButton.visibility = View.VISIBLE
@@ -591,13 +666,17 @@ class ChatAdapter(
                     val newState = !collapsedStates.getOrDefault(msgKey, false)
                     collapsedStates[msgKey] = newState
 
+                    // Apply change immediately to the view
                     applyCollapseState(newState)
                     collapseToggleButton.setImageResource(
                         if (newState) R.drawable.ic_expand_more else R.drawable.ic_expand_less2
                     )
                     onCollapse()
+                    // Note: We do NOT call notifyItemChanged here.
+                    // Changing maxLines directly is smoother and doesn't re-trigger Markdown parsing.
                 }
             } else {
+                // Short message: Always expanded, hide button
                 messageTextView.maxLines = Int.MAX_VALUE
                 messageTextView.ellipsize = null
                 collapseToggleButton.visibility = View.GONE
@@ -605,7 +684,11 @@ class ChatAdapter(
             }
             // ---------------------------------------------------
 
-            val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
+            val cleanReasoning = getCleanReasoning(message)
+            val reasoningText = cleanReasoning.takeIf { it.isNotBlank() }
+                ?.let { "```\n$it\n```\n\n---\n\n" }
+                ?: ""
+
 
             // 3. UI STATE LOGIC
             ttsButton.visibility = if (ttsAvailable) View.VISIBLE else View.GONE
@@ -696,34 +779,35 @@ class ChatAdapter(
 
             // 6. BUTTON LISTENERS (Lazy Calculation)
             htmlButton.setOnClickListener {
-               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
                 val fullRawMarkdown = reasoningText + text
                 if (fullRawMarkdown.isNotBlank()) {
                     onShowMarkdown.invoke(fullRawMarkdown)
                 }
             }
             htmlButton.setOnLongClickListener {
-               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
                 val fullRawMarkdown = reasoningText + text
                 if (fullRawMarkdown.isNotBlank()) {
                     onSaveHtml.invoke(fullRawMarkdown)
                     true // Consume long press
                 } else false
             }
-            editButton.setOnClickListener {
-                // Pass the position and the raw text to the fragment
-              //  val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-                val fullRawMarkdown = reasoningText + text
-                onEditAssistantMessage(bindingAdapterPosition, fullRawMarkdown)
-            }
+
             copyButton.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
                 clipboard.setPrimaryClip(clip)
             }
+            editButton.setOnClickListener {
+                // Pass the position and the raw text to the fragment
+                //  val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                val fullRawMarkdown =  text
+                onEditAssistantMessage(bindingAdapterPosition, fullRawMarkdown)
+            }
 
             copyButton.setOnLongClickListener {
-             //   val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
                 val fullRawMarkdown = reasoningText + text
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Markdown", fullRawMarkdown)
@@ -742,7 +826,7 @@ class ChatAdapter(
             }
 
             shareButton.setOnLongClickListener {
-               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                //val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
                 val fullRawMarkdown = reasoningText + text
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
@@ -783,7 +867,7 @@ class ChatAdapter(
             }
 
             aipdfButton.setOnClickListener {
-               // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
                 val fullRawMarkdown = reasoningText + text
                 CoroutineScope(Dispatchers.Main).launch {
                     val pdfUri = withContext(Dispatchers.IO) {
@@ -851,7 +935,7 @@ class ChatAdapter(
             }
 
             markdownButton.setOnClickListener {
-                //val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
+                //    val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
                 val fullRawMarkdown = reasoningText + text
                 onSaveMarkdown(bindingAdapterPosition, fullRawMarkdown)
             }
@@ -880,6 +964,63 @@ class ChatAdapter(
             messageTextView.maxLines = if (isCollapsed) 4 else Int.MAX_VALUE
             messageTextView.ellipsize = if (isCollapsed) android.text.TextUtils.TruncateAt.END else null
         }
+        private fun bindReasoning(message: FlexibleMessage) {
+            val reasoning = getCleanReasoning(message)
+            if (reasoning.isBlank()) {
+                reasoningContainer.visibility = View.GONE
+                return
+            }
+            reasoningContainer.visibility = View.VISIBLE
+            reasoningTextView.text = reasoning
+            reasoningTextView.textSize = 13f * currentFontScale / 100f
+            reasoningTextView.typeface = Typeface.create(currentTypeface, Typeface.ITALIC)
+
+
+            val msgKey = "reasoning_${reasoning.hashCode()}"
+            val isCollapsed = collapsedStates.getOrDefault(msgKey, true) // default COLLAPSED
+
+            applyReasoningCollapse(isCollapsed)
+            reasoningToggleButton.setImageResource(
+                if (isCollapsed) R.drawable.ic_expand_more else R.drawable.ic_expand_less2
+            )
+
+            val toggle = {
+                val newState = !collapsedStates.getOrDefault(msgKey, true)
+                collapsedStates[msgKey] = newState
+                applyReasoningCollapse(newState)
+                reasoningToggleButton.setImageResource(
+                    if (newState) R.drawable.ic_expand_more else R.drawable.ic_expand_less2
+                )
+            }
+            reasoningToggleButton.setOnClickListener { toggle() }
+            reasoningHeader.setOnClickListener { toggle() }  // tap the header too
+
+            reasoningCopyButton.setOnClickListener {
+                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Copied Reasoning", reasoning))
+            }
+        }
+
+        private fun applyReasoningCollapse(collapsed: Boolean) {
+            reasoningTextView.maxLines = if (collapsed) 3 else Int.MAX_VALUE
+            reasoningTextView.ellipsize = if (collapsed) android.text.TextUtils.TruncateAt.END else null
+        }
+
+        private fun getCleanReasoning(message: FlexibleMessage): String {
+            var r = message.reasoning ?: return ""
+            r = r.trim()
+            if (r.startsWith("```")) {           // legacy format only
+                r = r.removePrefix("```").trim()
+                val fence = r.lastIndexOf("```")
+                if (fence != -1) r = r.substring(0, fence)
+            }
+            // raw format (new): untouched, internal backticks preserved
+            return r.replace(Regex("\\n*-{3,}\\s*$"), "").trim()
+        }
+
+
+
     }
     inner class HiddenViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+
 }

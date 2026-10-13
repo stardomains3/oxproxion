@@ -3,6 +3,9 @@ package io.github.stardomains3.oxproxion
 import android.util.Log
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_LLAMA_CPP
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OLLAMA
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_MLX_LM
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_NATIV
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OMLX
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
@@ -20,6 +23,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonPrimitive
 import java.io.IOException
 import java.net.SocketTimeoutException
+import kotlin.time.Duration.Companion.milliseconds
 
 class LlmService(
     private val httpClient: HttpClient,
@@ -53,24 +57,34 @@ class LlmService(
         } else {
             null // Excluded from JSON entirely if not Ollama or not a reasoning model
         }
-        val llamaCppKwargs = if (lanProvider == LAN_PROVIDER_LLAMA_CPP && isReasoningModel) {
+        val llamaCppKwargs = if (isReasoningModel && (
+                    lanProvider == LAN_PROVIDER_LLAMA_CPP ||
+                            lanProvider == LAN_PROVIDER_OMLX ||
+                            lanProvider == LAN_PROVIDER_MLX_LM
+                    )) {
             mapOf("enable_thinking" to JsonPrimitive(false))
         } else null
+// NEW: Nativ (mlx-vlm) — top-level toggle
+        val nativThinkingParam = if (lanProvider == LAN_PROVIDER_NATIV && isReasoningModel) {
+            false
+        } else null
+
 
         try {
-            return withTimeout(SUGGESTION_TIMEOUT_MS) {
+            return withTimeout(SUGGESTION_TIMEOUT_MS.milliseconds) {
                 val authHeader =  "Bearer $apiKey"
 
                 val chatRequest = ChatRequest(
                     model = modelId,
                     messages = messages,
                     max_tokens = 40,
-                    //logprobs = null,
                     temperature = 0.1,
                     stream = false,
-                    think = thinkParam,             // Added Ollama logic
-                    chatTemplateKwargs = llamaCppKwargs // Added Llama.cpp logic
+                    think = thinkParam,                    // Ollama
+                    enableThinking = nativThinkingParam,   // NEW: Nativ
+                    chatTemplateKwargs = llamaCppKwargs    // llama.cpp / oMLX / mlx_lm
                 )
+
                 val activeClient = client ?: httpClient
                 val response = activeClient.post(endpoint) {
                     header("Authorization", authHeader)

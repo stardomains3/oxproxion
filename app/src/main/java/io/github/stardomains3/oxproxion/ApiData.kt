@@ -38,6 +38,8 @@ data class ChatRequest(
     @SerialName("image_config")  // NEW: Optional for Gemini
     val imageConfig: ImageConfig? = null,
     val plugins: List<Plugin>? = null,
+    @SerialName("enable_thinking")
+    val enableThinking: Boolean? = null,
     @SerialName("web_search_options")
     val webSearchOptions: WebSearchOptions? = null
 )
@@ -155,6 +157,8 @@ data class MessageResponse(
     val annotations: List<Annotation>? = null,
     val images: List<ImageResponse>? = null,
     val reasoning: String? = null,
+    @SerialName("reasoning_content")
+    val reasoningContent: String? = null,
     val thinking: String? = null,
     val reasoning_details: List<ReasoningDetail>? = null
 )
@@ -301,6 +305,8 @@ data class StreamedDelta(
     val annotations: List<Annotation>? = null,
     val images: List<ImageResponse>? = null,
     val audio: AudioDelta? = null,
+    @SerialName("reasoning_content")
+    val reasoningContent: String? = null,
     val reasoning: String? = null,
     val reasoning_details: List<ReasoningDetail>? = null
 )

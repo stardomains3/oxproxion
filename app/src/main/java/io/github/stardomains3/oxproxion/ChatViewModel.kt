@@ -35,6 +35,9 @@ import com.google.openlocationcode.OpenLocationCode
 import io.github.stardomains3.oxproxion.BuildConfig
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_LLAMA_CPP
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OLLAMA
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_MLX_LM
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_NATIV
+import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OMLX
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -648,9 +651,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     val chatMessages = messagesToSave.map {
                         ChatMessage(
-                            sessionId = existingId,  // FIXED: Use non-nullable
+                            sessionId = existingId,   // or sessionId in the new-chat branch
                             role = it.role,
-                            content = json.encodeToString(JsonElement.serializer(), it.content)
+                            content = json.encodeToString(JsonElement.serializer(), it.content),
+                            reasoning = it.reasoning,
+                            toolCalls = it.toolCalls?.let { tc ->
+                                json.encodeToString(ListSerializer(ToolCall.serializer()), tc)
+                            },
+                            toolCallId = it.toolCallId   // ← ADD   // ← ADD
                         )
                     }
                     repository.insertSessionAndMessages(session, chatMessages)  // Replaces due to OnConflict.REPLACE
@@ -673,9 +681,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val chatMessages = messagesToSave.map {
                     ChatMessage(
-                        sessionId = sessionId,  // Non-null by construction
+                        sessionId = sessionId,   // or sessionId in the new-chat branch
                         role = it.role,
-                        content = json.encodeToString(JsonElement.serializer(), it.content)
+                        content = json.encodeToString(JsonElement.serializer(), it.content),
+                        reasoning = it.reasoning,
+                        toolCalls = it.toolCalls?.let { tc ->
+                            json.encodeToString(ListSerializer(ToolCall.serializer()), tc)
+                        },
+                        toolCallId = it.toolCallId   // ← ADD   // ← ADD
                     )
                 }
                 repository.insertSessionAndMessages(session, chatMessages)
@@ -724,7 +737,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             json.parseToJsonElement(it.content)
                         } catch (e: Exception) {
                             JsonPrimitive(it.content)
-                        }
+                        },
+                        reasoning = it.reasoning,
+                        toolCalls = try {
+                            it.toolCalls?.let { tc ->
+                                json.decodeFromString(ListSerializer(ToolCall.serializer()), tc)
+                            }
+                        } catch (e: Exception) {
+                            null
+                        },
+                        toolCallId = it.toolCallId   // ← ADD
                     )
                 })
                 currentSessionId = sessionId
@@ -3528,8 +3550,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val isReasoningModel = isReasoningModel(_activeChatModel.value)
             val lanProvider = sharedPreferencesHelper.getLanProvider()
             val llamaCppKwargs = if (
-                lanProvider == LAN_PROVIDER_LLAMA_CPP &&
-                isReasoningModel
+                isReasoningModel && (
+                        lanProvider == LAN_PROVIDER_LLAMA_CPP ||
+                                lanProvider == LAN_PROVIDER_OMLX ||
+                                lanProvider == LAN_PROVIDER_MLX_LM
+                        )
             ) {
                 mapOf("enable_thinking" to JsonPrimitive(_isReasoningEnabled.value == true))
             } else null
@@ -3547,6 +3572,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     if (_isReasoningEnabled.value == true) null else "none"
                 } else null,
                 // NEW: Add the llama.cpp specific logic
+                // NEW: Nativ (mlx-vlm) — top-level toggle
+                enableThinking = if (isReasoningModel && lanProvider == LAN_PROVIDER_NATIV) {
+                    _isReasoningEnabled.value
+                } else null,
                 chatTemplateKwargs = llamaCppKwargs,
                 tools = if (_isToolsEnabled.value == true) buildTools() else null,
                 toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
@@ -3581,7 +3610,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     var accumulatedResponse = ""
                     var accumulatedReasoning = ""
                     var hasUsedReasoningDetails = false
-                    var reasoningStarted = false
+
                     var finish_reason: String? = null
                     var lastChoice: StreamedChoice? = null
                     val toolCallBuffer = mutableListOf<ToolCall>()
@@ -3640,23 +3669,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 if (delta?.reasoning_details?.isNotEmpty() == true) {
                                     hasUsedReasoningDetails = true
                                     delta.reasoning_details.forEach { detail ->
-                                        if (detail.type == "reasoning.text" && detail.text != null) {
-                                            if (!reasoningStarted) {
-                                                accumulatedReasoning = "```\n"
-                                                reasoningStarted = true
-                                            }
-                                            accumulatedReasoning += detail.text
+                                        val chunk = when {
+                                            detail.type == "reasoning.text" && detail.text != null -> detail.text
+                                            detail.type == "reasoning.summary" && detail.summary != null -> detail.summary
+                                            else -> null
+                                        }
+                                        if (chunk != null) {
+                                            accumulatedReasoning += chunk   // ← no fences, ever
                                             reasoningChanged = true
                                         }
                                     }
                                 } else if (!hasUsedReasoningDetails && !delta?.reasoning.isNullOrEmpty()) {
-                                    if (!reasoningStarted) {
-                                        accumulatedReasoning = "```\n"
-                                        reasoningStarted = true
-                                    }
-                                    accumulatedReasoning += delta.reasoning
+                                    accumulatedReasoning += delta.reasoning   // ← no fences
                                     reasoningChanged = true
                                 }
+                                // NEW: vLLM-style reasoning_content
+                                else if (!hasUsedReasoningDetails && !delta?.reasoningContent.isNullOrEmpty()) {
+                                    accumulatedReasoning += delta.reasoningContent
+                                    reasoningChanged = true
+                                }
+
 
                                 if (contentChanged || reasoningChanged) {
                                     withContext(Dispatchers.Main) {
@@ -3739,9 +3771,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
-                    if (reasoningStarted) {
-                        accumulatedReasoning += "\n```\n\n---\n\n"
-                    }
+
 
                     val hadToolCalls = toolCallBuffer.isNotEmpty()
                     val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
@@ -3753,6 +3783,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             role = "assistant",
                             content = JsonPrimitive(accumulatedResponse + citationsMarkdown),
                             toolCalls = toolCallBuffer,
+                            reasoning = accumulatedReasoning,   // ← ADD
                             imageUri = downloadedUris.firstOrNull()
                         )
                         withContext(Dispatchers.Main) {
@@ -3884,7 +3915,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             max_tokens = maxRTokens
                         )
                     } else {
-                        Reasoning(enabled = true, exclude = true)
+                        Reasoning(enabled = true, exclude = false)
                     }
                 } else if (_isReasoningEnabled.value == false && isReasoningModel(_activeChatModel.value)) {
                     Reasoning(enabled = false, exclude = true)
@@ -3914,7 +3945,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     var accumulatedResponse = ""
                     var accumulatedReasoning = ""
                     var hasUsedReasoningDetails = false
-                    var reasoningStarted = false
+
                     var finish_reason: String? = null
                     val toolCallBuffer = mutableListOf<ToolCall>()
                     val accumulatedAnnotations = mutableListOf<Annotation>()
@@ -3982,23 +4013,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 if (delta?.reasoning_details?.isNotEmpty() == true) {
                                     hasUsedReasoningDetails = true
                                     delta.reasoning_details.forEach { detail ->
-                                        if (detail.type == "reasoning.text" && detail.text != null) {
-                                            if (!reasoningStarted) {
-                                                accumulatedReasoning = "```\n"
-                                                reasoningStarted = true
-                                            }
-                                            accumulatedReasoning += detail.text
+                                        val chunk = when {
+                                            detail.type == "reasoning.text" && detail.text != null -> detail.text
+                                            detail.type == "reasoning.summary" && detail.summary != null -> detail.summary
+                                            else -> null
+                                        }
+                                        if (chunk != null) {
+                                            accumulatedReasoning += chunk   // ← no fences, ever
                                             reasoningChanged = true
                                         }
                                     }
                                 } else if (!hasUsedReasoningDetails && !delta?.reasoning.isNullOrEmpty()) {
-                                    if (!reasoningStarted) {
-                                        accumulatedReasoning = "```\n"
-                                        reasoningStarted = true
-                                    }
-                                    accumulatedReasoning += delta.reasoning
+                                    accumulatedReasoning += delta.reasoning   // ← no fences
                                     reasoningChanged = true
                                 }
+
 
                                 // === REAL-TIME UI UPDATE ===
                                 if (contentChanged || reasoningChanged) {
@@ -4089,10 +4118,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
-                    // --- 2. Close reasoning code fence ---
-                    if (reasoningStarted) {
-                        accumulatedReasoning += "\n```\n\n---\n\n"
-                    }
+
 
                     // --- 3. Download generated images ---
                     val downloadedUris = if (accumulatedImages.isNotEmpty()) {
@@ -4124,6 +4150,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             role = "assistant",
                             content = JsonPrimitive(accumulatedResponse + citationsMarkdown),
                             toolCalls = toolCallBuffer,
+                            reasoning = accumulatedReasoning,   // ← ADD
                             imageUri = downloadedUris.firstOrNull()
                         )
                         withContext(Dispatchers.Main) {
@@ -4202,13 +4229,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val lanProvider = sharedPreferencesHelper.getLanProvider()
 
                 val llamaCppKwargs = if (
-                    lanProvider == LAN_PROVIDER_LLAMA_CPP &&
-                    isReasoningModel
+                    isReasoningModel && (
+                            lanProvider == LAN_PROVIDER_LLAMA_CPP ||
+                                    lanProvider == LAN_PROVIDER_OMLX ||
+                                    lanProvider == LAN_PROVIDER_MLX_LM
+                            )
                 ) {
                     mapOf("enable_thinking" to JsonPrimitive(_isReasoningEnabled.value == true))
-                } else {
-                    null
-                }
+                } else null
+
 
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
@@ -4219,6 +4248,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     // ADD THIS: For Ollama OpenAI-compatible endpoint
                     reasoningEffort = if (isReasoningModel && lanProvider == LAN_PROVIDER_OLLAMA) {
                         if (_isReasoningEnabled.value == true) null else "none"
+                    } else null,
+                    // NEW: Nativ (mlx-vlm) — top-level toggle
+                    enableThinking = if (isReasoningModel && lanProvider == LAN_PROVIDER_NATIV) {
+                        _isReasoningEnabled.value
                     } else null,
                     chatTemplateKwargs = llamaCppKwargs,
                     max_tokens = maxTokens,
@@ -4310,25 +4343,30 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                if (choice?.message?.toolCalls?.isNotEmpty() == true && !toolCallsHandledForTurn && _isToolsEnabled.value == true) {
-                    val toolCalls = choice.message.toolCalls
+                    if (choice?.message?.toolCalls?.isNotEmpty() == true && !toolCallsHandledForTurn && _isToolsEnabled.value == true) {
+                        val toolCalls = choice.message.toolCalls
 
-                    val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
-                        formatCitations(choice.message.annotations)
-                    } else {
-                        ""
-                    }
-                    val rawContent = choice.message.content ?: ""
-                    val cleanContent = if (rawContent.trimStart().startsWith("</think>")) {
-                        rawContent.substringAfter("</think>").trimStart()
-                    } else {
-                        rawContent
-                    }
-                    val assistantMessage = FlexibleMessage(
-                        role = "assistant",
-                        content = JsonPrimitive(cleanContent ?: ("" + citationsMarkdown)),
-                        toolCalls = toolCalls
-                    )
+                        val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+                            formatCitations(choice.message.annotations)
+                        } else {
+                            ""
+                        }
+                        val rawContent = choice.message.content ?: ""
+                        val cleanContent = if (rawContent.trimStart().startsWith("</think>")) {
+                            rawContent.substringAfter("</think>").trimStart()
+                        } else {
+                            rawContent
+                        }
+                        // --- ADD THESE 3 LINES ---
+                        val reasoningForDisplay = extractReasoning(choice.message)
+                        //val separator = if (reasoningForDisplay.isNotBlank()) "\n\n---\n\n" else ""
+// -------------------------
+                        val assistantMessage = FlexibleMessage(
+                            role = "assistant",
+                            content = JsonPrimitive(cleanContent ?: ("" + citationsMarkdown)),
+                            toolCalls = toolCalls,
+                            reasoning = reasoningForDisplay   // ← ADD to constructor
+                        )
                     updateMessages { list ->
                         if (thinkingMessage != null) {
                             val index = list.indexOf(thinkingMessage)
@@ -4395,7 +4433,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 max_tokens = maxRTokens
                             )
                         } else {
-                            Reasoning(enabled = true, exclude = true)
+                            Reasoning(enabled = true, exclude = false)
                         }
                     } else if (_isReasoningEnabled.value == false && isReasoningModel(
                             _activeChatModel.value
@@ -4517,19 +4555,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 // Trust the presence of tool calls over the finish_reason for robustness.
-                if (choice?.message?.toolCalls?.isNotEmpty() == true && !toolCallsHandledForTurn && _isToolsEnabled.value == true) {
-                    val toolCalls = choice.message.toolCalls
-                    // Create the complete assistant message from the response
-                    val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
-                        formatCitations(choice.message.annotations)
-                    } else {
-                        ""
-                    }
-                    val assistantMessage = FlexibleMessage(
-                        role = "assistant",
-                        content = JsonPrimitive(choice.message.content ?: ("" + citationsMarkdown)),
-                        toolCalls = toolCalls
-                    )
+                    if (choice?.message?.toolCalls?.isNotEmpty() == true && !toolCallsHandledForTurn && _isToolsEnabled.value == true) {
+                        val toolCalls = choice.message.toolCalls
+                        // Create the complete assistant message from the response
+                        //old  val citationsMarkdown = formatCitations(choice.message.annotations)
+                        val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
+                            formatCitations(choice.message.annotations)
+                        } else {
+                            ""
+                        }
+                        val reasoningForDisplay = extractReasoning(choice.message)
+                        // val separator = if (reasoningForDisplay.isNotBlank()) "\n\n---\n\n" else ""
+                        // -------------------------
+                        val assistantMessage = FlexibleMessage(
+                            role = "assistant",
+                            content = JsonPrimitive(choice.message.content ?: ("" + citationsMarkdown)),
+                            toolCalls = toolCalls,
+                            reasoning = reasoningForDisplay    // ← ADD to constructor
+                        )
                     updateMessages { list ->
                         if (thinkingMessage != null) {
                             val index = list.indexOf(thinkingMessage)
@@ -4572,14 +4615,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val message = chatResponse.choices.firstOrNull()?.message ?: throw IllegalStateException("No message")
         val responseText = message.content ?: "No response received."
 
-        val reasoningForDisplay = message.reasoning_details
-            ?.firstOrNull { it.type == "reasoning.text" }
-            ?.let { "```\n${it.text}\n```" }
-            ?: message.thinking?.let { "```\n$it\n```" }
-            ?: message.reasoning?.let { "```\n$it\n```" }
-            ?: ""
+        val reasoningForDisplay = extractReasoning(message)
 
-        val separator = if (reasoningForDisplay.isNotBlank()) "\n\n---\n\n" else ""
+
+
+        //val separator = if (reasoningForDisplay.isNotBlank()) "\n\n---\n\n" else ""
         val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
             formatCitations(message.annotations)
         } else {
@@ -4592,7 +4632,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             role = "assistant",
             content = JsonPrimitive(finalContent),
             toolsUsed = thinkingMessage == null,
-            reasoning = reasoningForDisplay + separator
+            reasoning = reasoningForDisplay
         )
         if (downloadedUris.isNotEmpty()) {
             finalAiMessage = finalAiMessage.copy(imageUri = downloadedUris.first())
@@ -5168,6 +5208,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             withTimeout(23000.milliseconds) {
                 withContext(Dispatchers.IO) {
+
                     val localClient = if (isLanModel) {
                         createLanHttpClient()
                     } else {
@@ -5185,10 +5226,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         } else {
                             null
                         }
-
-                        /* val llamaCppKwargs = if (isLanModel && lanProvider == SharedPreferencesHelper.LAN_PROVIDER_LLAMA_CPP && isReasoningModel) {
-                             mapOf("enable_thinking" to JsonPrimitive(false))
-                         } else null*/
+                        // NEW: Nativ (mlx-vlm) — top-level toggle
+                        val nativThinkingParam = if (isLanModel && lanProvider == LAN_PROVIDER_NATIV && isReasoningModel) {
+                            false
+                        } else {
+                            null
+                        }
 
                         val requestBody = buildJsonObject {
                             put("model", JsonPrimitive(modelToUse))
@@ -5227,7 +5270,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             if (reasoningEffortParam != null) {
                                 put("reasoning_effort", JsonPrimitive(reasoningEffortParam))
                             }
-                            if (isLanModel && lanProvider == LAN_PROVIDER_LLAMA_CPP && isReasoningModel) {
+                            // NEW: Nativ — top-level enable_thinking
+                            if (nativThinkingParam != null) {
+                                put("enable_thinking", JsonPrimitive(nativThinkingParam))
+                            }
+                            // WIDENED: llama.cpp + oMLX + mlx_lm
+                            if (isLanModel && isReasoningModel && (
+                                        lanProvider == LAN_PROVIDER_LLAMA_CPP ||
+                                                lanProvider == LAN_PROVIDER_OMLX ||
+                                                lanProvider == LAN_PROVIDER_MLX_LM
+                                        )) {
                                 put("chat_template_kwargs", buildJsonObject { // <--- MUST BE SNAKE_CASE HERE
                                     put("enable_thinking", JsonPrimitive(false))
                                 })
@@ -5256,10 +5308,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         } catch (e: Throwable) {
-           // Log.e("ChatViewModel", "AI Fix failed", e)
+            Log.e("ChatViewModel", "AI Fix failed", e)
             null
         }
     }
+
     suspend fun correctText(input: String): String? {
         if (input.isBlank()) return null
 
@@ -5322,10 +5375,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 put("think", JsonPrimitive(false))
                                 put("reasoning_effort", JsonPrimitive("none"))  // ADD THIS
                             }
-                            if (isLanModel && lanProvider == LAN_PROVIDER_LLAMA_CPP && isReasoningModel) {
-                                put("chat_template_kwargs", buildJsonObject { // <--- MUST BE SNAKE_CASE HERE
+                            if (isLanModel && isReasoningModel && (
+                                        lanProvider == LAN_PROVIDER_LLAMA_CPP ||
+                                                lanProvider == LAN_PROVIDER_OMLX ||
+                                                lanProvider == LAN_PROVIDER_MLX_LM
+                                        )) {
+                                put("chat_template_kwargs", buildJsonObject {
                                     put("enable_thinking", JsonPrimitive(false))
                                 })
+                            }
+// NEW: Nativ
+                            if (isLanModel && lanProvider == LAN_PROVIDER_NATIV && isReasoningModel) {
+                                put("enable_thinking", JsonPrimitive(false))
                             }
                         }
 
@@ -7001,6 +7062,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
             else -> emptyList()
         }
+    }
+    private fun extractReasoning(message: MessageResponse): String {
+        return message.reasoning_details
+            ?.mapNotNull { d ->
+                when {
+                    d.type == "reasoning.text" && d.text != null -> d.text
+                    d.type == "reasoning.summary" && d.summary != null -> d.summary
+                    else -> null
+                }
+            }
+            ?.joinToString("\n")
+            ?.takeIf { it.isNotBlank() }
+            ?: message.thinking
+            ?: message.reasoning
+            ?: message.reasoningContent
+            ?: ""
     }
     private suspend fun deleteFilesViaSaf(filepaths: List<String>): String {
         return withContext(Dispatchers.IO) {
