@@ -33,11 +33,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="Note: You can set Effort OR Max Reasoning Tokens, not both. Setting Max Reasoning Tokens disables Effort. To use Effort, make sure Max Reasoning Tokens has no value."
+                android:text="Set Effort OR Max Reasoning Tokens, not both — a token value overrides Effort.\n\nDisplay in Response shows the model's reasoning in a collapsible bubble above the reply. When off, reasoning is still generated (and billed) but not shown."
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="14sp"
                 android:layout_marginBottom="16dp"
-                android:gravity="center" />
+                android:textAlignment="center" />
 
             <!-- Effort Selector -->
             <TextView
@@ -45,7 +45,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="Effort Level:"
-                android:textColor="?attr/colorPrimary"
+                android:textColor="?android:attr/textColorPrimary"
                 android:textSize="18sp"
                 android:layout_marginBottom="16dp" />
 
@@ -111,7 +111,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Include in Response:"
+                    android:text="Display in Response:"
                     android:textColor="?attr/colorPrimary"
                     android:textSize="16sp"
                     />
@@ -129,12 +129,14 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="Max Reasoning Tokens:"
-                android:textColor="?attr/colorPrimary"
+                android:textColor="?android:attr/textColorPrimary"
                 android:textSize="16sp"
                 android:layout_marginBottom="16dp" />
 
             <com.google.android.material.textfield.TextInputLayout
+
                 android:layout_width="200dp"
+                app:boxBackgroundColor="?attr/colorSurfaceContainerHighest"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 app:boxStrokeColor="?attr/colorPrimary"

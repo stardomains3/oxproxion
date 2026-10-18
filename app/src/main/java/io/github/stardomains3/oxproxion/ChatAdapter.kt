@@ -966,7 +966,10 @@ class ChatAdapter(
         }
         private fun bindReasoning(message: FlexibleMessage) {
             val reasoning = getCleanReasoning(message)
-            if (reasoning.isBlank()) {
+            // Read live — hide only when Advanced Reasoning is ON and "Include in response" is OFF
+            val prefs = SharedPreferencesHelper(itemView.context)
+            val suppress = prefs.getAdvancedReasoningEnabled() && prefs.getReasoningExclude()
+            if (reasoning.isBlank() || suppress) {
                 reasoningContainer.visibility = View.GONE
                 return
             }

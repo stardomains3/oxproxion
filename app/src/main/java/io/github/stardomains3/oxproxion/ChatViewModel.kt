@@ -167,6 +167,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _customModelsUpdated = MutableLiveData<Event<Unit>>()
     val customModelsUpdated: LiveData<Event<Unit>> = _customModelsUpdated
+    private val _reasoningVisibilityRefresh = MutableLiveData<Event<Unit>>()
+    val reasoningVisibilityRefresh: LiveData<Event<Unit>> = _reasoningVisibilityRefresh
 
     fun isVisionModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
@@ -717,7 +719,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             else -> element  // Primitives stay as-is
         }
     }
-
+    fun refreshReasoningVisibility() {
+        _reasoningVisibilityRefresh.value = Event(Unit)
+    }
     fun loadChat(sessionId: Long) {
       //  generatedImages.clear()
         _isChatLoading.value = true

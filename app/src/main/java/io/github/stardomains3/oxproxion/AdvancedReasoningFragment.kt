@@ -5,6 +5,7 @@ import android.graphics.PorterDuff
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import androidx.fragment.app.activityViewModels
 import android.view.View
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.graphics.toColorInt
@@ -20,6 +21,7 @@ import kotlin.text.toIntOrNull
 class AdvancedReasoningFragment : Fragment(R.layout.fragment_advanced_reasoning) {
 
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
+    private val viewModel: ChatViewModel by activityViewModels()
     private lateinit var effortGroup: MaterialButtonToggleGroup
     private lateinit var includeSwitch: MaterialSwitch
     private lateinit var maxTokensEdit: TextInputEditText
@@ -94,7 +96,9 @@ class AdvancedReasoningFragment : Fragment(R.layout.fragment_advanced_reasoning)
 
         includeSwitch.setOnCheckedChangeListener { _, isChecked ->
             sharedPreferencesHelper.saveReasoningExclude(!isChecked)  // exclude = !include
+            viewModel.refreshReasoningVisibility()                    // ← ADD
         }
+
 
         maxTokensEdit.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}

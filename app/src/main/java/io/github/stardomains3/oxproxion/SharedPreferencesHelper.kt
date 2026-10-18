@@ -302,7 +302,7 @@ class SharedPreferencesHelper(context: Context) {
         // Default to TRUE to preserve current behavior for existing users
         return mainPrefs.getBoolean(KEY_DISABLE_WEB_SEARCH_AFTER_SEND, true)
     }
-    fun getReasoningExclude(): Boolean = mainPrefs.getBoolean("reasoning_exclude", true)  // Default to true (exclude)
+    fun getReasoningExclude(): Boolean = mainPrefs.getBoolean("reasoning_exclude", false)
     fun saveReasoningExclude(exclude: Boolean) = mainPrefs.edit {
         putBoolean(
             "reasoning_exclude",

@@ -1140,6 +1140,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         viewModel.isAdvancedReasoningOn.observe(viewLifecycleOwner) { isAdvanced ->
             updateReasoningButtonAppearance() // Call helper
         }
+        viewModel.reasoningVisibilityRefresh.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                chatAdapter.notifyDataSetChanged()
+            }
+        }
+
         viewModel.isExtendedTopBarEnabled.observe(viewLifecycleOwner) { isTopBarEnabled ->
             updateExtendedTopBarVisibility(isTopBarEnabled)
             val isPresetsOnChatScreen = viewModel.isPresetsExtendedEnabled.value ?: false
