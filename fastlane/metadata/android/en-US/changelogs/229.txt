@@ -1,0 +1,1 @@
+- Fixed an issue with extended input area when a back swipe wouldn't return it to its normal state.

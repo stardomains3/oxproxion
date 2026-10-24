@@ -137,6 +137,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private var isSpeaking = false
+    private var isInputExpanded = false
     private var isShare = false
     private lateinit var pttButton: MaterialButton
     private var fromPtt = false
@@ -1431,6 +1432,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         newParent.addView(view)
     }
     private fun setInputExpandedState(expanded: Boolean) {
+        isInputExpanded = expanded
         val containerParams = chatInputContainer.layoutParams
         val editParams = chatEditText.layoutParams as LinearLayout.LayoutParams
         val rowParams = chatInputRow.layoutParams as LinearLayout.LayoutParams   // ← NEW
@@ -1523,8 +1525,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
             val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
 
-            // If keyboard is gone AND we have focus, it means we need to close up shop
-            if (!isKeyboardVisible && chatEditText.hasFocus()) {
+            if (!isKeyboardVisible && isInputExpanded) {   // ← flag, not hasFocus()
                 setInputExpandedState(false)
                 chatEditText.clearFocus()
             }
@@ -3626,8 +3627,9 @@ $cleanContent
 
 
     fun onBackPressed(): Boolean {
-        if (viewModel.isExpandableInputEnabled.value == true && chatEditText.hasFocus()) {
+        if (isInputExpanded) {                          // ← flag, not hasFocus()
             setInputExpandedState(false)
+
         }
         chatEditText.clearFocus()
         if (headerContainer.isVisible) {
