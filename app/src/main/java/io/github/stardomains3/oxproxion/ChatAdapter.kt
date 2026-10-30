@@ -21,6 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.recyclerview.widget.RecyclerView
 import coil.ImageLoader
@@ -118,6 +119,15 @@ class ChatAdapter(
             } ?: ""
         }
         return ""
+    }
+    private fun getImageDataUrl(content: JsonElement): String? {
+        if (content is JsonArray) {
+            return content.firstNotNullOfOrNull { item ->
+                (item as? JsonObject)?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull == "image_url" }
+                    ?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.content
+            }
+        }
+        return null
     }
 
     private fun getImageBase64(content: JsonElement): String? {
@@ -499,7 +509,8 @@ class ChatAdapter(
                 }
             }
 
-            // ... (Keep the rest of your existing image/button logic below exactly as it was) ...
+            // Preview: prefer Coil with the cheap content:// URI when available,
+            // otherwise decode from base64 in content.
             val imageUriStr = message.imageUri
             if (!imageUriStr.isNullOrEmpty()) {
                 try {
@@ -510,32 +521,19 @@ class ChatAdapter(
                         .build()
                     ImageLoader(itemView.context).enqueue(request)
                     imageView.visibility = View.VISIBLE
-
-                    imageView.setOnClickListener {
-                        try {
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(userImageUri, "image/*")
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            itemView.context.startActivity(intent)
-                        } catch (e: Exception) {
-                            Toast.makeText(itemView.context, "Could not open image", Toast.LENGTH_SHORT).show()
-                        }
-                    }
                 } catch (e: Exception) {
-                    val base64 = getImageBase64(message.content)
-                    if (base64 != null) {
-                        val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        imageView.setImageBitmap(bitmap)
-                        imageView.visibility = View.VISIBLE
-                    } else {
-                        imageView.visibility = View.GONE
-                    }
+                    showImageFromBase64(message)
                 }
             } else {
-                imageView.visibility = View.GONE
+                showImageFromBase64(message)
             }
+
+            // Tap-to-open: ALWAYS via FileProvider (uniform, works for
+            // fresh sends AND restored chats, avoids other apps'
+            // content:// handling bugs)
+            imageView.setOnClickListener { openImageInExternalViewer(message) }
+
+
 
             copyButtonuser.setOnClickListener { //rawUserContent
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -560,7 +558,58 @@ class ChatAdapter(
             deleteButton.setOnClickListener {
                 onDeleteMessage(bindingAdapterPosition)
             }
+
         }
+        private fun openImageInExternalViewer(message: FlexibleMessage) {
+            try {
+                val dataUrl = getImageDataUrl(message.content) ?: return
+                val mime = dataUrl.substringAfter("data:")
+                    .substringBefore(";")
+                    .ifBlank { "image/png" }
+                val base64 = dataUrl.substringAfter(",")
+                val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+
+                val ext = when (mime) {
+                    "image/jpeg" -> "jpg"
+                    "image/webp" -> "webp"
+                    else -> "png"
+                }
+                val file = File(itemView.context.cacheDir, "view_${System.currentTimeMillis()}.$ext")
+                file.writeBytes(bytes)
+
+                val fileUri = FileProvider.getUriForFile(
+                    itemView.context,
+                    "${itemView.context.packageName}.fileprovider",
+                    file
+                )
+
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(fileUri, mime)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                itemView.context.startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(itemView.context, "Could not open image", Toast.LENGTH_SHORT).show()
+            }
+        }
+        private fun showImageFromBase64(message: FlexibleMessage) {
+            val base64 = getImageBase64(message.content)
+            if (base64 != null) {
+                try {
+                    val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    imageView.setImageBitmap(bitmap)
+                    imageView.visibility = View.VISIBLE
+                } catch (e: Exception) {
+                    imageView.visibility = View.GONE
+                }
+            } else {
+                imageView.visibility = View.GONE
+            }
+        }
+
+
     }
 
 

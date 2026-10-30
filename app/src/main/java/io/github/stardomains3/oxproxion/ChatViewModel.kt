@@ -1204,21 +1204,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val currentMessages = _chatMessages.value ?: emptyList()
         val userMessage = currentMessages[userMessageIndex]
 
-        // Restore pendingUserImageUri from the message content if not already set
-        if (pendingUserImageUri == null) {
-            val contentArray = userMessage.content as? JsonArray
-            val imageUrl = contentArray?.find { item ->
-                (item as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "image_url"
-            }?.jsonObject?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
+        // Derive the image URI locally for display purposes only.
+        // (No longer touches pendingUserImageUri, so no stale state leaks
+        //  into the next message the user sends.)
+        val displayImageUri = userMessage.imageUri
+            ?: (userMessage.content as? JsonArray)
+                ?.find { item ->
+                    (item as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "image_url"
+                }
+                ?.jsonObject?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
 
-            if (imageUrl != null) {
-                pendingUserImageUri = imageUrl
-            }
-        }
-
-        // CRITICAL: Attach the image URI to the user message for the API call
-        val messageWithImage = if (pendingUserImageUri != null) {
-            userMessage.copy(imageUri = pendingUserImageUri)
+        val messageWithImage = if (displayImageUri != null) {
+            userMessage.copy(imageUri = displayImageUri)
         } else {
             userMessage
         }
@@ -4635,7 +4632,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         var finalAiMessage = FlexibleMessage(
             role = "assistant",
             content = JsonPrimitive(finalContent),
-            toolsUsed = thinkingMessage == null,
+            //toolsUsed = thinkingMessage == null,
             reasoning = reasoningForDisplay
         )
         if (downloadedUris.isNotEmpty()) {

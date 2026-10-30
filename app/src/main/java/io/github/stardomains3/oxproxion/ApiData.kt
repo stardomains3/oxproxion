@@ -2,6 +2,7 @@ package io.github.stardomains3.oxproxion
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
@@ -67,10 +68,9 @@ data class FlexibleMessage(
     val toolCalls: List<ToolCall>? = null,
     @SerialName("tool_call_id")
     val toolCallId: String? = null,
-    val toolsUsed: Boolean = false,  // NEW: Flag for visual indication (true if tools were involved in this
     val reasoning: String? = null,
     val thinking: String? = null,
-    @SerialName("image_uri")  // NEW: String for serialization (parse to Uri later)
+    @Transient
     val imageUri: String? = null  // For user/generated images (original Uri.toString())
 )
 

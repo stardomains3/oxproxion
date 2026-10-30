@@ -1396,6 +1396,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         }
         // Clean up any orphaned voice recordings from previous sessions
         clearStaleVoiceFiles()
+        // Clean up temp copies from previous tap-to-open sessions
+        clearStaleViewedImages()
         // end onviewcreated
     }
 
@@ -4498,6 +4500,18 @@ $cleanContent
             } else {
                 Toast.makeText(requireContext(), "Recording failed or was empty", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+    private fun clearStaleViewedImages() {
+        try {
+            requireContext().cacheDir.listFiles { file ->
+                file.name.startsWith("view_") &&
+                        (file.name.endsWith(".png") || file.name.endsWith(".jpg") || file.name.endsWith(".webp"))
+            }?.forEach { file ->
+                file.delete()
+            }
+        } catch (e: Exception) {
+            // Never crash on cache cleanup
         }
     }
 
