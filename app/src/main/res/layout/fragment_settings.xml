@@ -720,6 +720,7 @@
                     app:strokeColor="@color/chestnut"/>
             </com.google.android.material.button.MaterialButtonToggleGroup>
             <LinearLayout
+                android:id="@+id/watermarkSttRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"

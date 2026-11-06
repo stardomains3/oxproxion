@@ -28,26 +28,36 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         val viewModel: ChatViewModel by activityViewModels()
         val watermarkSttSwitch = view.findViewById<MaterialSwitch>(R.id.watermarkSttSwitch)
+        val watermarkSttRow = view.findViewById<View>(R.id.watermarkSttRow)
         val pushToTalkRow = view.findViewById<View>(R.id.pushToTalkRow)
         val pushToTalkSwitch = view.findViewById<MaterialSwitch>(R.id.pushToTalkSwitch)
         pushToTalkSwitch.isChecked = prefs.getPushToTalkEnabled()
         pushToTalkSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.savePushToTalkEnabled(isChecked)
         }
-        fun updatePttRowVisibility() {
-            // PTT only makes sense if a transcription backend is configured
+        fun updateVoiceSettingsVisibility() {
             val hasTranscription = when (prefs.getVoiceInputProvider()) {
                 "cloud" -> true
                 "lan" -> prefs.getVoiceInputModel().isNotBlank()
-                else -> false  // "off"
+                else -> false
             }
+
+            // Handle PTT (already works because it was hiding the Row)
             pushToTalkRow.visibility = if (hasTranscription) View.VISIBLE else View.GONE
             if (!hasTranscription && prefs.getPushToTalkEnabled()) {
                 pushToTalkSwitch.isChecked = false
-                prefs.savePushToTalkEnabled(false)  // force-off if backend removed
+                prefs.savePushToTalkEnabled(false)
+            }
+
+            // 2. FIX WATERMARK: Hide the ROW, not the Switch
+            watermarkSttRow.visibility = if (hasTranscription) View.VISIBLE else View.GONE
+            if (!hasTranscription && prefs.getWatermarkSttEnabled()) {
+                watermarkSttSwitch.isChecked = false
+                prefs.saveWatermarkSttEnabled(false)
             }
         }
-        updatePttRowVisibility()
+
+         updateVoiceSettingsVisibility()
         val themeToggleGroup = view.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.themeToggleGroup)
         val inferenceParamsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.inferenceParamsButton)
         val chatMemoryButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.chatMemoryButton)
@@ -281,7 +291,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         voiceModelEdit.doAfterTextChanged { text ->
             prefs.setVoiceInputModel(text?.toString() ?: "")
-            updatePttRowVisibility()   // ← ADD
+             updateVoiceSettingsVisibility()   // ← ADD
         }
 
 // Save provider on toggle change
@@ -293,7 +303,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                     else -> "lan"
                 }
                 prefs.setVoiceInputProvider(provider)
-                updatePttRowVisibility()   // ← ADD
+                 updateVoiceSettingsVisibility()  // ← ADD
             }
         }
         // 🔥 STYLE ALL SWITCHES (your exact code → reusable)

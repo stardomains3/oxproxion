@@ -1099,7 +1099,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 // Replace thinking message with transcription result
                 withContext(Dispatchers.Main) {
                     updateMessages { list ->
-                        val index = list.indexOf(thinkingMessage)
+                       // val index = list.indexOf(thinkingMessage)
+                        val index = indexOfMessage(list, thinkingMessage)
+
                         if (index != -1) {
                             list[index] = FlexibleMessage(
                                 role = "assistant",
@@ -1160,7 +1162,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 // Replace thinking message with transcription result
                 withContext(Dispatchers.Main) {
                     updateMessages { list ->
-                        val index = list.indexOf(thinkingMessage)
+                    //    val index = list.indexOf(thinkingMessage)
+                        val index = indexOfMessage(list, thinkingMessage)
+
                         if (index != -1) {
                             list[index] = FlexibleMessage(
                                 role = "assistant",
@@ -1200,6 +1204,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             return
         }
+
+        // Reset tool-call state for this fresh turn (mirrors sendUserMessage)
+        toolCallsHandledForTurn = false
+        toolRecursionDepth = 0
+
 
         val currentMessages = _chatMessages.value ?: emptyList()
         val userMessage = currentMessages[userMessageIndex]
@@ -2680,6 +2689,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         withContext(Dispatchers.Main) {
             updateMessages { it.addAll(toolResults) }
         }
+        // Decrement so the depth reflects ACTIVE tool chains, not lifetime history.
+        // Without this, depth only ever grows and continueConversation eventually
+        // refuses to run (> 14), stranding the "working..." bubble.
+        toolRecursionDepth--
         // All tool calls now continue the conversation to report their status.
         val messagesForApi = _chatMessages.value?.toMutableList() ?: mutableListOf()
         val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
@@ -3653,7 +3666,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                     if (isFirstContentChunk) {
                                         withContext(Dispatchers.Main) {
                                             updateMessages { list ->
-                                                val index = list.indexOf(thinkingMessage)
+                                              //  val index = list.indexOf(thinkingMessage)
+                                                val index = indexOfMessage(list, thinkingMessage)
+
                                                 if (index != -1) {
                                                     list[index] = FlexibleMessage(
                                                         role = "assistant",
@@ -3995,7 +4010,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                     if (isFirstContentChunk) {
                                         withContext(Dispatchers.Main) {
                                             updateMessages { list ->
-                                                val index = list.indexOf(thinkingMessage)
+                                               // val index = list.indexOf(thinkingMessage)
+                                                val index = indexOfMessage(list, thinkingMessage)
+
                                                 if (index != -1) {
                                                     list[index] = FlexibleMessage(
                                                         role = "assistant",
@@ -4364,13 +4381,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 // -------------------------
                         val assistantMessage = FlexibleMessage(
                             role = "assistant",
-                            content = JsonPrimitive(cleanContent ?: ("" + citationsMarkdown)),
+                            //content = JsonPrimitive(cleanContent ?: ("" + citationsMarkdown)),
+                            content = JsonPrimitive((cleanContent ?: "") + citationsMarkdown),
                             toolCalls = toolCalls,
                             reasoning = reasoningForDisplay   // ← ADD to constructor
                         )
                     updateMessages { list ->
                         if (thinkingMessage != null) {
-                            val index = list.indexOf(thinkingMessage)
+                          //  val index = list.indexOf(thinkingMessage)
+                            val index = indexOfMessage(list, thinkingMessage)
+
                             if (index != -1) list[index] = assistantMessage
                         } else {
                             list.add(assistantMessage)
@@ -4570,13 +4590,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         // -------------------------
                         val assistantMessage = FlexibleMessage(
                             role = "assistant",
-                            content = JsonPrimitive(choice.message.content ?: ("" + citationsMarkdown)),
+                            //content = JsonPrimitive(choice.message.content ?: ("" + citationsMarkdown)),
+                            content = JsonPrimitive((choice.message.content ?: "") + citationsMarkdown),
                             toolCalls = toolCalls,
                             reasoning = reasoningForDisplay    // ← ADD to constructor
                         )
                     updateMessages { list ->
                         if (thinkingMessage != null) {
-                            val index = list.indexOf(thinkingMessage)
+                           // val index = list.indexOf(thinkingMessage)
+                            val index = indexOfMessage(list, thinkingMessage)
+
                             if (index != -1) list[index] = assistantMessage
                         } else {
                             list.add(assistantMessage)  // Continuation: Add new bubble (fixes invisible)
@@ -4640,7 +4663,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         updateMessages { list ->
             if (thinkingMessage != null) {
-                val index = list.indexOf(thinkingMessage)
+              //  val index = list.indexOf(thinkingMessage)
+                val index = indexOfMessage(list, thinkingMessage)
+
                 if (index != -1) list[index] = finalAiMessage
             } else {
                 list.add(finalAiMessage)
@@ -4672,7 +4697,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val errorMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(detailedMsg))
         updateMessages { list ->
             if (thinkingMessage != null) {
-                val index = list.indexOf(thinkingMessage)
+               // val index = list.indexOf(thinkingMessage)
+                val index = indexOfMessage(list, thinkingMessage)
+
                 if (index != -1) list[index] = errorMessage
             } else {
                 list.add(errorMessage)
@@ -4702,7 +4729,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val finalErrorMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(errorText))
                     updateMessages { list ->
                         if (thinkingMessage != null) {
-                            val index = list.indexOf(thinkingMessage)
+                           // val index = list.indexOf(thinkingMessage)
+                            val index = indexOfMessage(list, thinkingMessage)
+
                             if (index != -1) list[index] = finalErrorMessage
                         } else {
                             list.add(finalErrorMessage)
@@ -4725,7 +4754,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val finalErrorMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(errorText))
                     updateMessages { list ->
                         if (thinkingMessage != null) {
-                            val index = list.indexOf(thinkingMessage)
+                          //  val index = list.indexOf(thinkingMessage)
+                            val index = indexOfMessage(list, thinkingMessage)
+
+
                             if (index != -1) list[index] = finalErrorMessage
                         } else {
                             list.add(finalErrorMessage)
@@ -4749,7 +4781,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val errorMessage = FlexibleMessage(role = "assistant", content = JsonPrimitive(errorMsg))
             updateMessages { list ->
                 if (thinkingMessage != null) {
-                    val index = list.indexOf(thinkingMessage)
+                  //  val index = list.indexOf(thinkingMessage)
+                    val index = indexOfMessage(list, thinkingMessage)
+
                     if (index != -1) list[index] = errorMessage
                 } else {
                     list.add(errorMessage)
@@ -4758,7 +4792,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
+    /**
+     * Identity-based lookup. FlexibleMessage is a data class, so indexOf() matches by
+     * equality — meaning every "working..." placeholder equals every other one. This
+     * finds the exact instance we want to replace, so a stale placeholder from an
+     * earlier turn can never be swapped out instead of the current one.
+     */
+    private fun indexOfMessage(list: List<FlexibleMessage>, target: FlexibleMessage): Int =
+        list.indexOfFirst { it === target }
     private fun updateMessages(updateBlock: (MutableList<FlexibleMessage>) -> Unit) {
         val current = _chatMessages.value?.toMutableList() ?: mutableListOf()
         updateBlock(current)

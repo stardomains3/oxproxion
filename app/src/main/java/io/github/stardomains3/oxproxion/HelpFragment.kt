@@ -269,7 +269,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ##  Menu
 
             Tap the **menu button** {{ic_menudot}} (the one on the lower left with nine dots) to show or hide the main menu. The menu will also hide if you tap outside of it.
-            If your prompt is filled with spelling/grammar errors you can long-press the menu button to send the prompt to model "google/gemma-4-26b-a4b-it" to fix it and it will automatically correct the prompt in the prompt box.
+            Long-press the menu button to run a grammar and spelling correction on your prompt. This will use your current active LAN model (or "google/gemma-4-26b-a4b-it" via OpenRouter) to automatically fix your text in the input box.
 
             ### Contextual Buttons (Enabled during a chat)
             *   **Copy Chat** {{ic_copi}} : Copies the full conversation to your clipboard. Long Press to copy Markdown RAW.

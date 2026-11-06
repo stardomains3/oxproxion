@@ -1,0 +1,2 @@
+- Bug fixes and optimizations.
+- Updated some dependencies.
