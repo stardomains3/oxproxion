@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    //alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.oss.licenses)
@@ -9,17 +8,14 @@ plugins {
 
 configurations.all {
     exclude(group = "org.jetbrains", module = "annotations-java5")
-}
-
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "com.atlassian.commonmark") {
-            useTarget("org.commonmark:${requested.name}:${libs.versions.commonmark.get()}")
-            because("The library moved from com.atlassian.commonmark to org.commonmark, causing duplicate classes")
-        }
-    }
     resolutionStrategy {
         force("org.commonmark:commonmark:${libs.versions.commonmark.get()}")
+        eachDependency {
+            if (requested.group == "com.atlassian.commonmark") {
+                useTarget("org.commonmark:${requested.name}:${libs.versions.commonmark.get()}")
+                because("...")
+            }
+        }
     }
 }
 
@@ -31,8 +27,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 37
-        versionCode = 231
-        versionName = "2.2.16"
+        versionCode = 232
+        versionName = "2.2.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -57,9 +53,7 @@ android {
         getByName("debug") {
             isDebuggable = true
         }
-        buildFeatures {
-            buildConfig = true
-        }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -82,13 +76,6 @@ android {
         }
     }
 }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
-    }
-
-
 
 dependencies {
     // Markwon (Syntax Highlighting Removed)
@@ -140,7 +127,7 @@ dependencies {
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.auth)
     implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.client.android)
+    //implementation(libs.ktor.client.android)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

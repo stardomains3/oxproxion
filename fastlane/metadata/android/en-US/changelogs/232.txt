@@ -1,0 +1,2 @@
+- Fixed issue with Ollama reasoning models.
+- Some build.gradle.kts (:app) cleanup.

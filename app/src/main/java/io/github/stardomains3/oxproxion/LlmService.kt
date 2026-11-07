@@ -52,10 +52,12 @@ class LlmService(
         val messages = listOf(
             FlexibleMessage(role = "user", content = JsonPrimitive(prompt))
         )
-        val thinkParam = if (lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
-            false
+        // Ollama: "think" is NOT supported on /v1/chat/completions (Responses API only).
+        // reasoning_effort "none" is the correct way to disable thinking there.
+        val reasoningEffortParam = if (lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
+            "none"
         } else {
-            null // Excluded from JSON entirely if not Ollama or not a reasoning model
+            null
         }
         val llamaCppKwargs = if (isReasoningModel && (
                     lanProvider == LAN_PROVIDER_LLAMA_CPP ||
@@ -70,6 +72,7 @@ class LlmService(
         } else null
 
 
+
         try {
             return withTimeout(SUGGESTION_TIMEOUT_MS.milliseconds) {
                 val authHeader =  "Bearer $apiKey"
@@ -80,7 +83,7 @@ class LlmService(
                     max_tokens = 40,
                     temperature = 0.1,
                     stream = false,
-                    think = thinkParam,                    // Ollama
+                    reasoningEffort = reasoningEffortParam, // Ollama: "none" disables thinking
                     enableThinking = nativThinkingParam,   // NEW: Nativ
                     chatTemplateKwargs = llamaCppKwargs    // llama.cpp / oMLX / mlx_lm
                 )

@@ -32,7 +32,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.openlocationcode.OpenLocationCode
-import io.github.stardomains3.oxproxion.BuildConfig
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_LLAMA_CPP
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_OLLAMA
 import io.github.stardomains3.oxproxion.SharedPreferencesHelper.Companion.LAN_PROVIDER_MLX_LM
@@ -3578,18 +3577,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 messages = messagesForApiRequest,
                 stream = true,
                 max_tokens = maxTokens,
-                think = if (isReasoningModel && lanProvider == LAN_PROVIDER_OLLAMA) {
-                    _isReasoningEnabled.value
-                } else null,
-                // ADD THIS: For Ollama OpenAI-compatible endpoint
-                reasoningEffort = if (isReasoningModel && lanProvider == LAN_PROVIDER_OLLAMA) {
-                    if (_isReasoningEnabled.value == true) null else "none"
-                } else null,
-                // NEW: Add the llama.cpp specific logic
-                // NEW: Nativ (mlx-vlm) — top-level toggle
+                think = null, // NOT supported on /v1/chat/completions (Responses API only)
                 enableThinking = if (isReasoningModel && lanProvider == LAN_PROVIDER_NATIV) {
                     _isReasoningEnabled.value
                 } else null,
+                // Ollama OpenAI-compatible endpoint: reasoning_effort is the only
+                // thinking control on /v1/chat/completions. "none" disables thinking;
+                // otherwise send the user's effort level (or "medium" as default).
+                reasoningEffort = if (lanProvider == LAN_PROVIDER_OLLAMA) {
+                    if (_isReasoningEnabled.value == true) {
+                        if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
+                            sharedPreferencesHelper.getReasoningEffort() ?: "medium"
+                        } else {
+                            "medium"
+                        }
+                    } else "none"
+                } else null,
+
                 chatTemplateKwargs = llamaCppKwargs,
                 tools = if (_isToolsEnabled.value == true) buildTools() else null,
                 toolChoice = if (_isToolsEnabled.value == true) "auto" else null,
@@ -4260,13 +4264,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messages = messagesForApiRequest,
-                    think = if (isReasoningModel && lanProvider == LAN_PROVIDER_OLLAMA) {
-                        _isReasoningEnabled.value
+                    think = null, // NOT supported on /v1/chat/completions (Responses API only)
+                    // Ollama OpenAI-compatible endpoint: reasoning_effort is the only
+                    // thinking control on /v1/chat/completions.
+                    reasoningEffort = if (lanProvider == LAN_PROVIDER_OLLAMA) {
+                        if (_isReasoningEnabled.value == true) {
+                            if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
+                                sharedPreferencesHelper.getReasoningEffort() ?: "medium"
+                            } else {
+                                "medium"
+                            }
+                        } else "none"
                     } else null,
-                    // ADD THIS: For Ollama OpenAI-compatible endpoint
-                    reasoningEffort = if (isReasoningModel && lanProvider == LAN_PROVIDER_OLLAMA) {
-                        if (_isReasoningEnabled.value == true) null else "none"
-                    } else null,
+
                     // NEW: Nativ (mlx-vlm) — top-level toggle
                     enableThinking = if (isReasoningModel && lanProvider == LAN_PROVIDER_NATIV) {
                         _isReasoningEnabled.value
@@ -5258,11 +5268,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     localClient.use { client ->
 
-                        val thinkParam = if (isLanModel && lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
-                            false
-                        } else {
-                            null
-                        }
+                        val thinkParam = null // "think" is not supported on /v1/chat/completions
+
                         val reasoningEffortParam = if (isLanModel && lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
                             "none"
                         } else {
@@ -5306,9 +5313,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             put("stream", JsonPrimitive(false))
                             put("max_tokens", JsonPrimitive(4000))
 
-                            if (thinkParam != null) {
-                                put("think", JsonPrimitive(thinkParam))
-                            }
+
                             if (reasoningEffortParam != null) {
                                 put("reasoning_effort", JsonPrimitive(reasoningEffortParam))
                             }
@@ -5412,11 +5417,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             put("stream", JsonPrimitive(false))
                             put("max_tokens", JsonPrimitive(10000)) // FIX: Reduced to safe limit for Gemma models
 
-                            // Dynamic Parameter Injection
+                            // Ollama: "think" is not supported on /v1/chat/completions;
+                            // reasoning_effort "none" is the correct way to disable thinking.
                             if (isLanModel && lanProvider == LAN_PROVIDER_OLLAMA && isReasoningModel) {
-                                put("think", JsonPrimitive(false))
-                                put("reasoning_effort", JsonPrimitive("none"))  // ADD THIS
+                                put("reasoning_effort", JsonPrimitive("none"))
                             }
+
                             if (isLanModel && isReasoningModel && (
                                         lanProvider == LAN_PROVIDER_LLAMA_CPP ||
                                                 lanProvider == LAN_PROVIDER_OMLX ||
