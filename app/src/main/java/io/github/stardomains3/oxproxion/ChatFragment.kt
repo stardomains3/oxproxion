@@ -1966,41 +1966,13 @@ $cleanContent
         genButton.setOnClickListener {
             val model = viewModel.activeChatModel.value ?: return@setOnClickListener
 
-            // Pure image models → OpenRouter /api/v1/images options (per-model)
-            if (viewModel.isPureImageGenerationModel(model)) {
-                lifecycleScope.launch {
-                    val caps = viewModel.getImageGenCapabilities(model)
-                    showImageGenOptionsDialog(model, caps)
-                }
-                return@setOnClickListener
+            // All image generation models → OpenRouter /api/v1/images options (per-model)
+            lifecycleScope.launch {
+                val caps = viewModel.getImageGenCapabilities(model)
+                showImageGenOptionsDialog(model, caps)
             }
-
-            // Existing Gemini flow (unchanged)
-            val isGoogleImageModel = model.startsWith("google/", ignoreCase = true) &&
-                    model.contains("image", ignoreCase = true)
-
-            if (!isGoogleImageModel) {
-                Toast.makeText(
-                    requireContext(),
-                    "Image generation parameters only supported for Google image models",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
-            }
-
-            val aspectRatios = arrayOf("1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9")
-            val currentRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
-            val selectedIndex = aspectRatios.indexOf(currentRatio)
-
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Select Aspect Ratio")
-                .setSingleChoiceItems(aspectRatios, selectedIndex) { _, which ->
-                    sharedPreferencesHelper.saveGeminiAspectRatio(aspectRatios[which])
-                }
-                .setPositiveButton("OK") { _, _ -> }
-                .setNegativeButton("Cancel", null)
-                .show()
         }
+
 
 
         modelNameTextView.setOnClickListener {

@@ -957,7 +957,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     _activeChatModel.value ?: throw IllegalStateException("No active chat model")
 
                 // Branch logic for LAN vs OpenRouter
-                if (isPureImageGenerationModel(modelForRequest)) {
+                if (isImageGenerationModel(modelForRequest)) {
+
                     handleImageGeneration(modelForRequest, messagesForApiRequest, thinkingMessage)
                 } else if (activeModelIsLan()) {
                     if (_isStreamingEnabled.value == true) {
@@ -1309,7 +1310,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val modelForRequest =
                     _activeChatModel.value ?: throw IllegalStateException("No active chat model")
 
-                if (isPureImageGenerationModel(modelForRequest)) {
+                if (isImageGenerationModel(modelForRequest)) {
+
                     handleImageGeneration(modelForRequest, messagesForApiRequest, THINKING_MESSAGE)
                 } else if (activeModelIsLan()) {
                     if (_isStreamingEnabled.value == true) {
@@ -3930,27 +3932,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 presencePenalty = if (sharedPreferencesHelper.getInferencePresencePenaltyEnabled()) sharedPreferencesHelper.getInferencePresencePenaltyValue().toDoubleOrNull() else null,
 
                 // === AUDIO modality ===
+                // === AUDIO modality ===
                 modalities = if (isLyria) {
                     listOf("text", "audio")
-                } else if (isImageGenerationModel(modelForRequest)) {
-                    if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
-                        modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
-                        modelForRequest.contains("sourceful/riverflow", ignoreCase = true)
-                    ) {
-                        listOf("image")
-                    } else {
-                        listOf("image", "text")
-                    }
                 } else null,
-                // === IMAGE CONFIG (Gemini image gen) ===
-                imageConfig = if (isImageGenerationModel(modelForRequest) &&
-                    modelForRequest.contains("google", ignoreCase = true) &&
-                    modelForRequest.contains("gemini", ignoreCase = true) &&
-                    modelForRequest.contains("image", ignoreCase = true)
-                ) {
-                    val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
-                    ImageConfig(aspectRatio = aspectRatio)
-                } else null,
+
                 // === REASONING CONFIG ===
                 reasoning = if (_isReasoningEnabled.value == true && isReasoningModel(_activeChatModel.value)) {
                     if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
@@ -4639,24 +4625,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     repetitionPenalty = if (sharedPreferencesHelper.getInferenceRepetitionPenaltyEnabled()) sharedPreferencesHelper.getInferenceRepetitionPenaltyValue().toDoubleOrNull() else null,
                     presencePenalty = if (sharedPreferencesHelper.getInferencePresencePenaltyEnabled()) sharedPreferencesHelper.getInferencePresencePenaltyValue().toDoubleOrNull() else null,
 
-                    modalities = if (isImageGenerationModel(modelForRequest)) {
-                        if (modelForRequest.contains("bytedance-seed", ignoreCase = true) ||
-                            modelForRequest.contains("black-forest-labs", ignoreCase = true) ||
-                            modelForRequest.contains("sourceful/riverflow", ignoreCase = true)
-                        ) {
-                            listOf("image")
-                        } else {
-                            listOf("image", "text")
-                        }
-                    } else null,
-                    imageConfig = if (isImageGenerationModel(modelForRequest) &&
-                        modelForRequest.contains("google", ignoreCase = true) &&
-                        modelForRequest.contains("gemini", ignoreCase = true) &&
-                        modelForRequest.contains("image", ignoreCase = true)
-                    ) {
-                        val aspectRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
-                        ImageConfig(aspectRatio = aspectRatio)
-                    } else null,
                 )
 
                 val response = httpClient.post(activeChatUrl) {

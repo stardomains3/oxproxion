@@ -1,0 +1,1 @@
+- Optimization for image generation models now going to OpenRouter's /api/v1/images endpoint

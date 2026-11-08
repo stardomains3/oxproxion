@@ -646,11 +646,7 @@ class SharedPreferencesHelper(context: Context) {
 
     fun saveBotPickerSourceFilter(source: String) = mainPrefs.edit { putString("bot_picker_source_filter", source) }
     fun getBotPickerSourceFilter(): String = mainPrefs.getString("bot_picker_source_filter", "ALL") ?: "ALL"
-    fun getGeminiAspectRatio(): String? = mainPrefs.getString("gemini_aspect_ratio", null)
 
-    fun saveGeminiAspectRatio(ratio: String) {
-        mainPrefs.edit { putString("gemini_aspect_ratio", ratio) }
-    }
     // --- API Key Management ---
 
     fun saveApiKey(alias: String, apiKey: String) {
