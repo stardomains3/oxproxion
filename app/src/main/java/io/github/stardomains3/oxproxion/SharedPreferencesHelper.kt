@@ -37,9 +37,14 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_VOICE_INPUT_MODEL = "voice_input_model"
         private const val KEY_VOICE_INPUT_PROVIDER = "voice_input_provider" // "lan", "cloud", "off"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_MODEL_LIST_SCHEMA_VERSION = "model_list_schema_version"
         const val THEME_SYSTEM = 0
         const val THEME_LIGHT = 1
         const val THEME_DARK = 2
+        private const val KEY_OR_IMAGE_ASPECT_RATIO_PREFIX = "or_img_ar_"
+        private const val KEY_OR_IMAGE_RESOLUTION_PREFIX = "or_img_res_"
+        private const val KEY_OR_IMAGE_QUALITY_PREFIX = "or_img_q_"
+        private const val KEY_OR_IMAGE_FORMAT_PREFIX = "or_img_fmt_"
         private const val KEY_INFERENCE_TEMP_ENABLED = "inference_temp_enabled"
         private const val KEY_INFERENCE_TEMP_VALUE = "inference_temp_value"
         private const val KEY_INFERENCE_TOP_P_ENABLED = "inference_top_p_enabled"
@@ -213,7 +218,12 @@ class SharedPreferencesHelper(context: Context) {
     fun saveInferenceTopPEnabled(enabled: Boolean) = mainPrefs.edit { putBoolean(KEY_INFERENCE_TOP_P_ENABLED, enabled) }
     fun getInferenceTopPValue(): String = mainPrefs.getString(KEY_INFERENCE_TOP_P_VALUE, "1.0") ?: "1.0"
     fun saveInferenceTopPValue(value: String) = mainPrefs.edit { putString(KEY_INFERENCE_TOP_P_VALUE, value) }
+    fun getModelListSchemaVersion(): Int =
+        mainPrefs.getInt(KEY_MODEL_LIST_SCHEMA_VERSION, 0)
 
+    fun saveModelListSchemaVersion(version: Int) {
+        mainPrefs.edit { putInt(KEY_MODEL_LIST_SCHEMA_VERSION, version) }
+    }
     // Top K (Default: 40) - This one was already correct
     fun getInferenceTopKEnabled(): Boolean = mainPrefs.getBoolean(KEY_INFERENCE_TOP_K_ENABLED, false)
     fun saveInferenceTopKEnabled(enabled: Boolean) = mainPrefs.edit { putBoolean(KEY_INFERENCE_TOP_K_ENABLED, enabled) }
@@ -275,7 +285,38 @@ class SharedPreferencesHelper(context: Context) {
             enabled
         )
     }
+    /** null = user chose "Default" → field omitted from the request entirely. */
+    fun getOpenRouterImageAspectRatio(modelId: String): String? =
+        mainPrefs.getString(KEY_OR_IMAGE_ASPECT_RATIO_PREFIX + modelId, null)
 
+    fun saveOpenRouterImageAspectRatio(modelId: String, value: String?) {
+        if (value == null) mainPrefs.edit { remove(KEY_OR_IMAGE_ASPECT_RATIO_PREFIX + modelId) }
+        else mainPrefs.edit { putString(KEY_OR_IMAGE_ASPECT_RATIO_PREFIX + modelId, value) }
+    }
+
+    fun getOpenRouterImageResolution(modelId: String): String? =
+        mainPrefs.getString(KEY_OR_IMAGE_RESOLUTION_PREFIX + modelId, null)
+
+    fun saveOpenRouterImageResolution(modelId: String, value: String?) {
+        if (value == null) mainPrefs.edit { remove(KEY_OR_IMAGE_RESOLUTION_PREFIX + modelId) }
+        else mainPrefs.edit { putString(KEY_OR_IMAGE_RESOLUTION_PREFIX + modelId, value) }
+    }
+
+    fun getOpenRouterImageQuality(modelId: String): String? =
+        mainPrefs.getString(KEY_OR_IMAGE_QUALITY_PREFIX + modelId, null)
+
+    fun saveOpenRouterImageQuality(modelId: String, value: String?) {
+        if (value == null) mainPrefs.edit { remove(KEY_OR_IMAGE_QUALITY_PREFIX + modelId) }
+        else mainPrefs.edit { putString(KEY_OR_IMAGE_QUALITY_PREFIX + modelId, value) }
+    }
+
+    fun getOpenRouterImageOutputFormat(modelId: String): String? =
+        mainPrefs.getString(KEY_OR_IMAGE_FORMAT_PREFIX + modelId, null)
+
+    fun saveOpenRouterImageOutputFormat(modelId: String, value: String?) {
+        if (value == null) mainPrefs.edit { remove(KEY_OR_IMAGE_FORMAT_PREFIX + modelId) }
+        else mainPrefs.edit { putString(KEY_OR_IMAGE_FORMAT_PREFIX + modelId, value) }
+    }
     fun getReasoningEffort(): String = mainPrefs.getString("reasoning_effort", "medium") ?: "medium"
     fun saveReasoningEffort(effort: String) = mainPrefs.edit {
         putString(

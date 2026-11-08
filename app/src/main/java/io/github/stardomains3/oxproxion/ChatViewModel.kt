@@ -122,6 +122,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
+import kotlin.compareTo
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
@@ -422,9 +423,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-
+    // In-memory cache: fetched once per model per app session
+    private val imageGenCapsCache = mutableMapOf<String, ImageGenCapabilities>()
     private var lanFetchJob: Job? = null
-
+    data class ImageGenCapabilities(
+        val resolutions: List<String> = emptyList(),
+        val aspectRatios: List<String> = emptyList(),
+        val qualities: List<String> = emptyList(),
+        val outputFormats: List<String> = emptyList(),
+        val maxInputReferences: Int = 0
+    )
     fun signalPresetApplied() {
         _presetAppliedEvent.value = Event(Unit)
     }
@@ -496,6 +504,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             role = "assistant",
             content = JsonPrimitive("working...")
         )
+        // Bump this whenever LlmModel gains a field that requires re-fetching the
+        // cached OpenRouter catalogue (e.g. isPureImageModel). Users with an older
+        // cached list get one automatic refresh, then never again.
+        private const val MODEL_LIST_SCHEMA_VERSION = 2
     }
     //val generatedImages = mutableMapOf<Int, String>()
     private var pendingUserImageUri: String? = null  // String (toString())
@@ -548,6 +560,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         llmService = LlmService(httpClient, activeChatUrl)
         activeChatApiKey = sharedPreferencesHelper.getApiKeyFromPrefs("openrouter_api_key")
         _sortOrder.value = sharedPreferencesHelper.getSortOrder()
+        // One-time catalogue refresh after a schema bump (e.g. the isPureImageModel
+        // field). Runs on every app launch, but the version check means the actual
+        // fetch only happens once — the first launch after the update.
+        if (sharedPreferencesHelper.getModelListSchemaVersion() < MODEL_LIST_SCHEMA_VERSION) {
+            sharedPreferencesHelper.saveModelListSchemaVersion(MODEL_LIST_SCHEMA_VERSION)
+            fetchOpenRouterModels()
+        }
+
         // 1. Restore draft on cold start
         if (draftFile.exists()) {
             try {
@@ -937,13 +957,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     _activeChatModel.value ?: throw IllegalStateException("No active chat model")
 
                 // Branch logic for LAN vs OpenRouter
-                if (activeModelIsLan()) {
+                if (isPureImageGenerationModel(modelForRequest)) {
+                    handleImageGeneration(modelForRequest, messagesForApiRequest, thinkingMessage)
+                } else if (activeModelIsLan()) {
                     if (_isStreamingEnabled.value == true) {
                         handleStreamedResponseLAN(modelForRequest, messagesForApiRequest, thinkingMessage)
                     } else {
                         handleNonStreamedResponseLAN(modelForRequest, messagesForApiRequest, thinkingMessage)
                     }
                 } else {
+
                     if (_isStreamingEnabled.value == true) {
                         handleStreamedResponse(modelForRequest, messagesForApiRequest, thinkingMessage)
                     } else {
@@ -1286,13 +1309,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val modelForRequest =
                     _activeChatModel.value ?: throw IllegalStateException("No active chat model")
 
-                if (activeModelIsLan()) {
+                if (isPureImageGenerationModel(modelForRequest)) {
+                    handleImageGeneration(modelForRequest, messagesForApiRequest, THINKING_MESSAGE)
+                } else if (activeModelIsLan()) {
                     if (_isStreamingEnabled.value == true) {
                         handleStreamedResponseLAN(modelForRequest, messagesForApiRequest, THINKING_MESSAGE)
                     } else {
                         handleNonStreamedResponseLAN(modelForRequest, messagesForApiRequest, THINKING_MESSAGE)
                     }
                 } else {
+
                     if (_isStreamingEnabled.value == true) {
                         handleStreamedResponse(modelForRequest, messagesForApiRequest, THINKING_MESSAGE)
                     } else {
@@ -4423,6 +4449,133 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         }
     }
+
+    private suspend fun handleImageGeneration(
+        modelForRequest: String,
+        messagesForApiRequest: List<FlexibleMessage>,
+        thinkingMessage: FlexibleMessage
+    ) {
+        withContext(Dispatchers.IO) {
+            // The prompt is the text of the last user message.
+            val prompt = messagesForApiRequest.lastOrNull { it.role == "user" }
+                ?.let { getMessageText(it.content) }
+                ?: throw IllegalStateException("No user message found for image generation")
+
+            val requestBody = buildJsonObject {
+                put("model", JsonPrimitive(modelForRequest))
+                put("prompt", JsonPrimitive(prompt))
+
+                // User-selected options ONLY, keyed per-model. null ("Default") = omit
+                // the field so the provider's own default applies.
+                sharedPreferencesHelper.getOpenRouterImageAspectRatio(modelForRequest)?.let {
+                    put("aspect_ratio", JsonPrimitive(it))
+                }
+                sharedPreferencesHelper.getOpenRouterImageResolution(modelForRequest)?.let {
+                    put("resolution", JsonPrimitive(it))
+                }
+                sharedPreferencesHelper.getOpenRouterImageQuality(modelForRequest)?.let {
+                    put("quality", JsonPrimitive(it))
+                }
+                sharedPreferencesHelper.getOpenRouterImageOutputFormat(modelForRequest)?.let {
+                    put("output_format", JsonPrimitive(it))
+                }
+
+                // Image-to-image: reuse the staged image from the user's message
+                val refUrls = extractImageDataUrls(
+                    messagesForApiRequest.lastOrNull { it.role == "user" }
+                )
+                if (refUrls.isNotEmpty()) {
+                    putJsonArray("input_references") {
+                        refUrls.take(1).forEach { url ->
+                            add(buildJsonObject {
+                                put("type", JsonPrimitive("image_url"))
+                                putJsonObject("image_url") {
+                                    put("url", JsonPrimitive(url))
+                                }
+                            })
+                        }
+                    }
+                }
+            }
+
+            val response = httpClient.post("https://openrouter.ai/api/v1/images") {
+                header("Authorization", "Bearer $activeChatApiKey")
+                contentType(ContentType.Application.Json)
+                setBody(requestBody)
+            }
+
+            if (!response.status.isSuccess()) {
+                val errorBody = try { response.bodyAsText() } catch (_: Exception) { "No details" }
+                throw Exception(parseOpenRouterError(errorBody))
+            }
+
+            val result = response.body<JsonObject>()
+            val firstImage = result["data"]?.jsonArray?.firstOrNull()?.jsonObject
+            val b64 = firstImage?.get("b64_json")?.jsonPrimitive?.contentOrNull
+            if (b64.isNullOrBlank()) {
+                throw Exception("Image generation succeeded but no image data was returned.")
+            }
+
+            // media_type reflects the ACTUAL format returned (png/jpeg/webp/svg/gif),
+            // so a user-selected output_format is saved with the right extension
+            // automatically — no extra mapping needed here.
+            val mediaType = firstImage["media_type"]?.jsonPrimitive?.contentOrNull ?: "image/png"
+            val imageBytes = Base64.getDecoder().decode(b64)
+
+            val ext = when (mediaType) {
+                "image/jpeg" -> "jpg"
+                "image/webp" -> "webp"
+                "image/svg+xml" -> "svg"
+                "image/gif" -> "gif"
+                else -> "png"
+            }
+            val filename = "generated_image_${System.currentTimeMillis()}.$ext"
+
+            val savedUri = saveImageBytesToDownloads(filename, imageBytes, mediaType)
+
+            withContext(Dispatchers.Main) {
+                updateMessages { list ->
+                    val index = indexOfMessage(list, thinkingMessage)
+                    val finalMessage = FlexibleMessage(
+                        role = "assistant",
+                        content = JsonPrimitive("🖼️ Image generated."),
+                        imageUri = savedUri
+                    )
+                    if (index != -1) {
+                        list[index] = finalMessage
+                    } else {
+                        list.add(finalMessage)
+                    }
+                }
+                _scrollToBottomEvent.value = Event(Unit)
+            }
+
+            _toolUiEvent.postValue(Event("✅ Image saved to Downloads!"))
+        }
+    }
+
+    /**
+     * Saves raw image bytes to Downloads/OpenChat and returns the content:// URI.
+     */
+    private fun saveImageBytesToDownloads(filename: String, bytes: ByteArray, mimeType: String): String {
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/OpenChat")
+        }
+
+        val uri = getApplication<Application>().contentResolver
+            .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw Exception("MediaStore insert failed")
+
+        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+            out.write(bytes)
+        } ?: throw Exception("Cannot open output stream")
+
+        return uri.toString()
+    }
+
+
     private suspend fun handleNonStreamedResponse(modelForRequest: String, messagesForApiRequest: List<FlexibleMessage>, thinkingMessage: FlexibleMessage?) {
         withTimeout((sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L).milliseconds) {
             withContext(Dispatchers.IO) {
@@ -5872,6 +6025,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             apiIdentifier = it.id,
                             isVisionCapable = it.architecture.input_modalities.contains("image"),
                             isImageGenerationCapable = it.architecture.output_modalities?.contains("image") ?: false,
+                            isPureImageModel = it.architecture.output_modalities == listOf("image"),
                             isReasoningCapable = it.supportedParameters?.contains("reasoning") ?: false,
                             isTranscription = false,
                             created = it.created,
@@ -5879,6 +6033,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                 } else emptyList()
+
 
                 // Fetch transcription models (STT)
                 val transcriptionResponse = httpClient.get("https://openrouter.ai/api/v1/models?output_modalities=transcription")
@@ -5906,8 +6061,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         LlmModel(
                             displayName = it.name,
                             apiIdentifier = it.id,
-                            isVisionCapable = false,
+                            // input_modalities containing "image" = accepts reference
+                            // images (image-to-image). Text-to-image-only models list
+                            // just ["text"] and correctly stay non-attachable.
+                            isVisionCapable = it.architecture.input_modalities.contains("image"),
                             isImageGenerationCapable = true,  // image gen capable
+                            isPureImageModel = it.architecture.output_modalities == listOf("image"),
                             isReasoningCapable = false,
                             isTranscription = false,
                             created = it.created,
@@ -5915,6 +6074,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                 } else emptyList()
+
+
 
                 // Combine and merge by ID, ensuring capabilities are preserved/combined
                 val allModels = regularModels + transcriptionModels + imageGenModels
@@ -5928,12 +6089,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             apiIdentifier = base.apiIdentifier,
                             isVisionCapable = models.any { it.isVisionCapable },
                             isImageGenerationCapable = models.any { it.isImageGenerationCapable },
+                            isPureImageModel = models.any { it.isPureImageModel },
                             isReasoningCapable = models.any { it.isReasoningCapable },
                             isTranscription = models.any { it.isTranscription },
                             created = base.created,
                             isFree = base.isFree,
                             isLANModel = false
                         )
+
                     }
 
                 allOpenRouterModels = merged
@@ -5968,7 +6131,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getOpenRouterModels() {
         allOpenRouterModels = sharedPreferencesHelper.getOpenRouterModels()
-        if (allOpenRouterModels.isEmpty() || !allOpenRouterModels.any { it.isFree }) {
+        val needsRefresh = allOpenRouterModels.isEmpty() ||
+                !allOpenRouterModels.any { it.isFree } ||
+                sharedPreferencesHelper.getModelListSchemaVersion() < MODEL_LIST_SCHEMA_VERSION
+        if (needsRefresh) {
+            // Mark the version immediately — fetchOpenRouterModels saves fresh data
+            // on completion, and this prevents repeated fetches if it's called again
+            // while the fetch is in flight.
+            sharedPreferencesHelper.saveModelListSchemaVersion(MODEL_LIST_SCHEMA_VERSION)
             fetchOpenRouterModels()
         } else {
             applySort()
@@ -6460,6 +6630,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         return listOf(plugin)
     }
+
     fun setWebSearchAutoOff(autoOff: Boolean) { shouldAutoOffWebSearch = autoOff }
     fun shouldAutoOffWebSearch() = shouldAutoOffWebSearch
     fun resetWebSearchAutoOff() { shouldAutoOffWebSearch = false }
@@ -6470,6 +6641,97 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun setPendingUserImageUri(uriStr: String?) {
         pendingUserImageUri = uriStr
     }
+    /**
+     * Fetches the per-endpoint capability records for an image model and merges them
+     * (union across providers). Cached — safe to call repeatedly from the UI.
+     */
+    suspend fun getImageGenCapabilities(modelId: String): ImageGenCapabilities {
+        imageGenCapsCache[modelId]?.let { return it }
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = httpClient.get("https://openrouter.ai/api/v1/images/models/$modelId/endpoints")
+                if (!response.status.isSuccess()) return@withContext ImageGenCapabilities()
+
+                val body = response.body<JsonObject>()
+                val endpoints = body["endpoints"]?.jsonArray ?: return@withContext ImageGenCapabilities()
+
+                // LinkedHashSet preserves the API's ordering (e.g. 1K, 2K, 4K)
+                val resolutions = linkedSetOf<String>()
+                val ratios = linkedSetOf<String>()
+                val qualities = linkedSetOf<String>()
+                val formats = linkedSetOf<String>()
+                var maxRefs = 0
+
+                for (endpoint in endpoints) {
+                    val params = endpoint.jsonObject["supported_parameters"]?.jsonObject ?: continue
+                    params["resolution"]?.jsonObject?.get("values")?.jsonArray?.forEach { v ->
+                        v.jsonPrimitive.contentOrNull?.let { resolutions.add(it) }
+                    }
+                    params["aspect_ratio"]?.jsonObject?.get("values")?.jsonArray?.forEach { v ->
+                        v.jsonPrimitive.contentOrNull?.let { ratios.add(it) }
+                    }
+                    params["quality"]?.jsonObject?.get("values")?.jsonArray?.forEach { v ->
+                        v.jsonPrimitive.contentOrNull?.let { qualities.add(it) }
+                    }
+                    params["output_format"]?.jsonObject?.get("values")?.jsonArray?.forEach { v ->
+                        v.jsonPrimitive.contentOrNull?.let { formats.add(it) }
+                    }
+                    params["input_references"]?.jsonObject?.get("max")?.jsonPrimitive?.intOrNull?.let {
+                        if (it > maxRefs) maxRefs = it
+                    }
+                }
+
+                ImageGenCapabilities(
+                    resolutions = resolutions.toList(),
+                    aspectRatios = ratios.toList(),
+                    qualities = qualities.toList(),
+                    outputFormats = formats.toList(),
+                    maxInputReferences = maxRefs
+                ).also { imageGenCapsCache[modelId] = it }
+            } catch (e: Exception) {
+                ImageGenCapabilities()
+            }
+        }
+    }
+
+    /** Extracts base64 data URLs from a user message's image content parts. */
+    private fun extractImageDataUrls(message: FlexibleMessage?): List<String> {
+        val arr = message?.content as? JsonArray ?: return emptyList()
+        return arr.mapNotNull { item ->
+            (item as? JsonObject)
+                ?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull == "image_url" }
+                ?.get("image_url")?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
+        }
+    }
+    /**
+     * True for models that ONLY output images (no text). These must use OpenRouter's
+     * dedicated /api/v1/images endpoint — chat/completions rejects them with a 404.
+     * Chat models that can also emit images (e.g. Gemini image) still go through
+     * chat/completions with modalities, so they are excluded here.
+     */
+     fun isPureImageGenerationModel(modelIdentifier: String?): Boolean {
+        if (modelIdentifier == null) return false
+
+        // 1. Preferred: the flag from the OpenRouter catalogue (output_modalities == ["image"])
+        val customModels = sharedPreferencesHelper.getCustomModels()
+        val allModels = getBuiltInModels() + customModels
+        val ownModel = allModels.find { it.apiIdentifier == modelIdentifier }
+        if (ownModel?.isPureImageModel == true) return true
+
+        val orModel = sharedPreferencesHelper.getOpenRouterModels()
+            .find { it.apiIdentifier == modelIdentifier }
+        if (orModel?.isPureImageModel == true) return true
+
+        // 2. Fallback for custom models created before the flag existed:
+        //    image-generation-capable but not vision-capable and not a Gemini
+        //    (Gemini image models are chat models with image output).
+        val isImageGen = ownModel?.isImageGenerationCapable
+            ?: orModel?.isImageGenerationCapable ?: false
+        if (!isImageGen) return false
+        if (modelIdentifier.contains("gemini", ignoreCase = true)) return false
+        return ownModel?.isVisionCapable == false || orModel?.isVisionCapable == false
+    }
+
     fun isImageGenerationModel(modelIdentifier: String?): Boolean {
         if (modelIdentifier == null) return false
 

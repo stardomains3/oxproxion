@@ -1966,6 +1966,16 @@ $cleanContent
         genButton.setOnClickListener {
             val model = viewModel.activeChatModel.value ?: return@setOnClickListener
 
+            // Pure image models → OpenRouter /api/v1/images options (per-model)
+            if (viewModel.isPureImageGenerationModel(model)) {
+                lifecycleScope.launch {
+                    val caps = viewModel.getImageGenCapabilities(model)
+                    showImageGenOptionsDialog(model, caps)
+                }
+                return@setOnClickListener
+            }
+
+            // Existing Gemini flow (unchanged)
             val isGoogleImageModel = model.startsWith("google/", ignoreCase = true) &&
                     model.contains("image", ignoreCase = true)
 
@@ -1978,22 +1988,20 @@ $cleanContent
                 return@setOnClickListener
             }
 
-            // Dialog options (match docs: 1:1, 16:9, etc.)
             val aspectRatios = arrayOf("1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9")
-            val currentRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"  // Default 1:1
+            val currentRatio = sharedPreferencesHelper.getGeminiAspectRatio() ?: "1:1"
             val selectedIndex = aspectRatios.indexOf(currentRatio)
 
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Select Aspect Ratio")
                 .setSingleChoiceItems(aspectRatios, selectedIndex) { _, which ->
-                    val selectedRatio = aspectRatios[which]
-                    sharedPreferencesHelper.saveGeminiAspectRatio(selectedRatio)
-                  //  Toast.makeText(requireContext(), "Aspect ratio set to $selectedRatio", Toast.LENGTH_SHORT).show()
+                    sharedPreferencesHelper.saveGeminiAspectRatio(aspectRatios[which])
                 }
-                .setPositiveButton("OK") { _, _ -> /* Dialog dismisses */ }
+                .setPositiveButton("OK") { _, _ -> }
                 .setNegativeButton("Cancel", null)
                 .show()
         }
+
 
         modelNameTextView.setOnClickListener {
             hideKeyboard()
@@ -3774,12 +3782,16 @@ $cleanContent
 
 
     private suspend fun processPdfBitmap(bitmap: Bitmap, description: String) {
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-        val bytes = byteArrayOutputStream.toByteArray()
+        // ✅ Bracket @WorkerThread calls (compress + copy) in one IO block
+        val (bytes, previewBmp) = withContext(Dispatchers.IO) {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+            byteArrayOutputStream.toByteArray() to bitmap.copy(Bitmap.Config.ARGB_8888, false)
+        }
 
         if (bytes.size > 12_000_000) {
             Toast.makeText(requireContext(), "PDF page too large (max 12MB). Try a different page.", Toast.LENGTH_SHORT).show()
+            previewBmp.recycle()
             bitmap.recycle()
             return
         }
@@ -3806,7 +3818,7 @@ $cleanContent
         // Set for ViewModel (enables bubble preview)
         viewModel.setPendingUserImageUri(pngUri.toString())
 
-        val previewBmp = bitmap.copy(Bitmap.Config.ARGB_8888, false)
+        // ✅ Lint now knows we're back on Main here → no more threading error
         previewImageView.setImageBitmap(previewBmp)
         attachmentPreviewContainer.visibility = View.VISIBLE
 
@@ -3814,8 +3826,9 @@ $cleanContent
 
         // Recycle originals
         bitmap.recycle()
-        // After copy
     }
+
+
 
 
 
@@ -4569,6 +4582,125 @@ $cleanContent
         tempCopyHideJob = null
         tempCopyButton.visibility = View.GONE
     }
+
+    private fun showImageGenOptionsDialog(model: String, caps: ChatViewModel.ImageGenCapabilities) {
+        if (caps.aspectRatios.isEmpty() && caps.resolutions.isEmpty() &&
+            caps.qualities.isEmpty() && caps.outputFormats.isEmpty()) {
+            Toast.makeText(requireContext(), "This model has no configurable image options.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        showImageAspectRatioDialog(model, caps)
+    }
+
+    private fun showImageAspectRatioDialog(model: String, caps: ChatViewModel.ImageGenCapabilities) {
+        if (caps.aspectRatios.isEmpty()) {
+            showImageResolutionDialog(model, caps)
+            return
+        }
+
+        // "Default" first = omit the field from the request (provider default applies)
+        val options = listOf("Default") + caps.aspectRatios
+        val current = sharedPreferencesHelper.getOpenRouterImageAspectRatio(model)
+        var selected = current
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Aspect Ratio")
+            .setSingleChoiceItems(
+                options.toTypedArray(),
+                options.indexOf(current).takeIf { it >= 0 } ?: 0
+            ) { _, which ->
+                selected = if (which == 0) null else options[which]
+            }
+            .setPositiveButton("Next") { _, _ ->
+                sharedPreferencesHelper.saveOpenRouterImageAspectRatio(model, selected)
+                showImageResolutionDialog(model, caps)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showImageResolutionDialog(model: String, caps: ChatViewModel.ImageGenCapabilities) {
+        if (caps.resolutions.isEmpty()) {
+            showImageQualityDialog(model, caps)
+            return
+        }
+
+        val options = listOf("Default") + caps.resolutions
+        val current = sharedPreferencesHelper.getOpenRouterImageResolution(model)
+        var selected = current
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Resolution")
+            .setSingleChoiceItems(
+                options.toTypedArray(),
+                options.indexOf(current).takeIf { it >= 0 } ?: 0
+            ) { _, which ->
+                selected = if (which == 0) null else options[which]
+            }
+            .setPositiveButton("Next") { _, _ ->
+                sharedPreferencesHelper.saveOpenRouterImageResolution(model, selected)
+                showImageQualityDialog(model, caps)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showImageQualityDialog(model: String, caps: ChatViewModel.ImageGenCapabilities) {
+        if (caps.qualities.isEmpty()) {
+            showImageOutputFormatDialog(model, caps)
+            return
+        }
+
+        val options = listOf("Default") + caps.qualities
+        val current = sharedPreferencesHelper.getOpenRouterImageQuality(model)
+        var selected = current
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Quality")
+            .setSingleChoiceItems(
+                options.toTypedArray(),
+                options.indexOf(current).takeIf { it >= 0 } ?: 0
+            ) { _, which ->
+                selected = if (which == 0) null else options[which]
+            }
+            .setPositiveButton("Next") { _, _ ->
+                sharedPreferencesHelper.saveOpenRouterImageQuality(model, selected)
+                showImageOutputFormatDialog(model, caps)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showImageOutputFormatDialog(model: String, caps: ChatViewModel.ImageGenCapabilities) {
+        if (caps.outputFormats.isEmpty()) return
+
+        val options = listOf("Default") + caps.outputFormats
+        val current = sharedPreferencesHelper.getOpenRouterImageOutputFormat(model)
+        var selected = current
+
+        MaterialAlertDialogBuilder(requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+        )
+            .setTitle("Output Format")
+            .setSingleChoiceItems(
+                options.toTypedArray(),
+                options.indexOf(current).takeIf { it >= 0 } ?: 0
+            ) { _, which ->
+                selected = if (which == 0) null else options[which]
+            }
+            .setPositiveButton("Save") { _, _ ->
+                sharedPreferencesHelper.saveOpenRouterImageOutputFormat(model, selected)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun processVoiceRecording(file: File) {
         lifecycleScope.launch {
             try {

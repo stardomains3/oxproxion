@@ -8,6 +8,7 @@ data class LlmModel(
     val apiIdentifier: String,    // The actual model string, e.g., "openai/gpt-4o-mini"
     val isVisionCapable: Boolean,  // To determine which icon to show
     val isImageGenerationCapable: Boolean = false,
+    val isPureImageModel: Boolean = false,  // Output is ONLY images (no text) — must use /api/v1/images
     val isReasoningCapable: Boolean = false,
     val isTranscription: Boolean = false,  // NEW - for audio transcription models
     val created: Long = 0L,

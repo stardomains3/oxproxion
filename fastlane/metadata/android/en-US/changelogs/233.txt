@@ -1,0 +1,1 @@
+- Image generation models now go to OpenRouter's /api/v1/images endpoint
