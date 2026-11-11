@@ -75,7 +75,8 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             "ic_copi" to R.drawable.ic_copi,
             "ic_markdown" to R.drawable.ic_markdown,
             "ic_html" to R.drawable.ic_html,
-            "ic_epub" to R.drawable.ic_epub,
+             "ic_reader" to R.drawable.ic_reader,
+             "ic_epub" to R.drawable.ic_epub,
             "ic_print" to R.drawable.ic_print,
             "ic_pdfnew" to R.drawable.ic_pdfnew,
             "ic_stream" to R.drawable.ic_stream,
@@ -247,6 +248,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Create PNG File of Response**: Tap the **PNG icon** to save just that response as a .png file in your device's Downloads folder. Long-press for .webp. 
             *   **View HTML of Response**: Tap the **HTML icon** to view the AI response in HTML in an Android Webview. This makes code blocks easier to read, allows one tap copy of them and other view improvements. A print option appears in the screen too.
             *   **Save HTML of Response**: Long-Press the **HTML icon** to save the AI response as an HTML file in your device's Downloads folder.
+            *   **Reading Mode** {{ic_reader}} : Tap the **reader icon** on any message to enter Reading Mode. This hides the top bar, input box, and status bar for a clutter-free, fullscreen reading experience. Tap the system back button/gesture twice to exit Reading Mode and return everything to normal.
             *   **Edit User Message**: Tap the **edit icon** on a user message to load its text into the input box for editing. Caution: this removes the message and all subsequent messages from the history.
             *   **Resend User Message**: Tap the **resend icon** on a user message to resend the prompt and generate a new response. Caution: this removes all messages after it while keeping the original prompt.
 
@@ -297,6 +299,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             ### Settings Screen
             *   **Extended Dock** {{ic_extend}} : Toggles extended dock on or off. If on, an extra row is added to the bottom dock.
             *   **Scroll Progress Indicator** : It gives you an indication where you are in the chat.
+            *   **Prefer Fullscreen Chat** : Enter Reader mode automatically when sending a message.
             *   **Scroll Buttons on screen** {{ic_scrollers}} : If toggled on, shows up and down buttons to scroll on the chat screen. Tap them to go to top or bottom of chat respectively. Long-press them to scroll one screen's length in respective direction.
             *   **Volume Keys Scroll to Top/Bottom** : On the main chat screen, if this setting is enabled, single click of volume button up/down takes you one page up/down respectively. Long-click of volume button up/down takes you to chat very top/bottom respectively. If no messages are present it will work as a normal volume key.  
             *   **Presets Button on chat screen** {{ic_presets}} : Option to have Preset button in menu or on chat screen. Presets enable the user to have pre-selected settings applied to the app: model, system message, reasoning on/off, streaming on/off, and conversation mode on/off, with one tap. These are also exposed as a share target, "Presets", when sharing text to the app; thus making functions like summarization, spelling correction, audio reply, etc with different models/combos fast and easy. Note: because the user can change the model and system message outside the preset, if they are to do that, it will invalidate the preset(it won't apply) and will require the user to edit/save the preset again with the current desired model/system message for it to work.

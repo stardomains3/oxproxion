@@ -12,7 +12,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintWidth_percent="0.95"
+        app:layout_constraintWidth_percent="1.0"
         app:layout_constraintHorizontal_bias="1.0">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -84,6 +84,16 @@
                     android:contentDescription="Toggle expand"
                     android:src="@drawable/ic_expand_more"
                     android:visibility="gone"
+                    app:tint="#777777" />
+                <ImageButton
+                    android:id="@+id/readingModeButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Reading mode"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_reader"
                     app:tint="#777777" />
 
                 <ImageButton

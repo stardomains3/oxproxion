@@ -210,7 +210,16 @@
                     android:padding="4dp"
                     android:src="@drawable/ic_html"
                     app:tint="#777777" />
-
+                <ImageButton
+                    android:id="@+id/readingModeButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Reading mode"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_reader"
+                    app:tint="#777777" />
                 <ImageButton
                     android:id="@+id/shareButton"
                     android:layout_width="32dp"

@@ -15,6 +15,7 @@ import android.os.StrictMode
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
@@ -60,12 +61,14 @@ class ChatAdapter(
     private val onSaveHtml: (String) -> Unit,
     private val onSaveText: (Int, String) -> Unit,
     private val onCollapse: () -> Unit,
-    private val onSaveAsFile: (String) -> Unit
+    private val onSaveAsFile: (String) -> Unit,
+    private val onReadingMode: () -> Unit
+
 
 
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
+    private var isReaderMode = false
     private val collapsedStates = mutableMapOf<String, Boolean>()
     private val renderCache = HashMap<FlexibleMessage, CharSequence>()
     private val noCopyFactory = NoCopySpannableFactory.getInstance()
@@ -79,6 +82,11 @@ class ChatAdapter(
 
     // 2. OPTIMIZATION: Conflated Channel for throttling
     private val updateChannel = Channel<FlexibleMessage>(Channel.CONFLATED)
+    fun setReaderModeUi(enabled: Boolean) {
+        if (isReaderMode == enabled) return
+        isReaderMode = enabled
+        notifyDataSetChanged()   // rebind everything so buttons hide/show
+    }
 
     init {
         // 3. OPTIMIZATION: Consumer loop
@@ -418,6 +426,8 @@ class ChatAdapter(
 
     inner class UserViewHolder(itemView: View, private val markwon: Markwon) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
+        private val readingModeButton: ImageButton = itemView.findViewById(R.id.readingModeButton)
+        private val buttonScrollView: HorizontalScrollView = itemView.findViewById(R.id.buttonScrollView)
         private val copyButtonuser: ImageButton = itemView.findViewById(R.id.copyButtonuser)
         private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
@@ -427,6 +437,7 @@ class ChatAdapter(
 
 
         fun bind(message: FlexibleMessage) {
+            buttonScrollView.visibility = if (isReaderMode) View.GONE else View.VISIBLE
             messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
 
@@ -555,6 +566,7 @@ class ChatAdapter(
             resendButton.setOnClickListener {
                 onRedoMessage(bindingAdapterPosition, message.content)
             }
+            readingModeButton.setOnClickListener { onReadingMode() }
             deleteButton.setOnClickListener {
                 onDeleteMessage(bindingAdapterPosition)
             }
@@ -619,6 +631,8 @@ class ChatAdapter(
         private val onSpeakText: (String, Int) -> Unit,
         private val onSynthesizeToWavFile: (String, Int) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
+        private val readingModeButton: ImageButton = itemView.findViewById(R.id.readingModeButton)
+        private val buttonScrollView: HorizontalScrollView = itemView.findViewById(R.id.buttonScrollView)
         private val reasoningContainer: ConstraintLayout = itemView.findViewById(R.id.reasoningContainer)
         private val reasoningTextView: TextView = itemView.findViewById(R.id.reasoningTextView)
         private val reasoningToggleButton: ImageButton = itemView.findViewById(R.id.reasoningToggleButton)
@@ -677,6 +691,7 @@ class ChatAdapter(
         }
 
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
+            buttonScrollView.visibility = if (isReaderMode) View.GONE else View.VISIBLE
             bindReasoning(message)
             messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
@@ -864,7 +879,7 @@ class ChatAdapter(
                 Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
                 true
             }
-
+            readingModeButton.setOnClickListener { onReadingMode() }
             shareButton.setOnClickListener {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"

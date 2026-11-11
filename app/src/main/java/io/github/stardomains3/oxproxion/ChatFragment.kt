@@ -77,7 +77,9 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -134,6 +136,7 @@ interface OnKeyboardShortcutListener {
 class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListener {
    // private var isFontUpdate = false
     private var menuClosedByTouch = false
+    private var isReadingMode = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private var isSpeaking = false
@@ -152,6 +155,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var presetsButton2: MaterialButton
     private lateinit var attachmentButton: MaterialButton
     private lateinit var topSettingsButton: MaterialButton
+    private lateinit var readingKeyboardButton: MaterialButton
     private lateinit var topPresetsButton: MaterialButton
     private lateinit var extendedTopBarContainer: LinearLayout
     private lateinit var topStreamButton: MaterialButton
@@ -470,6 +474,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         convoButton  = view.findViewById(R.id.convoButton)
         clearButton = view.findViewById(R.id.clearButton)
         utilityButton = view.findViewById(R.id.utilityButton)
+        readingKeyboardButton = view.findViewById(R.id.readingKeyboardButton)
         speechButton = view.findViewById(R.id.speechButton)
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
@@ -1398,6 +1403,26 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         clearStaleVoiceFiles()
         // Clean up temp copies from previous tap-to-open sessions
         clearStaleViewedImages()
+        ViewCompat.setOnApplyWindowInsetsListener(topBarLayout) { v, insets ->
+            if (!isReadingMode) {
+                val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+                v.setPadding(v.paddingLeft, statusBars.top, v.paddingRight, v.paddingBottom)
+            } else {
+                v.setPadding(v.paddingLeft, 0, v.paddingRight, v.paddingBottom)
+            }
+            insets
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(chatInputContainer) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            v.setPadding(
+                v.paddingLeft,
+                v.paddingTop,
+                v.paddingRight,
+                maxOf(ime.bottom, bars.bottom)   // whichever is on top right now
+            )
+            insets
+        }
         // end onviewcreated
     }
 
@@ -1565,6 +1590,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                         dialog.dismiss()
                     }
                     .setPositiveButton("Edit") { _, _ ->
+                        if (isReadingMode) {
+                            toggleReadingMode()
+                        }
                         selectedImageBytes = null
                         selectedImageMime = null
                         attachmentPreviewContainer.visibility = View.GONE
@@ -1594,6 +1622,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
 
                         // NEW: Get system message (as before)
                         val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
+                        if (sharedPreferencesHelper.getPreferFullscreenChat() && !isReadingMode) {
+                            toggleReadingMode()
+                        }
 
                         // NEW: Use specialized resend (keeps original UI, sends content)
                         viewModel.resendExistingPrompt(position, systemMessage)
@@ -1690,7 +1721,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             },
             onSaveAsFile = { content ->
                 showSaveFileDialog(content)
-            }
+            },
+            onReadingMode = { toggleReadingMode() }
+
 
         )
         chatRecyclerView.apply {
@@ -1960,6 +1993,9 @@ $cleanContent
                     attachmentPreviewContainer.visibility = View.GONE
                     pendingFiles.clear()
                     updateAttachmentButton()
+                    if (sharedPreferencesHelper.getPreferFullscreenChat() && !isReadingMode) {
+                        toggleReadingMode()
+                    }
                 }
             }
         }
@@ -2024,6 +2060,23 @@ $cleanContent
                 .add(R.id.fragment_container, SystemMessageLibraryFragment())
                 .addToBackStack(null)
                 .commit()
+        }
+        readingKeyboardButton.setOnClickListener {
+            toggleReadingMode()          // exits reading mode (restores bars + input)
+            chatEditText.requestFocus()
+            chatEditText.showKeyboard()   // your existing View extension — shows IME
+        }
+        readingKeyboardButton.setOnLongClickListener {
+            if (isReadingMode) {
+                toggleReadingMode()   // exit reading mode first
+            }
+            hideKeyboard()
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            } else {
+                startSpeechRecognition()
+            }
+            true
         }
         resetChatButton.setOnLongClickListener {
             hideTempCopyButton()
@@ -3584,6 +3637,12 @@ $cleanContent
         backButton.visibility = View.GONE
         backcopyButton.visibility = View.GONE
         updateHomeButtonVisibility()
+        // Restore status bar if leaving while in reading mode
+        if (isReadingMode) {
+            val window = requireActivity().window
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        }
     }
     override fun onResume() {
         super.onResume()
@@ -3593,6 +3652,11 @@ $cleanContent
        // val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         //notificationManager.cancel(2)
         ForegroundService.dismissNotificationIfNotSpeaking()
+        if (isReadingMode) {
+            val window = requireActivity().window
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        }
 
         /*if (viewModel.isChatLoading.value == false) {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
@@ -3609,6 +3673,11 @@ $cleanContent
 
 
     fun onBackPressed(): Boolean {
+        if (isReadingMode) {
+            toggleReadingMode()
+            return true
+        }
+
         if (isInputExpanded) {                          // ← flag, not hasFocus()
             setInputExpandedState(false)
 
@@ -4089,6 +4158,42 @@ $cleanContent
         titleView?.paintFlags = titleView.paintFlags.or(Paint.UNDERLINE_TEXT_FLAG)
     }
 
+    private fun toggleReadingMode() {
+        isReadingMode = !isReadingMode
+        applyReadingMode()
+    }
+
+    private fun applyReadingMode() {
+        chatAdapter.setReaderModeUi(isReadingMode)
+        readingKeyboardButton.visibility =
+            if (isReadingMode && sharedPreferencesHelper.getPreferFullscreenChat()) View.VISIBLE else View.GONE
+        topBarLayout.visibility = if (isReadingMode) View.GONE else View.VISIBLE
+        chatInputContainer.visibility = if (isReadingMode) View.GONE else View.VISIBLE
+        hideMenu()
+
+        val window = requireActivity().window
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+
+        if (isReadingMode) {
+            // 1. Extend into the display cutout / notch area
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+            // 2. Hide all system bars
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            // 1. Restore standard cutout handling
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+            }
+            // 2. Restore bars
+            controller.show(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+        }
+    }
 
     private fun showWebSearchEngineDialog() {
         val engines = listOf(

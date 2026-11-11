@@ -33,6 +33,7 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         private const val KEY_WATERMARK_STT_ENABLED = "watermark_stt_enabled"
+        private const val KEY_PREFER_FULLSCREEN_CHAT = "prefer_fullscreen_chat"
 
         private const val KEY_VOICE_INPUT_MODEL = "voice_input_model"
         private const val KEY_VOICE_INPUT_PROVIDER = "voice_input_provider" // "lan", "cloud", "off"
@@ -611,7 +612,10 @@ class SharedPreferencesHelper(context: Context) {
     fun saveWatermarkSttEnabled(enabled: Boolean) {
         mainPrefs.edit { putBoolean(KEY_WATERMARK_STT_ENABLED, enabled) }
     }
+    fun getPreferFullscreenChat(): Boolean = mainPrefs.getBoolean(KEY_PREFER_FULLSCREEN_CHAT, false)
 
+    fun savePreferFullscreenChat(enabled: Boolean) =
+        mainPrefs.edit { putBoolean(KEY_PREFER_FULLSCREEN_CHAT, enabled) }
     fun getKeepScreenOnPreference(): Boolean {
         return mainPrefs.getBoolean(KEY_KEEP_SCREEN_ON, false)
     }

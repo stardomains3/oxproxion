@@ -1,0 +1,2 @@
+- Added Reader mode with full system bars hiding for edge-to-edge immersive reading. Enter via the new button on any chat message bubble. Exit with the system back gesture twice.
+- Added "Prefer Fullscreen Chat" setting: enters Reader mode automatically when sending a message.

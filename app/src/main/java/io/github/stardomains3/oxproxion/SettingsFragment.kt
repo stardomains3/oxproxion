@@ -75,6 +75,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val keepScreenOnSwitch = view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
         val scrollButtonsSwitch = view.findViewById<MaterialSwitch>(R.id.scrollButtonsSwitch)
         val volumeScrollSwitch = view.findViewById<MaterialSwitch>(R.id.volumeScrollSwitch)
+        val preferFullscreenChatSwitch = view.findViewById<MaterialSwitch>(R.id.preferFullscreenChatSwitch)
         val timeoutButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.timeoutButton)
         val extendedDockSwitch = view.findViewById<MaterialSwitch>(R.id.extendedDockSwitch)
         val presetsExtendedSwitch = view.findViewById<MaterialSwitch>(R.id.presetsExtendedSwitch)
@@ -109,6 +110,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
         presetsExtendedSwitch.isChecked = viewModel.isPresetsExtendedEnabled.value ?: false
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
+        preferFullscreenChatSwitch.isChecked = prefs.getPreferFullscreenChat()
         extendedTopBarSwitch.isChecked = prefs.getExtendedTopBarEnabled()
         copyOrOpenSwitch.isChecked = prefs.getUseCopyButton()
         watermarkSttSwitch.isChecked = prefs.getWatermarkSttEnabled()
@@ -132,7 +134,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 .addToBackStack(null)
                 .commit()
         }
-
+        preferFullscreenChatSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.savePreferFullscreenChat(isChecked)
+        }
         braveApiKeyButton.setOnClickListener {
             val dialog = SaveBraveApiDialogFragment()
             dialog.show(childFragmentManager, SaveBraveApiDialogFragment.TAG)
@@ -311,6 +315,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             R.id.watermarkSttSwitch,
             R.id.pushToTalkSwitch,   // ← ADD
             R.id.scrollButtonsSwitch,
+            R.id.preferFullscreenChatSwitch,
             R.id.volumeScrollSwitch,
             R.id.expandableInputSwitch,
             R.id.scrollProgressSwitch,
