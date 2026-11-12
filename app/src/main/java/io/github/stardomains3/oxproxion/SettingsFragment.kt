@@ -85,7 +85,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val promptsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.promptsButton)
         val creditsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.creditsButton)
         val helpButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.helpButton)
-        val maxTokensButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.maxTokensButton)
+        //val maxTokensButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.maxTokensButton)
         val lanButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.lanButton)
         val openRouterTransformsSwitch = view.findViewById<MaterialSwitch>(R.id.openRouterTransformsSwitch)
         val voiceModelEdit = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.voiceInputModelEdit)
@@ -266,10 +266,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 .addToBackStack(null)
                 .commit()
         }
-        maxTokensButton.setOnClickListener {
-            val dialog = MaxTokensDialogFragment()
-            dialog.show(childFragmentManager, "MaxTokensDialogFragment")
-        }
+
         lanButton.setOnClickListener {
             SaveLANDialogFragment().show(childFragmentManager, SaveLANDialogFragment.TAG)
         }

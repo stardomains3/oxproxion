@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlin.text.set
 
@@ -56,84 +57,94 @@ class AddEditSystemMessageFragment : Fragment() {
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_save_system_message -> {
-                    val newTitle = titleEditText.text.toString().trim()  // Trim to handle whitespace
-                    val newPrompt = promptEditText.text.toString()
+                    val newTitle = titleEditText.text.toString().trim()
+                    val newPrompt = promptEditText.text.toString()  // intentionally NOT trimmed yet
 
-                    if (newTitle.isNotBlank() && newPrompt.isNotBlank()) {
-                        // Fetch ALL messages for duplicate checking (defaults + customs)
-                        val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
-                        val customMessages = sharedPreferencesHelper.getCustomSystemMessages()
-                        val allMessages = customMessages + defaultMessage  // Combine into one list
-
-                        // Check for duplicates (case-insensitive, trimmed)
-
-                        // ... (rest of your code above remains the same)
-
-                        val hasDuplicate = allMessages.any { existingMessage ->
-                            val existingTitleTrimmed = existingMessage.title.trim()
-                            val isTitleMatch = existingTitleTrimmed.equals(newTitle, ignoreCase = true)
-
-                            // Exclude the current message if editing
-                            val originalTitleValue = originalTitle  // Capture in immutable local var to enable smart-cast
-                            val isCurrentMessage = if (originalTitleValue != null) {
-                                val originalTitleTrimmed = originalTitleValue.trim()  // Now safe to trim
-                                existingTitleTrimmed.equals(originalTitleTrimmed, ignoreCase = true) &&
-                                        (existingMessage.isDefault == isDefaultMessage)  // Ensure category match
-                            } else {
-                                false
-                            }
-
-                            isTitleMatch && !isCurrentMessage
-                        }
-
-// ... (rest of your code below remains the same)
-
-
-                        if (hasDuplicate) {
-                            // Show error with Snackbar
-                            Snackbar.make(requireView(), "A message with this title already exists", Snackbar.LENGTH_LONG)
-                                .setAction("OK") { /* Dismiss action */ }
-                                .show()
-                            return@setOnMenuItemClickListener true
-                        }
-
-                        // Proceed with saving (rest of your logic remains the same)
-                        val newSystemMessage = SystemMessage(newTitle, newPrompt, isDefault = isDefaultMessage)
-
-                        if (isDefaultMessage) {
-                            // Save as the new default system message
-                            sharedPreferencesHelper.saveDefaultSystemMessage(newSystemMessage)
-
-                            // Update selected message if it was the default
-                            val currentSelected = sharedPreferencesHelper.getSelectedSystemMessage()
-                            if (currentSelected.isDefault) {
-                                sharedPreferencesHelper.saveSelectedSystemMessage(newSystemMessage)
-                            }
-                        } else {
-                            // Handle custom messages as before
-                            val customSystemMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
-                            if (originalTitle != null) {
-                                val index = customSystemMessages.indexOfFirst { it.title.equals(originalTitle, ignoreCase = true) }
-                                if (index != -1) {
-                                    val currentSelected = sharedPreferencesHelper.getSelectedSystemMessage()
-                                    if (currentSelected.title.equals(originalTitle, ignoreCase = true)) {
-                                        sharedPreferencesHelper.saveSelectedSystemMessage(newSystemMessage)
-                                    }
-                                    customSystemMessages[index] = newSystemMessage
-                                }
-                            } else {
-                                customSystemMessages.add(newSystemMessage)
-                            }
-                            sharedPreferencesHelper.saveCustomSystemMessages(customSystemMessages)
-                        }
-                        parentFragmentManager.popBackStack()
+                    if (newTitle.isBlank()) {
+                        Snackbar.make(requireView(), "Title is required", Snackbar.LENGTH_LONG)
+                            .setAction("OK") { }
+                            .show()
+                        return@setOnMenuItemClickListener true
                     }
+
+                    // NEW: Empty prompt is now allowed, but confirm so it's not accidental
+                    if (newPrompt.isBlank()) {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("Save with empty prompt?")
+                            .setMessage("An empty system prompt means requests will be sent without a system message (default model behavior).")
+                            .setNegativeButton("Cancel", null)
+                            .setPositiveButton("Save") { _, _ ->
+                                saveMessage(newTitle, newPrompt, isDefaultMessage)
+                            }
+                            .show()
+                        return@setOnMenuItemClickListener true
+                    }
+
+                    saveMessage(newTitle, newPrompt, isDefaultMessage)
                     true
                 }
+
                 else -> false
             }
         }
 
 
     }
+    private fun saveMessage(newTitle: String, newPrompt: String, isDefaultMessage: Boolean) {
+        // === Existing duplicate check, verbatim ===
+        val defaultMessage = sharedPreferencesHelper.getDefaultSystemMessage()
+        val customMessages = sharedPreferencesHelper.getCustomSystemMessages()
+        val allMessages = customMessages + defaultMessage
+
+        val hasDuplicate = allMessages.any { existingMessage ->
+            val existingTitleTrimmed = existingMessage.title.trim()
+            val isTitleMatch = existingTitleTrimmed.equals(newTitle, ignoreCase = true)
+
+            val originalTitleValue = originalTitle
+            val isCurrentMessage = if (originalTitleValue != null) {
+                val originalTitleTrimmed = originalTitleValue.trim()
+                originalTitleTrimmed.equals(originalTitleTrimmed, ignoreCase = true) &&
+                        (existingMessage.isDefault == isDefaultMessage)
+            } else {
+                false
+            }
+
+            isTitleMatch && !isCurrentMessage
+        }
+
+        if (hasDuplicate) {
+            Snackbar.make(requireView(), "A message with this title already exists", Snackbar.LENGTH_LONG)
+                .setAction("OK") { }
+                .show()
+            return
+        }
+
+        val newSystemMessage = SystemMessage(newTitle, newPrompt.trim(), isDefault = isDefaultMessage)
+
+
+        if (isDefaultMessage) {
+            sharedPreferencesHelper.saveDefaultSystemMessage(newSystemMessage)
+            val currentSelected = sharedPreferencesHelper.getSelectedSystemMessage()
+            if (currentSelected.isDefault) {
+                sharedPreferencesHelper.saveSelectedSystemMessage(newSystemMessage)
+            }
+        } else {
+            val customSystemMessages = sharedPreferencesHelper.getCustomSystemMessages().toMutableList()
+            if (originalTitle != null) {
+                val index = customSystemMessages.indexOfFirst { it.title.equals(originalTitle, ignoreCase = true) }
+                if (index != -1) {
+                    val currentSelected = sharedPreferencesHelper.getSelectedSystemMessage()
+                    if (currentSelected.title.equals(originalTitle, ignoreCase = true)) {
+                        sharedPreferencesHelper.saveSelectedSystemMessage(newSystemMessage)
+                    }
+                    customSystemMessages[index] = newSystemMessage
+                }
+            } else {
+                customSystemMessages.add(newSystemMessage)
+            }
+            sharedPreferencesHelper.saveCustomSystemMessages(customSystemMessages)
+        }
+        parentFragmentManager.popBackStack()
+    }
+
 }

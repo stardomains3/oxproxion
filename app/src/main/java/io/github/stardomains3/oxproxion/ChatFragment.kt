@@ -1622,6 +1622,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
 
                         // NEW: Get system message (as before)
                         val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
+                            .trim().takeIf { it.isNotBlank() }
+
                         if (sharedPreferencesHelper.getPreferFullscreenChat() && !isReadingMode) {
                             toggleReadingMode()
                         }
@@ -1933,7 +1935,8 @@ $cleanContent
                 }
                 val substitutedPrompt = substituteVariables(prompt)  //#subpromptcode
                 val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage()//#subpromptcode
-                val substitutedSystemPrompt = substituteVariables(systemMessage.prompt)//#subpromptcode
+                val substitutedSystemPrompt = substituteVariables(systemMessage.prompt).trim()
+                    .takeIf { it.isNotBlank() }   // null if empty → no system role sent
                 //if (prompt.isNotBlank() || selectedImageBytes != null) { //#subpromptcode replaced
                 if (substitutedPrompt.isNotBlank() || selectedImageBytes != null) { //#subpromptcode
                     /* if (!ForegroundService.isRunningForeground) {

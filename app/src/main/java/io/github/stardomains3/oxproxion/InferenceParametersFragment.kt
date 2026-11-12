@@ -21,7 +21,19 @@ class InferenceParametersFragment : Fragment(R.layout.fragment_inference_paramet
         toolbar.setNavigationOnClickListener { parentFragmentManager.popBackStack() }
 
         val prefs = SharedPreferencesHelper(requireContext())
-
+// Max Tokens
+        setupParameter(
+            view = view,
+            switchId = R.id.maxTokensSwitch,
+            inputLayoutId = R.id.maxTokensInputLayout,
+            editId = R.id.maxTokensEdit,
+            isEnabled = prefs.getMaxTokensEnabled(),
+            currentValue = prefs.getMaxTokens(),
+            onSwitchChanged = { prefs.saveMaxTokensEnabled(it) },
+            onValueChanged = { text ->
+                if (text.toIntOrNull() != null) prefs.saveMaxTokens(text)
+            }
+        )
         // Temperature
         setupParameter(
             view = view,
@@ -109,6 +121,7 @@ class InferenceParametersFragment : Fragment(R.layout.fragment_inference_paramet
 
         // Apply custom switch styling
         listOf(
+            R.id.maxTokensSwitch,
             R.id.tempSwitch,
             R.id.topPSwitch,
             R.id.topKSwitch,

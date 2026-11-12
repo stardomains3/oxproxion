@@ -1,0 +1,4 @@
+New: Blank system prompts now use model defaults (helpful for Gemma 3/Ollama).
+New: Option to omit max_tokens to use provider defaults.
+Fix: Reasoning fields no longer sent as empty strings.
+Fix: Static tool descriptions now enable prompt caching (faster/lower token usage).

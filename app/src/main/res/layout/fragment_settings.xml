@@ -99,22 +99,7 @@
                 app:strokeWidth="1dp"
                 app:backgroundTint="?attr/colorSurface" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/maxTokensButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Max Tokens"
-                app:icon="@drawable/ic_ruler"
-                app:iconSize="28dp"
-                app:iconTint="#A8A8A8"
-                app:iconTintMode="src_in"
-                app:iconGravity="start"
-                app:iconPadding="12dp"
-                android:textColor="?android:attr/textColorPrimary"
-                app:strokeColor="@color/chestnut"
-                app:strokeWidth="1dp"
-                app:backgroundTint="?attr/colorSurface" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/inferenceParamsButton"
                 android:layout_width="match_parent"

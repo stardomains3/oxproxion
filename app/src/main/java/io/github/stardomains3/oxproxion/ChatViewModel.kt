@@ -122,6 +122,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
+import kotlin.collections.copy
 import kotlin.compareTo
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
@@ -1840,11 +1841,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = "function",
                 function = FunctionTool(
                     name = "add_calendar_event",
-                    description = "Adds an event to the user's calendar. Provide a title and start date/time; the AI will populate optional fields like location, description, all-day status, and end time as needed (e.g., default end to 1 hour after start for timed events, or next day for all-day). Dates/times should be in ISO 8601 format (e.g., '2023-10-05T14:30:00' for Oct 5, 2023 at 2:30 PM). Current time/date this was sent is: ${
-                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(
-                            Date()
-                        )
-                    }",
+                    description = "Adds an event to the user's calendar. Provide a title and start date/time; the AI will populate optional fields like location, description, all-day status, and end time as needed (e.g., default end to 1 hour after start for timed events, or next day for all-day). Dates/times should be in ISO 8601 format (e.g., '2023-10-05T14:30:00' for Oct 5, 2023 at 2:30 PM). If the user says a time without specifying AM/PM, ask them to clarify before calling this tool. If you need the current time to resolve a relative date (e.g., 'tomorrow', 'next Friday'), call get_current_datetime first.",
                     parameters = buildJsonObject {
                         put("type", "object")
                         putJsonObject("properties") {
@@ -2722,15 +2719,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         toolRecursionDepth--
         // All tool calls now continue the conversation to report their status.
         val messagesForApi = _chatMessages.value?.toMutableList() ?: mutableListOf()
-        val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt
-        if (messagesForApi.isEmpty() || messagesForApi[0].role != "system") {
-            messagesForApi.add(
-                0,
-                FlexibleMessage(role = "system", content = JsonPrimitive(systemMessage))
-            )
-            // Log.d("ToolDebug", "Re-added system message to continuation payload")
+        val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt.trim()
+        if (systemMessage.isNotBlank() && (messagesForApi.isEmpty() || messagesForApi[0].role != "system")) {
+            messagesForApi.add(0, FlexibleMessage(role = "system", content = JsonPrimitive(systemMessage)))
         }
-      //  messagesForApi.addAll(toolResults)
+
+        //  messagesForApi.addAll(toolResults)
         continueConversation(messagesForApi)
     }
 
@@ -3583,11 +3577,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val sharedPreferencesHelper =
                 SharedPreferencesHelper(getApplication<Application>().applicationContext)
 
-            val maxTokens = try {
-                sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
-            } catch (e: Exception) {
-                12000
-            }
+            val maxTokens = if (sharedPreferencesHelper.getMaxTokensEnabled()) {
+                try {
+                    sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
+                } catch (e: Exception) {
+                    12000
+                }
+            } else null
+
             val isReasoningModel = isReasoningModel(_activeChatModel.value)
             val lanProvider = sharedPreferencesHelper.getLanProvider()
             val llamaCppKwargs = if (
@@ -3602,7 +3599,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             val chatRequest = ChatRequest(
                 model = modelForRequest,
-                messages = messagesForApiRequest,
+                messagesForApiRequest.sanitizedForApi(),
                 stream = true,
                 max_tokens = maxTokens,
                 think = null, // NOT supported on /v1/chat/completions (Responses API only)
@@ -3902,18 +3899,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     searchContextSize = sharedPreferencesHelper.getWebSearchContextSize()
                 )
             } else null
-            val maxTokens = try {
-                sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
-            } catch (e: Exception) {
-                12000
-            }
+            val maxTokens = if (sharedPreferencesHelper.getMaxTokensEnabled()) {
+                try {
+                    sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
+                } catch (e: Exception) {
+                    12000
+                }
+            } else null
+
             val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
             val effort = if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
 
             // --- Build ChatRequest with ALL features ---
             val chatRequest = ChatRequest(
                 model = modelForRequest,
-                messages = messagesForApiRequest,
+                messagesForApiRequest.sanitizedForApi(),
                 transforms = if (sharedPreferencesHelper.getOpenRouterTransformsEnabled() && !activeModelIsLan())
                     listOf("middle-out")
                 else null,
@@ -4254,11 +4254,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val sharedPreferencesHelper =
                     SharedPreferencesHelper(getApplication<Application>().applicationContext)
 
-                val maxTokens = try {
-                    sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
-                } catch (e: Exception) {
-                    12000
-                }
+                val maxTokens = if (sharedPreferencesHelper.getMaxTokensEnabled()) {
+                    try {
+                        sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
+                    } catch (e: Exception) {
+                        12000
+                    }
+                } else null
+
                 val isReasoningModel = isReasoningModel(_activeChatModel.value)
                 val lanProvider = sharedPreferencesHelper.getLanProvider()
 
@@ -4275,7 +4278,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
-                    messages = messagesForApiRequest,
+                    messagesForApiRequest.sanitizedForApi(),
                     think = null, // NOT supported on /v1/chat/completions (Responses API only)
                     // Ollama OpenAI-compatible endpoint: reasoning_effort is the only
                     // thinking control on /v1/chat/completions.
@@ -4573,17 +4576,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             searchContextSize = sharedPreferencesHelper.getWebSearchContextSize()
                         )
                     } else null
-                val maxTokens = try {
-                    sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
-                } catch (e: Exception) {
-                    12000  // Fallback on any prefs error
-                }
+                val maxTokens = if (sharedPreferencesHelper.getMaxTokensEnabled()) {
+                    try {
+                        sharedPreferencesHelper.getMaxTokens().toIntOrNull() ?: 12000
+                    } catch (e: Exception) {
+                        12000
+                    }
+                } else null
+
                 val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
                 val effort =
                     if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
-                    messages = messagesForApiRequest,
+                    messagesForApiRequest.sanitizedForApi(),
                     transforms = if (sharedPreferencesHelper.getOpenRouterTransformsEnabled() && !activeModelIsLan())
                         listOf("middle-out")
                     else
@@ -4969,6 +4975,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } == true
         }
     }
+    /** Strips blank reasoning/thinking so they're omitted (null) from the JSON payload. */
+    private fun List<FlexibleMessage>.sanitizedForApi(): List<FlexibleMessage> =
+        map { msg ->
+            val cleanReasoning = msg.reasoning?.takeIf { it.isNotBlank() }
+            val cleanThinking = msg.thinking?.takeIf { it.isNotBlank() }
+            if (cleanReasoning == msg.reasoning && cleanThinking == msg.thinking) msg
+            else msg.copy(reasoning = cleanReasoning, thinking = cleanThinking)
+        }
     fun checkRemainingCredits() {
         viewModelScope.launch {
             val remaining = withContext(Dispatchers.IO) {

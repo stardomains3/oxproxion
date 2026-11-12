@@ -83,6 +83,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_TIMEOUT_MINUTES = "timeout_minutes"
         private const val KEY_DISABLE_WEB_SEARCH_AFTER_SEND = "disable_web_search_after_send"
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
+        private const val MAX_TOKENS_ENABLED = "max_tokens_enabled"
         private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
         private const val KEY_SCROLL_PROGRESS_ENABLED = "scroll_progress_enabled"
         private const val KEY_FONT_SIZE = "font_size"
@@ -755,6 +756,12 @@ class SharedPreferencesHelper(context: Context) {
     }
     fun getPreferenceModel(): String? {
         return mainPrefs.getString(KEY_MODEL_VALE, "mistralai/mistral-medium-3")
+    }
+    fun getMaxTokensEnabled(): Boolean =
+        mainPrefs.getBoolean(MAX_TOKENS_ENABLED, true) // default ON = current behavior
+
+    fun saveMaxTokensEnabled(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(MAX_TOKENS_ENABLED, enabled) }
     }
     fun saveMaxTokens(value: String) {
         mainPrefs.edit(commit = true) {
