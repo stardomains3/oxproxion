@@ -1164,4 +1164,25 @@
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/floatingTranscribeButton"
+        style="@style/Widget.Material3.Button.IconButton.Filled"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="120dp"
+        android:layout_marginEnd="16dp"
+        android:alpha="0.8"
+        android:elevation="8dp"
+        android:visibility="gone"
+        app:backgroundTint="#6D2E0F"
+        app:cornerRadius="28dp"
+        app:icon="@drawable/ic_imm"
+        app:iconSize="20dp"
+        app:iconTint="#FFFFFF"
+        app:iconGravity="textStart"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp" />
 </FrameLayout>

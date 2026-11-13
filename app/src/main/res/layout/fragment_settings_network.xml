@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="Network &amp; API"
+        app:titleTextColor="?android:attr/textColorPrimary"
+        android:background="?attr/colorSurface"
+        app:navigationIcon="@drawable/is_backarrow" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardCornerRadius="24dp"
+            app:strokeColor="@color/chestnut"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- 1. LAN Settings -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/lanButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="LAN Settings"
+                    app:icon="@drawable/ic_lan"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+                <!-- 2. Request Timeout -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/timeoutButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Request Timeout"
+                    app:icon="@drawable/ic_timeout"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#1A000000" />
+
+                <!-- 3. OpenRouter API Key -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/apiKeyButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="OpenRouter API Key"
+                    app:icon="@drawable/ic_key"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+                <!-- 4. Brave Search API Key -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/braveApiKeyButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Brave Search API Key"
+                    app:icon="@drawable/ic_key"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#1A000000" />
+
+                <!-- 5. Check Remaining Credits -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/creditsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Check Remaining Credits"
+                    app:icon="@drawable/ic_credits"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </ScrollView>
+</LinearLayout>

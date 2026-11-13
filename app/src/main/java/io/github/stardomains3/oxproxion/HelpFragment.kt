@@ -75,7 +75,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             "ic_copi" to R.drawable.ic_copi,
             "ic_markdown" to R.drawable.ic_markdown,
             "ic_html" to R.drawable.ic_html,
-             "ic_reader" to R.drawable.ic_reader,
+             "ic_reader" to R.drawable.ic_imm,
              "ic_epub" to R.drawable.ic_epub,
             "ic_print" to R.drawable.ic_print,
             "ic_pdfnew" to R.drawable.ic_pdfnew,
@@ -309,14 +309,24 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Auto-disable Web Search**: Prevents the web search from auto turning off after each use.
             *   **LAN Button** {{ic_lan}} : Opens the LAN dialog where you can choose your LAN model provider and enter its endpoint.
             *   **Prompt Library Button** {{ic_prompts}}: Opens the Prompt Library Screen
-            *   **Max Tokens Button** {{ic_ruler}} : Opens a dialog to set your Max Tokens value. Max Tokens limit the length of the AI's response. A higher number allows longer replies but may increase costs. Default is 12000.
+            *   **Inference Parameters** : Opens a screen to fine-tune model generation settings (Temperature, Top P, Top K, etc.).
             *   **API Key Button** {{ic_key}} : Opens a dialog to enter your OpenRouter API key.
-             *  **Chat Memory : Allows the user to control context by limiting the amount of past messages sent in chat.
+            *   **Chat Memory : Allows the user to control context by limiting the amount of past messages sent in chat.
             *   **Brave Search API Key Button** {{ic_key}} : Opens a dialog to enter your Brave Search API key. The option for the tool will appear when long-pressing tools button. Allows for local or cloud models to have Brave search results injected into context.
             *   **OpenRouter Transforms** : To help with prompts that exceed the maximum context size of a model, OpenRouter supports a custom parameter called transforms. https://openrouter.ai/docs/guides/features/message-transforms
             *   **Extended Top Bar** : Allows the reasoning, web search, streaming, tools, presets, and setting buttons to be on chat screen all the time below the top bar for convenient access. Also includes a Home button to bring to Android Home screen.
             *   **Auto Back after receiving a Share** : If on, when you share text to a share target of the app, it will automatically take you back to the app you shared it from.
             *   **Copy Button on Notification** : If on it will replace the standard button with a Copy button on the notification which will copy the last AI response and dismiss the notification.
+            
+            ### Inference Parameters
+            Fine-tune the model's response behavior:
+            * **Max Tokens**: Limits the length of the AI's response. You can toggle this off to omit the limit entirely.
+            * **Temperature**: Controls randomness. Lower values are more deterministic/focused; higher values are more creative/diverse.
+            * **Top P**: Nucleus sampling; filters tokens based on cumulative probability.
+            * **Top K**: Limits the model to the top K most likely tokens.
+            * **Min P**: Filters tokens based on a probability threshold relative to the top token.
+            * **Repetition Penalty**: Reduces the likelihood of the model repeating the same words or phrases.
+            * **Presence Penalty**: Encourages the model to introduce new topics.
             
             ---
 
@@ -354,6 +364,7 @@ class HelpFragment : Fragment(R.layout.fragment_help) {
             *   **Hold and Drag** to reorder.
             *   **Manage**: Tap the edit button on a message to **Edit** or **Delete** it.
             *   **Import/Export**: Use the menu bar icons to manage your System Messages.
+            *   **Blank System Prompts**: Create a system message with an empty prompt to use the model's default behavior (helpful for models without system prompt support, like Gemma 3, or custom Ollama templates).
             
              ### "Prompt Library" Screen
             *  **Access**: Long-press the Presets button.

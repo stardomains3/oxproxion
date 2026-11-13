@@ -5,10 +5,11 @@ import android.os.Bundle
 import android.widget.CheckedTextView
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.DialogFragment
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlin.toString
 
 class ChatMemoryDialogFragment : DialogFragment() {
+    var onMemoryChanged: ((Int) -> Unit)? = null
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val prefs = SharedPreferencesHelper(requireContext())
@@ -41,9 +42,7 @@ class ChatMemoryDialogFragment : DialogFragment() {
                 }
 
                 prefs.saveChatMemoryCount(count)
-
-                val button = requireActivity().findViewById<MaterialButton>(R.id.chatMemoryButton)
-                button?.text = if (count == Int.MAX_VALUE) "All messages" else "$count messages"
+                onMemoryChanged?.invoke(count)
 
                 dialog.dismiss()
             }
@@ -66,4 +65,3 @@ class ChatMemoryDialogFragment : DialogFragment() {
         return dialog
     }
 }
-

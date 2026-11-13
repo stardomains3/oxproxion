@@ -218,7 +218,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Reading mode"
                     android:padding="4dp"
-                    android:src="@drawable/ic_reader"
+                    android:src="@drawable/ic_imm"
                     app:tint="#777777" />
                 <ImageButton
                     android:id="@+id/shareButton"

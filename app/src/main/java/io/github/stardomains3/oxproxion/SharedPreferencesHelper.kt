@@ -34,7 +34,8 @@ class SharedPreferencesHelper(context: Context) {
     companion object {
         private const val KEY_WATERMARK_STT_ENABLED = "watermark_stt_enabled"
         private const val KEY_PREFER_FULLSCREEN_CHAT = "prefer_fullscreen_chat"
-
+        private const val KEY_FLOATING_TRANSCRIBE_X = "floating_transcribe_x"
+        private const val KEY_FLOATING_TRANSCRIBE_Y = "floating_transcribe_y"
         private const val KEY_VOICE_INPUT_MODEL = "voice_input_model"
         private const val KEY_VOICE_INPUT_PROVIDER = "voice_input_provider" // "lan", "cloud", "off"
         private const val KEY_THEME_MODE = "theme_mode"
@@ -85,6 +86,7 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val MAX_TOKENS_ENABLED = "max_tokens_enabled"
         private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
+        private const val KEY_FLOATING_TRANSCRIBE_ENABLED = "floating_transcribe_enabled"
         private const val KEY_SCROLL_PROGRESS_ENABLED = "scroll_progress_enabled"
         private const val KEY_FONT_SIZE = "font_size"
         private const val KEY_CLEAR_CHAT_DEFAULT = "clear_chat_default"
@@ -226,6 +228,29 @@ class SharedPreferencesHelper(context: Context) {
     fun saveModelListSchemaVersion(version: Int) {
         mainPrefs.edit { putInt(KEY_MODEL_LIST_SCHEMA_VERSION, version) }
     }
+    fun getFloatingTranscribeEnabled(): Boolean =
+        mainPrefs.getBoolean(KEY_FLOATING_TRANSCRIBE_ENABLED, false)
+
+    fun saveFloatingTranscribeEnabled(enabled: Boolean) =
+        mainPrefs.edit { putBoolean(KEY_FLOATING_TRANSCRIBE_ENABLED, enabled) }
+
+    /**
+     * Saves the button's last dragged position.
+     * Pass -1 for both to reset to default position.
+     */
+    fun saveFloatingTranscribePos(x: Int, y: Int) =
+        mainPrefs.edit {
+            putInt(KEY_FLOATING_TRANSCRIBE_X, x)
+            putInt(KEY_FLOATING_TRANSCRIBE_Y, y)
+        }
+
+    /**
+     * Returns the saved position as a Pair(x, y).
+     * Returns (-1, -1) if never saved (use default position).
+     */
+    fun getFloatingTranscribePos(): Pair<Int, Int> =
+        mainPrefs.getInt(KEY_FLOATING_TRANSCRIBE_X, -1) to
+                mainPrefs.getInt(KEY_FLOATING_TRANSCRIBE_Y, -1)
     // Top K (Default: 40) - This one was already correct
     fun getInferenceTopKEnabled(): Boolean = mainPrefs.getBoolean(KEY_INFERENCE_TOP_K_ENABLED, false)
     fun saveInferenceTopKEnabled(enabled: Boolean) = mainPrefs.edit { putBoolean(KEY_INFERENCE_TOP_K_ENABLED, enabled) }

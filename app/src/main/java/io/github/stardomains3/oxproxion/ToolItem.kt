@@ -94,7 +94,7 @@ data class ToolItem(
             ToolItem(
                 name = "create_folder",
                 displayName = "Create Folder",
-                description = "Creates a new subfolder in the Download/OpenChat workspace",
+                description = "Creates a new subfolder in the Download/oxproxion workspace",
                 isEnabled = "create_folder" in enabledSet
             ),
             ToolItem(

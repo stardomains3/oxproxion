@@ -1,0 +1,3 @@
+- New Settings layout with categories.
+- Fixed a bug that might have caused issues for the new image generation endpoint.
+- Immersive/Reader mode button removed in favor of new optional floating immersive view toggle button.

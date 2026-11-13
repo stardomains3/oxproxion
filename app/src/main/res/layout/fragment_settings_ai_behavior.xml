@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="AI Behavior"
+        app:titleTextColor="?android:attr/textColorPrimary"
+        android:background="?attr/colorSurface"
+        app:navigationIcon="@drawable/is_backarrow" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardCornerRadius="24dp"
+            app:strokeColor="@color/chestnut"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- 1. Inference Parameters -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/inferenceParamsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Inference Parameters"
+                    app:icon="@drawable/ic_param"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+                <!-- 2. Chat Memory -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Chat Memory"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/chatMemoryButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="8 messages"
+                        android:textColor="?android:attr/textColorPrimary"
+                        app:strokeColor="@color/chestnut"
+                        app:strokeWidth="1dp"
+                        app:backgroundTint="?attr/colorSurface" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#1A000000" />
+
+                <!-- 3. Prompt Library -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/promptsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Prompt Library"
+                    app:icon="@drawable/ic_prompts"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+                <!-- 4. Manage AI Tools -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/toolsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Manage AI Tools"
+                    app:icon="@drawable/ic_tools"
+                    app:iconSize="24dp"
+                    app:iconTint="#A8A8A8"
+                    app:iconTintMode="src_in"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    app:strokeColor="@color/chestnut"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="?attr/colorSurface" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#1A000000" />
+
+                <!-- 5. OpenRouter Middle-Out Transform -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="OpenRouter Middle-Out Transform"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/openRouterTransformsSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#1A000000" />
+
+                <!-- 6. Auto-disable Web Search -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Auto-disable Web Search After Send"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/autoDisableWebSearchSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </ScrollView>
+</LinearLayout>

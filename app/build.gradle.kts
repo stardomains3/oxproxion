@@ -27,8 +27,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 37
-        versionCode = 236
-        versionName = "2.2.21"
+        versionCode = 237
+        versionName = "2.2.22"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -78,7 +78,6 @@ android {
 }
 
 dependencies {
-    // Markwon (Syntax Highlighting Removed)
     implementation(libs.markwon.simple)
     implementation(libs.markwon.core)
     implementation(libs.markwon.html)
@@ -88,7 +87,6 @@ dependencies {
     implementation(libs.markwon.strikethrough)
     implementation(libs.markwon.syntax.highlight)
     implementation(libs.prism4j.core)
-    // Removed: markwon.syntax.highlight, prism4j.core, kapt(prism4j.bundler)
 
     // Core / UI
     implementation(libs.androidx.documentfile)
@@ -127,7 +125,6 @@ dependencies {
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.auth)
     implementation(libs.ktor.serialization.kotlinx.json)
-    //implementation(libs.ktor.client.android)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

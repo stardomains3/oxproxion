@@ -128,6 +128,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.compareTo
+import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
 interface OnKeyboardShortcutListener {
@@ -139,6 +143,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private var isReadingMode = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
+    private lateinit var floatingTranscribeButton: MaterialButton
     private var isSpeaking = false
     private var isInputExpanded = false
     private var isShare = false
@@ -155,7 +160,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var presetsButton2: MaterialButton
     private lateinit var attachmentButton: MaterialButton
     private lateinit var topSettingsButton: MaterialButton
-    private lateinit var readingKeyboardButton: MaterialButton
+    //private lateinit var readingKeyboardButton: MaterialButton
     private lateinit var topPresetsButton: MaterialButton
     private lateinit var extendedTopBarContainer: LinearLayout
     private lateinit var topStreamButton: MaterialButton
@@ -233,6 +238,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var previewImageView: ImageView
     private lateinit var centerWatermarkIcon: ImageView
     private lateinit var removeAttachmentButton: ImageButton
+
     private lateinit var headerContainer: LinearLayout
     private var overlayView: View? = null
     private var tempCopyHideJob: Job? = null
@@ -461,6 +467,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         // --- Initialize Views from fragment_chat.xml ---
         pdfChatButton = view.findViewById(R.id.pdfChatButton)
         systemMessageButton = view.findViewById(R.id.systemMessageButton)
+        floatingTranscribeButton = view.findViewById(R.id.floatingTranscribeButton)
         streamButton = view.findViewById(R.id.streamButton)
         reasoningButton = view.findViewById(R.id.reasoningButton)
         chatInputRow = view.findViewById(R.id.chatInputRow)
@@ -474,7 +481,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         convoButton  = view.findViewById(R.id.convoButton)
         clearButton = view.findViewById(R.id.clearButton)
         utilityButton = view.findViewById(R.id.utilityButton)
-        readingKeyboardButton = view.findViewById(R.id.readingKeyboardButton)
+       // readingKeyboardButton = view.findViewById(R.id.readingKeyboardButton)
         speechButton = view.findViewById(R.id.speechButton)
         chatRecyclerView = view.findViewById(R.id.chatRecyclerView)
         chatEditText = view.findViewById(R.id.chatEditText)
@@ -837,6 +844,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
             val hasMessages = messages.isNotEmpty()
+            updateFloatingImmersiveVisibility()
             val isFeatureEnabled = sharedPreferencesHelper.getWatermarkSttEnabled()
             if (hasMessages || !isFeatureEnabled) {
                 // Disable if chat has messages OR feature is turned off in settings
@@ -1347,6 +1355,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         }
         pttButton = view.findViewById(R.id.pttButton)
         setupPttButton()
+        setupFloatingTranscribeButton()
 
         val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         if (notificationManager != null) {
@@ -2064,7 +2073,7 @@ $cleanContent
                 .addToBackStack(null)
                 .commit()
         }
-        readingKeyboardButton.setOnClickListener {
+        /*readingKeyboardButton.setOnClickListener {
             toggleReadingMode()          // exits reading mode (restores bars + input)
             chatEditText.requestFocus()
             chatEditText.showKeyboard()   // your existing View extension — shows IME
@@ -2080,7 +2089,7 @@ $cleanContent
                 startSpeechRecognition()
             }
             true
-        }
+        }*/
         resetChatButton.setOnLongClickListener {
             hideTempCopyButton()
            /* if (ForegroundService.isRunningForeground && sharedPreferencesHelper.getNotiPreference()) {
@@ -3460,6 +3469,87 @@ $cleanContent
 
         updateButtonVisibility()   // keep the keyboard-toggle icon in sync
     }
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupFloatingTranscribeButton() {
+        updateFloatingImmersiveVisibility()
+
+        // Restore saved drag position (if any)
+        val (savedX, savedY) = sharedPreferencesHelper.getFloatingTranscribePos()
+        if (savedX >= 0 && savedY >= 0) {
+            floatingTranscribeButton.post {
+                val lp = floatingTranscribeButton.layoutParams as FrameLayout.LayoutParams
+                lp.leftMargin = savedX
+                lp.topMargin = savedY
+                lp.gravity = Gravity.TOP or Gravity.START
+                floatingTranscribeButton.layoutParams = lp
+            }
+        }
+
+        // --- Drag + tap logic ---
+        var initialX = 0
+        var initialY = 0
+        var initialTouchX = 0f
+        var initialTouchY = 0f
+        var isDragging = false
+
+        floatingTranscribeButton.setOnTouchListener { v, event ->
+            val lp = v.layoutParams as FrameLayout.LayoutParams
+
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = lp.leftMargin
+                    initialY = lp.topMargin
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    true
+                }
+
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - initialTouchX
+                    val dy = event.rawY - initialTouchY
+
+                    if (!isDragging && (abs(dx) > 10 || abs(dy) > 10)) {
+                        isDragging = true
+                    }
+
+                    if (isDragging) {
+                        lp.leftMargin = (initialX + dx).toInt()
+                        lp.topMargin = (initialY + dy).toInt()
+                        lp.gravity = Gravity.TOP or Gravity.START
+                        v.layoutParams = lp
+                    }
+                    true
+                }
+
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (isDragging) {
+                        // Save position after drag
+                        sharedPreferencesHelper.saveFloatingTranscribePos(
+                            lp.leftMargin, lp.topMargin
+                        )
+                    } else if (event.action == MotionEvent.ACTION_UP) {
+                        // Plain tap → toggle Immersive View
+                        toggleReadingMode()
+                    }
+                    true
+                }
+
+                else -> false
+            }
+        }
+    }
+
+
+
+    private fun updateFloatingImmersiveVisibility() {
+        if (!::floatingTranscribeButton.isInitialized) return
+        val enabled = sharedPreferencesHelper.getFloatingTranscribeEnabled()
+        val hasMessages = !(viewModel.chatMessages.value.isNullOrEmpty())
+        // Show on chat screen only with messages; always while in reading mode
+        floatingTranscribeButton.visibility =
+            if (enabled && (hasMessages || isReadingMode)) View.VISIBLE else View.GONE
+    }
 
     private fun setupPlusButtonListener() {
         plusButton.setOnClickListener {
@@ -3630,6 +3720,7 @@ $cleanContent
             updateSystemMessageButtonState()
             updatePttButtonVisibility()
            // chatEditText.requestFocus()
+            updateFloatingImmersiveVisibility()
             viewModel.checkAdvancedReasoningStatus()
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
           //  topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
@@ -4168,7 +4259,7 @@ $cleanContent
 
     private fun applyReadingMode() {
         chatAdapter.setReaderModeUi(isReadingMode)
-        readingKeyboardButton.visibility =
+       // readingKeyboardButton.visibility =
             if (isReadingMode && sharedPreferencesHelper.getPreferFullscreenChat()) View.VISIBLE else View.GONE
         topBarLayout.visibility = if (isReadingMode) View.GONE else View.VISIBLE
         chatInputContainer.visibility = if (isReadingMode) View.GONE else View.VISIBLE
@@ -4196,6 +4287,7 @@ $cleanContent
             controller.show(WindowInsetsCompat.Type.systemBars())
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
+        updateFloatingImmersiveVisibility()
     }
 
     private fun showWebSearchEngineDialog() {

@@ -4550,7 +4550,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
             put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/OpenChat")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/oxproxion")
         }
 
         val uri = getApplication<Application>().contentResolver
