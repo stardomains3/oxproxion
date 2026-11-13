@@ -33,6 +33,7 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         private const val KEY_WATERMARK_STT_ENABLED = "watermark_stt_enabled"
+        private const val KEY_READING_FOCUS_DIM_ENABLED = "reading_focus_dim_enabled"
         private const val KEY_PREFER_FULLSCREEN_CHAT = "prefer_fullscreen_chat"
         private const val KEY_FLOATING_TRANSCRIBE_X = "floating_transcribe_x"
         private const val KEY_FLOATING_TRANSCRIBE_Y = "floating_transcribe_y"
@@ -406,6 +407,12 @@ class SharedPreferencesHelper(context: Context) {
         mainPrefs.edit { putString(KEY_SORT_ORDER, sortOrder.name) }
     }
     fun getTimeoutMinutes(): Int = mainPrefs.getInt(KEY_TIMEOUT_MINUTES, 5)
+    fun getReadingFocusDimEnabled(): Boolean =
+        mainPrefs.getBoolean(KEY_READING_FOCUS_DIM_ENABLED, false)
+
+    fun saveReadingFocusDimEnabled(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_READING_FOCUS_DIM_ENABLED, enabled) }
+    }
     fun saveToolsPreference(isEnabled: Boolean) {
         mainPrefs.edit {
             putBoolean(KEY_TOOLS_ENABLED, isEnabled)

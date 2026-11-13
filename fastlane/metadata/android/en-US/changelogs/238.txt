@@ -1,0 +1,1 @@
+- Added a user option for if in Reader Mode to highlight the chat bubble nearest the center.

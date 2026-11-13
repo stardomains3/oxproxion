@@ -402,6 +402,7 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        holder.itemView.alpha = 1f   // clean baseline for recycled views
         val message = messages[position]
         var contentText = getMessageText(message.content)
 
@@ -419,6 +420,7 @@ class ChatAdapter(
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
+        holder.itemView.alpha = 1f
         if (holder is AssistantViewHolder) holder.stopPulse()
     }
 

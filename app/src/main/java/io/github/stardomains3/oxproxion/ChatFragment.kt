@@ -128,9 +128,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.compareTo
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -139,8 +136,12 @@ interface OnKeyboardShortcutListener {
 }
 class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListener {
    // private var isFontUpdate = false
+   companion object {
+       private const val READER_DIM_ALPHA = 0.35f
+   }
     private var menuClosedByTouch = false
     private var isReadingMode = false
+    private var dimmingActive = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private lateinit var floatingTranscribeButton: MaterialButton
@@ -1750,6 +1751,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             }
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
+                applyReadingFocusDim()   // no-ops (just a few float compares) when not dimming
                 if (isScrollProgressEnabled) {
                     updateScrollProgress()
                 }
@@ -3721,6 +3723,7 @@ $cleanContent
             updatePttButtonVisibility()
            // chatEditText.requestFocus()
             updateFloatingImmersiveVisibility()
+            chatRecyclerView.post { applyReadingFocusDim() }
             viewModel.checkAdvancedReasoningStatus()
             convoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
           //  topConvoButton.isSelected = sharedPreferencesHelper.getConversationModeEnabled()
@@ -3751,6 +3754,7 @@ $cleanContent
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             insetsController.hide(WindowInsetsCompat.Type.systemBars())
         }
+        chatRecyclerView.post { applyReadingFocusDim() }
 
         /*if (viewModel.isChatLoading.value == false) {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
@@ -4256,6 +4260,61 @@ $cleanContent
         isReadingMode = !isReadingMode
         applyReadingMode()
     }
+    private fun applyReadingFocusDim() {
+        val shouldDim = isReadingMode && sharedPreferencesHelper.getReadingFocusDimEnabled()
+
+        if (!shouldDim) {
+            // Repair stale dim left on views (cached views re-attach WITHOUT rebind)
+            for (i in 0 until chatRecyclerView.childCount) {
+                val child = chatRecyclerView.getChildAt(i)
+                if (child.alpha != 1f) child.alpha = 1f
+            }
+            dimmingActive = false
+            return
+        }
+        val count = chatRecyclerView.childCount
+        if (count == 0) return
+
+        val atBottom = !chatRecyclerView.canScrollVertically(1)
+        val atTop = !chatRecyclerView.canScrollVertically(-1)
+
+        // Whole chat fits on screen: nothing to focus → don't dim anything
+        if (atTop && atBottom) {
+            for (i in 0 until count) {
+                val child = chatRecyclerView.getChildAt(i)
+                if (child.alpha != 1f) child.alpha = 1f
+            }
+            dimmingActive = false
+            return
+        }
+
+        val rvCenter = chatRecyclerView.height / 2f
+
+        val focused: View? = when {
+            // Hard edges: first/last bubble physically can't reach the middle
+            atTop -> chatRecyclerView.getChildAt(0)
+            atBottom -> chatRecyclerView.getChildAt(count - 1)
+            // Reading line: first bubble whose bottom edge reaches the middle
+            else -> {
+                var pick: View? = null
+                for (i in 0 until count) {
+                    val child = chatRecyclerView.getChildAt(i)
+                    if (child.y + child.height >= rvCenter) {
+                        pick = child
+                        break
+                    }
+                }
+                pick ?: chatRecyclerView.getChildAt(count - 1)  // safety net
+            }
+        }
+
+        for (i in 0 until count) {
+            val child = chatRecyclerView.getChildAt(i)
+            child.alpha = if (child === focused) 1f else READER_DIM_ALPHA
+        }
+        dimmingActive = true
+
+    }
 
     private fun applyReadingMode() {
         chatAdapter.setReaderModeUi(isReadingMode)
@@ -4288,6 +4347,8 @@ $cleanContent
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
         updateFloatingImmersiveVisibility()
+        chatRecyclerView.post { applyReadingFocusDim() }
+
     }
 
     private fun showWebSearchEngineDialog() {

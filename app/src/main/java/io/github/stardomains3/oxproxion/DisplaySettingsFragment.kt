@@ -27,6 +27,8 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             view.findViewById<MaterialSwitch>(R.id.floatingTranscribeSwitch)
         val keepScreenOnSwitch =
             view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
+        val readingFocusDimSwitch =
+            view.findViewById<MaterialSwitch>(R.id.readingFocusDimSwitch)
 
         // ---- Load current state ----
         when (prefs.getThemeMode()) {
@@ -37,6 +39,7 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         preferFullscreenChatSwitch.isChecked = prefs.getPreferFullscreenChat()
         floatingTranscribeSwitch.isChecked = prefs.getFloatingTranscribeEnabled()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
+        readingFocusDimSwitch.isChecked = prefs.getReadingFocusDimEnabled()
 
         // ---- Theme Mode (verbatim from your original) ----
         themeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -74,6 +77,9 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         floatingTranscribeSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveFloatingTranscribeEnabled(isChecked)
         }
+        readingFocusDimSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveReadingFocusDimEnabled(isChecked)
+        }
 
         // ---- Keep Screen On (verbatim, incl. live window flag) ----
         keepScreenOnSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -92,7 +98,8 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             view,
             R.id.preferFullscreenChatSwitch,
             R.id.floatingTranscribeSwitch,
-            R.id.keepScreenOnSwitch
+            R.id.keepScreenOnSwitch,
+            R.id.readingFocusDimSwitch
         )
     }
 }
