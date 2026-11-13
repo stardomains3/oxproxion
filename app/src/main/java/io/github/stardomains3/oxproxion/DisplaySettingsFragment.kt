@@ -6,6 +6,7 @@ import android.view.WindowManager
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.materialswitch.MaterialSwitch
 
@@ -27,8 +28,10 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             view.findViewById<MaterialSwitch>(R.id.floatingTranscribeSwitch)
         val keepScreenOnSwitch =
             view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
-        val readingFocusDimSwitch =
-            view.findViewById<MaterialSwitch>(R.id.readingFocusDimSwitch)
+        val fontButton = view.findViewById<MaterialButton>(R.id.fontButton)
+        val fontSizeButton = view.findViewById<MaterialButton>(R.id.fontSizeButton)
+        val readingFocusDimSwitch = view.findViewById<MaterialSwitch>(R.id.readingFocusDimSwitch)
+
 
         // ---- Load current state ----
         when (prefs.getThemeMode()) {
@@ -41,26 +44,22 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
         readingFocusDimSwitch.isChecked = prefs.getReadingFocusDimEnabled()
 
-        // ---- Theme Mode (verbatim from your original) ----
+        fontButton.text = prettyFontName(prefs.getSelectedFont())
+
+        // ---- Theme Mode ----
         themeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) { // Only trigger when a button is selected
+            if (isChecked) {
                 val mode = when (checkedId) {
                     R.id.btnThemeLight -> SharedPreferencesHelper.THEME_LIGHT
                     R.id.btnThemeDark  -> SharedPreferencesHelper.THEME_DARK
                     else               -> SharedPreferencesHelper.THEME_SYSTEM
                 }
-
-                // Save the choice
                 prefs.saveThemeMode(mode)
-
-                // Determine the AppCompatDelegate mode
                 val appMode = when (mode) {
                     SharedPreferencesHelper.THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
                     SharedPreferencesHelper.THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
                     else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 }
-
-                // Apply and Recreate
                 if (AppCompatDelegate.getDefaultNightMode() != appMode) {
                     AppCompatDelegate.setDefaultNightMode(appMode)
                     requireActivity().recreate()
@@ -77,20 +76,31 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         floatingTranscribeSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveFloatingTranscribeEnabled(isChecked)
         }
-        readingFocusDimSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.saveReadingFocusDimEnabled(isChecked)
-        }
 
-        // ---- Keep Screen On (verbatim, incl. live window flag) ----
+        // ---- Keep Screen On ----
         keepScreenOnSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveKeepScreenOnPreference(isChecked)
-
             val window = requireActivity().window
             if (isChecked) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             } else {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
+        }
+
+        readingFocusDimSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveReadingFocusDimEnabled(isChecked)
+        }
+
+
+        // ---- Font: pop back to chat, then show the font dialog there ----
+        fontButton.setOnClickListener {
+            requestChatUi("font_dialog")
+        }
+
+        // ---- Font Size: pop back to chat, then show the +/- controls there ----
+        fontSizeButton.setOnClickListener {
+            requestChatUi("font_size")
         }
 
         // ---- Style switches ----
@@ -101,5 +111,23 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             R.id.keepScreenOnSwitch,
             R.id.readingFocusDimSwitch
         )
+    }
+
+    // 🔥 Tell ChatFragment to show something, then unwind to it.
+    // Result is delivered synchronously to ChatFragment's listener, so
+    // dialog/controls appear as the pops land the user back on the chat.
+    private fun requestChatUi(action: String) {
+        parentFragmentManager.setFragmentResult(
+            ChatFragment.UI_REQUEST_KEY,
+            Bundle().apply { putString("action", action) }
+        )
+        parentFragmentManager.popBackStack() // Display → Settings
+        parentFragmentManager.popBackStack() // Settings → Chat
+    }
+
+    // "geologica_light" → "Geologica light" (good enough for a label)
+    private fun prettyFontName(stored: String?): String {
+        val name = stored?.takeIf { it.isNotBlank() } ?: "geologica_light"
+        return name.replace("_", " ").replaceFirstChar { it.uppercase() }
     }
 }

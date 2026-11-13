@@ -2,6 +2,7 @@ package io.github.stardomains3.oxproxion
 
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.google.android.material.appbar.MaterialToolbar
@@ -17,7 +18,9 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
 
         val prefs = SharedPreferencesHelper(requireContext())
         val viewModel: ChatViewModel by activityViewModels()
+        val convoModeSwitch = view.findViewById<MaterialSwitch>(R.id.convoModeSwitch)
 
+        val streamingSwitch = view.findViewById<MaterialSwitch>(R.id.streamingSwitch)
         val extendedTopBarSwitch = view.findViewById<MaterialSwitch>(R.id.extendedTopBarSwitch)
         val extendedDockSwitch = view.findViewById<MaterialSwitch>(R.id.extendedDockSwitch)
         val expandableInputSwitch = view.findViewById<MaterialSwitch>(R.id.expandableInputSwitch)
@@ -29,6 +32,7 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
         val showCitationsSwitch = view.findViewById<MaterialSwitch>(R.id.showCitationsSwitch)
 
         // ---- Load current state ----
+        streamingSwitch.isChecked = viewModel.isStreamingEnabled.value ?: false
         extendedTopBarSwitch.isChecked = prefs.getExtendedTopBarEnabled()
         animateBarOnErrorSwitch.isChecked = prefs.getAnimateBarOnError()
         showCitationsSwitch.isChecked = prefs.getShowCitations()
@@ -38,19 +42,50 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
         extendedDockSwitch.isChecked = viewModel.isExtendedDockEnabled.value ?: false
         presetsExtendedSwitch.isChecked = viewModel.isPresetsExtendedEnabled.value ?: false
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
+        convoModeSwitch.isChecked = prefs.getConversationModeEnabled()
 
-        // ---- Listeners (verbatim from your original) ----
-        extendedTopBarSwitch.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.toggleExtendedTopBar()  // VM saves + notifies Chat
+
+        // ---- Streaming (moved from chat menu, Lyria guard preserved) ----
+        streamingSwitch.setOnCheckedChangeListener { _, isChecked ->
+            // ECHO GUARD: skip events that merely reflect the VM's current state
+            // (observer-driven updates, and our own Lyria revert below).
+            val current = viewModel.isStreamingEnabled.value ?: false
+            if (isChecked == current) return@setOnCheckedChangeListener
+
+            val model = viewModel.activeChatModel.value ?: ""
+            val isLyria = model.contains("google/lyria", ignoreCase = true)
+            if (isLyria && !isChecked) {
+                // Refuse: revert the switch visually WITHOUT toggling the VM.
+                // Setting isChecked re-fires this listener, but then isChecked == current
+                // and the echo guard above swallows it. No loop, no accidental toggle.
+                streamingSwitch.isChecked = true
+                Toast.makeText(
+                    requireContext(),
+                    "Streaming is required for Lyria music models.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                viewModel.toggleStreaming()  // VM saves + notifies Chat
+            }
         }
-        extendedTopBarSwitch.isChecked = prefs.getExtendedTopBarEnabled() // keep synced
+        viewModel.isStreamingEnabled.observe(viewLifecycleOwner) { enabled ->
+            streamingSwitch.isChecked = enabled
+        }
+
+        // ---- Everything below: unchanged from your working version ----
+        extendedTopBarSwitch.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.toggleExtendedTopBar()
+        }
 
         extendedDockSwitch.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.toggleExtendedDock()  // VM saves + notifies Chat
+            viewModel.toggleExtendedDock()
         }
 
         expandableInputSwitch.setOnCheckedChangeListener { _, _ ->
             viewModel.toggleExpandableInput()
+        }
+        convoModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveConversationModeEnabled(isChecked)
         }
 
         presetsExtendedSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -68,7 +103,7 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
         }
 
         scrollButtonsSwitch.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.toggleScrollers()  // VM saves prefs + notifies Chat instantly
+            viewModel.toggleScrollers()
         }
 
         volumeScrollSwitch.setOnCheckedChangeListener { _, _ ->
@@ -89,6 +124,7 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
         // ---- Style all switches ----
         styleAllSwitches(
             view,
+            R.id.streamingSwitch,
             R.id.extendedTopBarSwitch,
             R.id.extendedDockSwitch,
             R.id.expandableInputSwitch,
@@ -97,7 +133,9 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
             R.id.scrollButtonsSwitch,
             R.id.volumeScrollSwitch,
             R.id.animateBarOnErrorSwitch,
-            R.id.showCitationsSwitch
+            R.id.showCitationsSwitch,
+            R.id.convoModeSwitch
+
         )
     }
 }

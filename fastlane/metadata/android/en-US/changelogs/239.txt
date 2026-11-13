@@ -1,0 +1,1 @@
+- Moved less-often used menu items to the new streamlined Settings.
