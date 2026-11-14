@@ -1,0 +1,2 @@
+- When text is entered in the prompt box, the "Magic Prompt" spelling/grammar corrector button now appears in the menu.
+- A new button in the menu displays your current chat message memory settings; click it to change the setting.

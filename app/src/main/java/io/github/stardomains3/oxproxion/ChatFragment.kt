@@ -218,6 +218,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private lateinit var leftButtonContainer: LinearLayout
     private lateinit var rightButtonContainer: LinearLayout
     private lateinit var menuButton: MaterialButton
+    private lateinit var magicCorrectButton: MaterialButton
+    private lateinit var chatMemoryMenuButton: MaterialButton
+
     private lateinit var backcopyButton: MaterialButton
     private lateinit var backButton: MaterialButton
     private lateinit var progressBar: View
@@ -511,6 +514,10 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         topSettingsButton = view.findViewById(R.id.topSettingsButton)
         fullReaderButton = view.findViewById(R.id.fullReaderButton)
         menuButton = view.findViewById(R.id.menuButton)
+        magicCorrectButton = view.findViewById(R.id.magicCorrectButton)
+        chatMemoryMenuButton = view.findViewById(R.id.chatMemoryMenuButton)
+        chatMemoryMenuButton.isVisible = true
+        updateChatMemoryButtonText()
         backcopyButton = view.findViewById(R.id.backcopyButton)
         homeButton = view.findViewById(R.id.homeButton)
         backButton = view.findViewById(R.id.backButton)
@@ -715,6 +722,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             }
             override fun afterTextChanged(s: android.text.Editable?) {
                 updateButtonVisibility()
+                magicCorrectButton.isVisible = !s.isNullOrEmpty()
             }
         })
         pdfGenerator = PdfGenerator(requireContext())
@@ -2481,6 +2489,17 @@ $cleanContent
             }
         }
 
+        magicCorrectButton.setOnClickListener {
+            hideMenu()
+            correctInputText()
+        }
+
+        chatMemoryMenuButton.setOnClickListener {
+            hideMenu()
+            val dialog = ChatMemoryDialogFragment()
+            dialog.onMemoryChanged = { updateChatMemoryButtonText() }
+            dialog.show(childFragmentManager, "ChatMemoryDialogFragment")
+        }
 
         menuButton.setOnClickListener {
             hideTempCopyButton()
@@ -2492,34 +2511,10 @@ $cleanContent
             }
         }
         menuButton.setOnLongClickListener {
-            val inputText = chatEditText.text.toString().trim()
-            if (inputText.isBlank()) {
-                Toast.makeText(requireContext(), "No text to correct", Toast.LENGTH_SHORT).show()
-            } else if (viewModel.activeChatApiKey.isBlank()) {
-                Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT).show()
-            } else {
-                menuButton.isSelected = true
-                menuButton.setIconResource(R.drawable.ic_magic)
-
-                lifecycleScope.launch {
-                    val corrected = viewModel.correctText(inputText)
-                    if (!corrected.isNullOrBlank()) {
-                        chatEditText.setText(corrected)
-                        chatEditText.setSelection(corrected.length)
-                    } else {
-                        Toast.makeText(
-
-                            requireContext(),
-                            "Correction failed",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    menuButton.setIconResource(R.drawable.ic_menudot)
-                    menuButton.isSelected = false
-                }
-            }
+            correctInputText()
             true
         }
+
         fullReaderButton.setOnClickListener {
             hideMenu()
             toggleReadingMode()   // no focus position → full, non-dimmed reader mode
@@ -3113,12 +3108,15 @@ $cleanContent
         headerContainer.visibility = View.VISIBLE
         (chatFrameView as ViewGroup).bringChildToFront(headerContainer)
         dimOverlay?.visibility = View.VISIBLE
+        updateChatMemoryButtonText()
+        chatMemoryMenuButton.isVisible = true
+        updateMenuRowVisibilities()   // <-- add this
         centerWatermarkIcon.animate()
             .alpha(0f)
             .setDuration(300)
             .start()
-
     }
+
     private fun applyPttRestIconSize() {
         pttButton.post {
             val shortestSide = minOf(pttButton.width, pttButton.height)
@@ -3128,6 +3126,33 @@ $cleanContent
             pttButton.iconSize = pttRestIconPx
         }
     }
+    private fun correctInputText() {
+        val inputText = chatEditText.text.toString().trim()
+        when {
+            inputText.isBlank() -> return
+            viewModel.activeChatApiKey.isBlank() ->
+                Toast.makeText(requireContext(), "API Key is not set.", Toast.LENGTH_SHORT).show()
+            else -> {
+                magicCorrectButton.isSelected = true
+                lifecycleScope.launch {
+                    val corrected = viewModel.correctText(inputText)
+                    if (!corrected.isNullOrBlank()) {
+                        chatEditText.setText(corrected)
+                        chatEditText.setSelection(corrected.length)
+                    } else {
+                        Toast.makeText(requireContext(), "Correction failed", Toast.LENGTH_SHORT).show()
+                    }
+                    magicCorrectButton.isSelected = false
+                }
+            }
+        }
+    }
+
+    private fun updateChatMemoryButtonText() {
+        val count = sharedPreferencesHelper.getChatMemoryCount()
+        chatMemoryMenuButton.text = if (count == Int.MAX_VALUE) "All" else count.toString()
+    }
+
     private fun hideMenu() {
         dimOverlay?.visibility = View.GONE
         headerContainer.visibility = View.GONE
