@@ -1,153 +1,182 @@
-<!-- res/layout/bottom_sheet_model_picker.xml -->
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical"
-    android:fitsSystemWindows="true"
     android:background="?attr/colorSurface"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
     tools:context=".BotModelPickerFragment">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:title="Your Models"
-        app:titleTextColor="?android:attr/textColorPrimary"
         android:background="?attr/colorSurface"
         app:menu="@menu/bottom_sheet_model_picker_menu"
-        app:navigationIcon="@drawable/is_backarrow" />
+        app:navigationIcon="@drawable/is_backarrow"
+        app:title="Your Models"
+        app:titleTextColor="?android:attr/textColorPrimary" />
 
     <!-- ConstraintLayout for filter bars -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="8dp">
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
         <!-- Sort Bar -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/sortBar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:singleSelection="true">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/sortAlphabeticalButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Alphabetical"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/sortDateButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Newest"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Type Filter Bar -->
-        <com.google.android.material.button.MaterialButtonToggleGroup
+        <!--
+            Horizontally scrolling type-filter chips.
+            Chips retain their natural width, so their text is never truncated.
+        -->
+        <HorizontalScrollView
             android:id="@+id/filterBar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/sortBar"
             android:layout_marginTop="8dp"
-            app:singleSelection="true">
+            android:clipToPadding="false"
+            android:fillViewport="false"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:scrollbars="none"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/sortBar">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/filterAllButton"
-                android:layout_width="0dp"
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/filterChipGroup"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="All"
-                app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:chipSpacingHorizontal="8dp"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/filterVisionButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Vision"
-                app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/filterAllButton"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="All"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/toggle_background_selector"
+                    app:chipStrokeColor="@color/chestnut"
+                    app:chipStrokeWidth="1dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/filterImageGenButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Image Gen"
-                app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/filterVisionButton"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="Vision"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/toggle_background_selector"
+                    app:chipStrokeColor="@color/chestnut"
+                    app:chipStrokeWidth="1dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/filterTranscriptionButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Transc."
-                app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/filterImageGenButton"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="Image Generation"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/toggle_background_selector"
+                    app:chipStrokeColor="@color/chestnut"
+                    app:chipStrokeWidth="1dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/filterTranscriptionButton"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="Transcription"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/toggle_background_selector"
+                    app:chipStrokeColor="@color/chestnut"
+                    app:chipStrokeWidth="1dp" />
+
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
 
         <!-- Cost Filter Bar -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/costFilterBar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/filterBar"
             android:layout_marginTop="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/filterBar"
             app:singleSelection="true">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/costFilterAllButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="All"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/costFilterFreeButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Free"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/costFilterPaidButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Paid"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <!-- Source Filter Bar -->
@@ -155,41 +184,41 @@
             android:id="@+id/sourceFilterBar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/costFilterBar"
             android:layout_marginTop="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/costFilterBar"
             app:singleSelection="true">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/sourceFilterAllButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="All"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/sourceFilterLanButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="LAN"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/sourceFilterCloudButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Cloud"
                 app:backgroundTint="@color/toggle_background_selector"
-                app:strokeColor="@color/chestnut"
-                style="?attr/materialButtonOutlinedStyle" />
+                app:strokeColor="@color/chestnut" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -203,8 +232,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:cacheColorHint="@android:color/transparent"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            android:scrollbars="vertical"/>
+            android:scrollbars="vertical"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabAddModel"

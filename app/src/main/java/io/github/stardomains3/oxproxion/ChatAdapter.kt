@@ -62,13 +62,16 @@ class ChatAdapter(
     private val onSaveText: (Int, String) -> Unit,
     private val onCollapse: () -> Unit,
     private val onSaveAsFile: (String) -> Unit,
-    private val onReadingMode: () -> Unit
+    private val onReadingMode: (Int) -> Unit
+
 
 
 
 
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private var isReaderMode = false
+    private var focusedPosition: Int? = null
+
     private val collapsedStates = mutableMapOf<String, Boolean>()
     private val renderCache = HashMap<FlexibleMessage, CharSequence>()
     private val noCopyFactory = NoCopySpannableFactory.getInstance()
@@ -87,6 +90,12 @@ class ChatAdapter(
         isReaderMode = enabled
         notifyDataSetChanged()   // rebind everything so buttons hide/show
     }
+    fun setReaderFocus(position: Int?) {
+        if (focusedPosition == position) return
+        focusedPosition = position
+        notifyDataSetChanged()   // rebind so alphas update
+    }
+
 
     init {
         // 3. OPTIMIZATION: Consumer loop
@@ -402,7 +411,7 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        holder.itemView.alpha = 1f   // clean baseline for recycled views
+        holder.itemView.alpha = if (focusedPosition == null || focusedPosition == position) 1f else 0.35f
         val message = messages[position]
         var contentText = getMessageText(message.content)
 
@@ -568,7 +577,7 @@ class ChatAdapter(
             resendButton.setOnClickListener {
                 onRedoMessage(bindingAdapterPosition, message.content)
             }
-            readingModeButton.setOnClickListener { onReadingMode() }
+            readingModeButton.setOnClickListener { onReadingMode(bindingAdapterPosition) }
             deleteButton.setOnClickListener {
                 onDeleteMessage(bindingAdapterPosition)
             }
@@ -881,7 +890,7 @@ class ChatAdapter(
                 Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
                 true
             }
-            readingModeButton.setOnClickListener { onReadingMode() }
+            readingModeButton.setOnClickListener { onReadingMode(bindingAdapterPosition) }
             shareButton.setOnClickListener {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"

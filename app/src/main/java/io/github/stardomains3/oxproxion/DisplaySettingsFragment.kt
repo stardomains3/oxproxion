@@ -30,7 +30,7 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
         val fontButton = view.findViewById<MaterialButton>(R.id.fontButton)
         val fontSizeButton = view.findViewById<MaterialButton>(R.id.fontSizeButton)
-        val readingFocusDimSwitch = view.findViewById<MaterialSwitch>(R.id.readingFocusDimSwitch)
+        //val readingFocusDimSwitch = view.findViewById<MaterialSwitch>(R.id.readingFocusDimSwitch)
 
 
         // ---- Load current state ----
@@ -42,7 +42,7 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         preferFullscreenChatSwitch.isChecked = prefs.getPreferFullscreenChat()
         floatingTranscribeSwitch.isChecked = prefs.getFloatingTranscribeEnabled()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
-        readingFocusDimSwitch.isChecked = prefs.getReadingFocusDimEnabled()
+       // readingFocusDimSwitch.isChecked = prefs.getReadingFocusDimEnabled()
 
         fontButton.text = prettyFontName(prefs.getSelectedFont())
 
@@ -88,9 +88,9 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             }
         }
 
-        readingFocusDimSwitch.setOnCheckedChangeListener { _, isChecked ->
+       /* readingFocusDimSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveReadingFocusDimEnabled(isChecked)
-        }
+        }*/
 
 
         // ---- Font: pop back to chat, then show the font dialog there ----
@@ -108,8 +108,8 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             view,
             R.id.preferFullscreenChatSwitch,
             R.id.floatingTranscribeSwitch,
-            R.id.keepScreenOnSwitch,
-            R.id.readingFocusDimSwitch
+            R.id.keepScreenOnSwitch
+//R.id.readingFocusDimSwitch
         )
     }
 

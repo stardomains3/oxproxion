@@ -12,6 +12,7 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -26,7 +27,7 @@ class BotModelPickerFragment : Fragment() {
     private var filteredModels: MutableList<LlmModel> = mutableListOf()
 
     private lateinit var sortBar: MaterialButtonToggleGroup
-    private lateinit var filterBar: MaterialButtonToggleGroup
+    private lateinit var filterBar: ChipGroup
     private lateinit var costFilterBar: MaterialButtonToggleGroup
     private lateinit var sourceFilterBar: MaterialButtonToggleGroup
 
@@ -62,7 +63,7 @@ class BotModelPickerFragment : Fragment() {
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         val fabAddModel = view.findViewById<FloatingActionButton>(R.id.fabAddModel)
         sortBar = view.findViewById(R.id.sortBar)
-        filterBar = view.findViewById(R.id.filterBar)
+        filterBar = view.findViewById(R.id.filterChipGroup)
         costFilterBar = view.findViewById(R.id.costFilterBar)
         sourceFilterBar = view.findViewById(R.id.sourceFilterBar)
 
@@ -91,24 +92,30 @@ class BotModelPickerFragment : Fragment() {
         // --- APPLY VISUAL CHECKS ---
         updateSortButtons(currentSortOrder)
 
-        filterBar.check(when (currentFilterType) {
-            FilterType.ALL -> R.id.filterAllButton
-            FilterType.VISION -> R.id.filterVisionButton
-            FilterType.IMAGE_GEN -> R.id.filterImageGenButton
-            FilterType.TRANSCRIPTION -> R.id.filterTranscriptionButton
-        })
+        filterBar.check(
+            when (currentFilterType) {
+                FilterType.ALL -> R.id.filterAllButton
+                FilterType.VISION -> R.id.filterVisionButton
+                FilterType.IMAGE_GEN -> R.id.filterImageGenButton
+                FilterType.TRANSCRIPTION -> R.id.filterTranscriptionButton
+            }
+        )
 
-        costFilterBar.check(when (currentCostFilter) {
-            CostFilter.ALL -> R.id.costFilterAllButton
-            CostFilter.FREE -> R.id.costFilterFreeButton
-            CostFilter.PAID -> R.id.costFilterPaidButton
-        })
+        costFilterBar.check(
+            when (currentCostFilter) {
+                CostFilter.ALL -> R.id.costFilterAllButton
+                CostFilter.FREE -> R.id.costFilterFreeButton
+                CostFilter.PAID -> R.id.costFilterPaidButton
+            }
+        )
 
-        sourceFilterBar.check(when (currentSourceFilter) {
-            SourceFilter.ALL -> R.id.sourceFilterAllButton
-            SourceFilter.LAN -> R.id.sourceFilterLanButton
-            SourceFilter.CLOUD -> R.id.sourceFilterCloudButton
-        })
+        sourceFilterBar.check(
+            when (currentSourceFilter) {
+                SourceFilter.ALL -> R.id.sourceFilterAllButton
+                SourceFilter.LAN -> R.id.sourceFilterLanButton
+                SourceFilter.CLOUD -> R.id.sourceFilterCloudButton
+            }
+        )
 
         // Toolbar setup
         toolbar.setNavigationOnClickListener { parentFragmentManager.popBackStack() }
@@ -155,8 +162,8 @@ class BotModelPickerFragment : Fragment() {
             }
         }
 
-        filterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) {
+        filterBar.setOnCheckedChangeListener { _, checkedId ->
+            if (checkedId != View.NO_ID) {
                 currentFilterType = when (checkedId) {
                     R.id.filterAllButton -> FilterType.ALL
                     R.id.filterVisionButton -> FilterType.VISION

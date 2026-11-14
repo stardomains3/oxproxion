@@ -137,12 +137,14 @@ interface OnKeyboardShortcutListener {
 class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListener {
    // private var isFontUpdate = false
    companion object {
-       private const val READER_DIM_ALPHA = 0.35f
+      // private const val READER_DIM_ALPHA = 0.35f
        const val UI_REQUEST_KEY = "chat_ui_request"
    }
     private var menuClosedByTouch = false
     private var isReadingMode = false
-    private var dimmingActive = false
+    private var readerFocusPosition: Int? = null
+    private lateinit var fullReaderButton: MaterialButton
+    // private var dimmingActive = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private lateinit var floatingTranscribeButton: MaterialButton
@@ -507,6 +509,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
 
         topPresetsButton = view.findViewById(R.id.topPresetsButton)
         topSettingsButton = view.findViewById(R.id.topSettingsButton)
+        fullReaderButton = view.findViewById(R.id.fullReaderButton)
         menuButton = view.findViewById(R.id.menuButton)
         backcopyButton = view.findViewById(R.id.backcopyButton)
         homeButton = view.findViewById(R.id.homeButton)
@@ -955,6 +958,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
            // pdfChatButton.isVisible = hasMessages
             //copyChatButton.isVisible = hasMessages
             buttonsRow2.isVisible = hasMessages
+            fullReaderButton.isVisible = hasMessages
         }
 
         fun areAnimationsEnabled(context: Context): Boolean {
@@ -1729,9 +1733,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             onSaveAsFile = { content ->
                 showSaveFileDialog(content)
             },
-            onReadingMode = { toggleReadingMode() }
-
-
+            onReadingMode = { position -> toggleReadingMode(position) }
         )
         chatRecyclerView.apply {
             adapter = chatAdapter
@@ -1746,7 +1748,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             }
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
-                applyReadingFocusDim()   // no-ops (just a few float compares) when not dimming
+               // applyReadingFocusDim()   // no-ops (just a few float compares) when not dimming
                 if (isScrollProgressEnabled) {
                     updateScrollProgress()
                 }
@@ -2517,6 +2519,10 @@ $cleanContent
                 }
             }
             true
+        }
+        fullReaderButton.setOnClickListener {
+            hideMenu()
+            toggleReadingMode()   // no focus position → full, non-dimmed reader mode
         }
 
         settingsButton.setOnClickListener {
@@ -3539,7 +3545,7 @@ $cleanContent
             updatePttButtonVisibility()
            // chatEditText.requestFocus()
             updateFloatingImmersiveVisibility()
-            chatRecyclerView.post { applyReadingFocusDim() }
+          //  chatRecyclerView.post { applyReadingFocusDim() }
             viewModel.checkAdvancedReasoningStatus()
         }
     }
@@ -3568,7 +3574,7 @@ $cleanContent
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             insetsController.hide(WindowInsetsCompat.Type.systemBars())
         }
-        chatRecyclerView.post { applyReadingFocusDim() }
+      //  chatRecyclerView.post { applyReadingFocusDim() }
 
         /*if (viewModel.isChatLoading.value == false) {
             if (viewModel.chatMessages.value.isNullOrEmpty()) {
@@ -4070,11 +4076,13 @@ $cleanContent
         titleView?.paintFlags = titleView.paintFlags.or(Paint.UNDERLINE_TEXT_FLAG)
     }
 
-    private fun toggleReadingMode() {
+    private fun toggleReadingMode(focusPosition: Int? = null) {
         isReadingMode = !isReadingMode
+        readerFocusPosition = if (isReadingMode) focusPosition else null
         applyReadingMode()
     }
-    private fun applyReadingFocusDim() {
+
+    /*private fun applyReadingFocusDim() {
         val shouldDim = isReadingMode && sharedPreferencesHelper.getReadingFocusDimEnabled()
 
         if (!shouldDim) {
@@ -4128,7 +4136,7 @@ $cleanContent
         }
         dimmingActive = true
 
-    }
+    }*/
 
     private fun applyReadingMode() {
         chatAdapter.setReaderModeUi(isReadingMode)
@@ -4161,9 +4169,27 @@ $cleanContent
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
         updateFloatingImmersiveVisibility()
-        chatRecyclerView.post { applyReadingFocusDim() }
-
+        chatAdapter.setReaderFocus(readerFocusPosition)
+        readerFocusPosition?.let { centerFocusedItem(it) }
     }
+    private fun centerFocusedItem(position: Int) {
+        chatRecyclerView.post {
+            val vh = chatRecyclerView.findViewHolderForAdapterPosition(position)
+            if (vh == null) {
+                // Not bound yet — scroll roughly there and retry once bound
+                layoutManager.scrollToPositionWithOffset(position, 0)
+                chatRecyclerView.post { centerFocusedItem(position) }
+                return@post
+            }
+            val rvH = chatRecyclerView.height
+            val itemH = vh.itemView.height
+            // Fits on screen → center it. Taller than screen → top-aligned,
+            // overflow hangs off the bottom, still scrollable.
+            val offset = if (itemH >= rvH) 0 else (rvH - itemH) / 2
+            layoutManager.scrollToPositionWithOffset(position, offset)
+        }
+    }
+
 
     private fun showWebSearchEngineDialog() {
         val engines = listOf(

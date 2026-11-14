@@ -1,5 +1,6 @@
 package io.github.stardomains3.oxproxion
 
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -26,7 +28,7 @@ class OpenRouterModelsFragment : Fragment() {
     private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
     private lateinit var sortBar: MaterialButtonToggleGroup
     private lateinit var searchView: SearchView
-    private lateinit var filterBar: MaterialButtonToggleGroup
+    private lateinit var filterBar: ChipGroup
     private lateinit var costFilterBar: MaterialButtonToggleGroup
     private var allModels: List<LlmModel> = emptyList()
     private var filteredModels: List<LlmModel> = emptyList()
@@ -46,7 +48,8 @@ class OpenRouterModelsFragment : Fragment() {
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.fragment_open_router_models, container, false)
@@ -66,10 +69,15 @@ class OpenRouterModelsFragment : Fragment() {
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_refresh_models -> {
-                    Toast.makeText(requireContext(), "Refreshing models…", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "Refreshing models…",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     viewModel.fetchOpenRouterModels()
                     true
                 }
+
                 else -> false
             }
         }
@@ -79,6 +87,7 @@ class OpenRouterModelsFragment : Fragment() {
         searchView.queryHint = "Search models..."
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean = true
+
             override fun onQueryTextChange(newText: String?): Boolean {
                 filterModels(newText ?: "")
                 return true
@@ -87,8 +96,9 @@ class OpenRouterModelsFragment : Fragment() {
 
         val infoCard = view.findViewById<CardView>(R.id.infoCard)
         val closeInfoButton = view.findViewById<ImageView>(R.id.closeInfoButton)
+
         sortBar = view.findViewById(R.id.sortBar)
-        filterBar = view.findViewById(R.id.filterBar)
+        filterBar = view.findViewById(R.id.filterChipGroup)
         costFilterBar = view.findViewById(R.id.costFilterBar)
 
         if (sharedPreferencesHelper.hasDismissedOpenRouterInfo()) {
@@ -111,38 +121,47 @@ class OpenRouterModelsFragment : Fragment() {
             "TRANSCRIPTION" -> FilterType.TRANSCRIPTION
             else -> FilterType.ALL
         }
+
         currentCostFilter = when (sharedPreferencesHelper.getOpenRouterCostFilter()) {
             "FREE" -> CostFilter.FREE
             "PAID" -> CostFilter.PAID
             else -> CostFilter.ALL
         }
 
-        // 2. Visually check the correct buttons based on loaded state
-        filterBar.check(when (currentFilterType) {
-            FilterType.ALL -> R.id.filterAllButton
-            FilterType.VISION -> R.id.filterVisionButton
-            FilterType.IMAGE_GEN -> R.id.filterImageGenButton
-            FilterType.TRANSCRIPTION -> R.id.filterTranscriptionButton
-        })
+        // 2. Visually check the correct controls based on loaded state
+        filterBar.check(
+            when (currentFilterType) {
+                FilterType.ALL -> R.id.filterAllButton
+                FilterType.VISION -> R.id.filterVisionButton
+                FilterType.IMAGE_GEN -> R.id.filterImageGenButton
+                FilterType.TRANSCRIPTION -> R.id.filterTranscriptionButton
+            }
+        )
 
-        costFilterBar.check(when (currentCostFilter) {
-            CostFilter.ALL -> R.id.costFilterAllButton
-            CostFilter.FREE -> R.id.costFilterFreeButton
-            CostFilter.PAID -> R.id.costFilterPaidButton
-        })
+        costFilterBar.check(
+            when (currentCostFilter) {
+                CostFilter.ALL -> R.id.costFilterAllButton
+                CostFilter.FREE -> R.id.costFilterFreeButton
+                CostFilter.PAID -> R.id.costFilterPaidButton
+            }
+        )
 
         // 3. Listeners that save the new selection
         sortBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 when (checkedId) {
-                    R.id.sortAlphabeticalButton -> viewModel.setSortOrder(SortOrder.ALPHABETICAL)
-                    R.id.sortDateButton -> viewModel.setSortOrder(SortOrder.BY_DATE)
+                    R.id.sortAlphabeticalButton -> {
+                        viewModel.setSortOrder(SortOrder.ALPHABETICAL)
+                    }
+
+                    R.id.sortDateButton -> {
+                        viewModel.setSortOrder(SortOrder.BY_DATE)
+                    }
                 }
             }
         }
-
-        filterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) {
+        filterBar.setOnCheckedChangeListener { _, checkedId ->
+            if (checkedId != View.NO_ID) {
                 currentFilterType = when (checkedId) {
                     R.id.filterAllButton -> FilterType.ALL
                     R.id.filterVisionButton -> FilterType.VISION
@@ -150,10 +169,12 @@ class OpenRouterModelsFragment : Fragment() {
                     R.id.filterTranscriptionButton -> FilterType.TRANSCRIPTION
                     else -> FilterType.ALL
                 }
+
                 sharedPreferencesHelper.saveOpenRouterFilterType(currentFilterType.name)
                 filterModels(searchView.query.toString())
             }
         }
+
 
         costFilterBar.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
@@ -163,6 +184,7 @@ class OpenRouterModelsFragment : Fragment() {
                     R.id.costFilterPaidButton -> CostFilter.PAID
                     else -> CostFilter.ALL
                 }
+
                 sharedPreferencesHelper.saveOpenRouterCostFilter(currentCostFilter.name)
                 filterModels(searchView.query.toString())
             }
@@ -232,7 +254,12 @@ class OpenRouterModelsFragment : Fragment() {
             Toast.makeText(context, "Model already exists.", Toast.LENGTH_SHORT).show()
         } else {
             viewModel.addCustomModel(model)
-            Toast.makeText(context, "Model added: ${model.displayName}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Model added: ${model.displayName}",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 }
+
