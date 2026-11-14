@@ -143,6 +143,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private var menuClosedByTouch = false
     private var isReadingMode = false
     private var readerFocusPosition: Int? = null
+    private var originalRvPaddingTop = -1
+    private var originalRvPaddingBottom = -1
+
     private lateinit var fullReaderButton: MaterialButton
     // private var dimmingActive = false
     private lateinit var speechLauncher: ActivityResultLauncher<Intent>
@@ -4162,7 +4165,40 @@ $cleanContent
         dimmingActive = true
 
     }*/
+    private fun centerFocusedItem(position: Int) {
+        chatRecyclerView.post {
+            val vh = chatRecyclerView.findViewHolderForAdapterPosition(position)
+            if (vh == null) {
+                // Bring it into the viewport so RecyclerView binds it
+                layoutManager.scrollToPositionWithOffset(position, 0)
+                chatRecyclerView.doOnPreDraw { centerFocusedItem(position) }
+                return@post
+            }
 
+            val rvH = chatRecyclerView.height
+            val itemH = vh.itemView.height
+
+            if (originalRvPaddingTop == -1) {
+                originalRvPaddingTop = chatRecyclerView.paddingTop
+                originalRvPaddingBottom = chatRecyclerView.paddingBottom
+            }
+
+            val pad = if (itemH >= rvH) 0 else (rvH - itemH) / 2
+
+            // Crucial: allow items to draw/scroll into the padding area
+            // so the 2nd item can push the 1st item up into the top padding
+            chatRecyclerView.clipToPadding = false
+            chatRecyclerView.setPadding(0, pad, 0, pad)
+
+            // Offset is 0 because startAfterPadding is ALREADY at `pad`!
+            layoutManager.scrollToPositionWithOffset(position, 0)
+        }
+    }
+    private fun restoreRecyclerViewPadding() {
+        if (originalRvPaddingTop != -1) {
+            chatRecyclerView.setPadding(0, originalRvPaddingTop, 0, originalRvPaddingBottom)
+        }
+    }
     private fun applyReadingMode() {
         chatAdapter.setReaderModeUi(isReadingMode)
        // readingKeyboardButton.visibility =
@@ -4195,9 +4231,14 @@ $cleanContent
         }
         updateFloatingImmersiveVisibility()
         chatAdapter.setReaderFocus(readerFocusPosition)
-        readerFocusPosition?.let { centerFocusedItem(it) }
+        if (readerFocusPosition != null) {
+            centerFocusedItem(readerFocusPosition!!)
+        } else {
+            restoreRecyclerViewPadding()
+        }
+
     }
-    private fun centerFocusedItem(position: Int) {
+    private fun centerFocusedItemold(position: Int) {
         chatRecyclerView.post {
             val vh = chatRecyclerView.findViewHolderForAdapterPosition(position)
             if (vh == null) {

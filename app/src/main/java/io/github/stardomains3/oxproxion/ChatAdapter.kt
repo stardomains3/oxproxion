@@ -411,7 +411,7 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        holder.itemView.alpha = if (focusedPosition == null || focusedPosition == position) 1f else 0.35f
+        holder.itemView.alpha = if (focusedPosition == null || focusedPosition == position) 1f else 0.0f
         val message = messages[position]
         var contentText = getMessageText(message.content)
 
