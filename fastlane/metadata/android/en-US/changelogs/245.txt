@@ -1,0 +1,1 @@
+- Optimized the AI suggest chat title function to be a lot more token efficient.

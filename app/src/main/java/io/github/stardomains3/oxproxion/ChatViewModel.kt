@@ -509,6 +509,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // cached OpenRouter catalogue (e.g. isPureImageModel). Users with an older
         // cached list get one automatic refresh, then never again.
         private const val MODEL_LIST_SCHEMA_VERSION = 2
+        // --- Suggested-title context budgeting ---
+        // Overall excerpt cap (~1.5k tokens). Plenty for a title, small enough
+        // that it won't hurt even a 2k-context LAN model.
+        private const val TITLE_CONTEXT_CHAR_LIMIT = 6_000
+        // Opening exchanges (establish topic) + latest exchanges (capture drift)
+        private const val TITLE_HEAD_MESSAGES = 6
+        private const val TITLE_TAIL_MESSAGES = 2
+        // Refinement #1: per-message cap so one giant pasted article can't eat the whole budget
+        private const val TITLE_PER_MESSAGE_CHAR_LIMIT = 600
     }
     //val generatedImages = mutableMapOf<Int, String>()
     private var pendingUserImageUri: String? = null  // String (toString())
@@ -795,6 +804,72 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun onModelPreferenceSaved() {
         _modelPreferenceToSave.value = null
     }
+
+    /**
+     * Builds a compact chat excerpt for title generation only — NOT for export.
+     *
+     * Strategy: send the opening exchanges (establishes the topic) plus the most
+     * recent ones (captures late pivots), never the whole chat.
+     *
+     * - Refinement #1: each message is truncated to [TITLE_PER_MESSAGE_CHAR_LIMIT],
+     *   so a pasted 20k-word article as the first user message can't consume
+     *   the entire budget.
+     * - Refinement #2: only user/assistant text is included. Tool results,
+     *   tool-call payloads, and reasoning/thinking are skipped entirely —
+     *   getMessageText() pulls just the "text" part of multimodal arrays, so
+     *   base64 image payloads never make it in either.
+     * - Hard overall cap of [TITLE_CONTEXT_CHAR_LIMIT] as a final safety net.
+     */
+    private fun getChatHistoryForTitle(): String {
+        val messages = _chatMessages.value ?: return ""
+
+        // Refinement #2: text-only user/assistant turns. Skips "tool" role
+        // messages and drops "working..." placeholders / empty bubbles.
+        val candidates: List<Pair<String, String>> = messages.mapNotNull { message ->
+            if (message.role != "user" && message.role != "assistant") return@mapNotNull null
+            val text = getMessageText(message.content).trim()
+            if (text.isEmpty() || text == "working...") return@mapNotNull null
+            message.role to text
+        }
+
+        if (candidates.isEmpty()) return ""
+
+        // Head establishes the topic; tail catches "actually, let's talk about X instead".
+        val headIdx = (0 until TITLE_HEAD_MESSAGES).filter { it < candidates.size }
+        val tailIdx = ((candidates.size - TITLE_TAIL_MESSAGES) until candidates.size)
+            .filter { it >= 0 }
+        // distinct() merges overlap on short chats; sorted() restores chronology
+        val indices = (headIdx + tailIdx).distinct().sorted()
+
+        val sb = StringBuilder()
+        for (i in indices) {
+            val (role, fullText) = candidates[i]
+
+            // Refinement #1: truncate individual messages. 600 chars is far more
+            // than a title model ever needs from a single turn.
+            val text = if (fullText.length > TITLE_PER_MESSAGE_CHAR_LIMIT) {
+                fullText.take(TITLE_PER_MESSAGE_CHAR_LIMIT) + "\n[...message truncated]"
+            } else {
+                fullText
+            }
+
+            val label = if (role == "user") "User" else "AI"
+            val segment = "$label: $text"
+
+            // Hard overall cap — trim or bail if the budget is exhausted
+            val remaining = TITLE_CONTEXT_CHAR_LIMIT - sb.length
+            if (remaining <= 200) break
+            if (segment.length > remaining) {
+                sb.append(segment.take(remaining)).append("\n[...excerpt truncated]")
+                break
+            }
+            sb.append(segment).append("\n\n")
+        }
+        return sb.toString().trim()
+    }
+
+
+
     fun getFormattedChatHistoryTxt(): String {
         val messages = _chatMessages.value?.filter { message ->
             val contentText = getMessageText(message.content).trim()
@@ -5003,7 +5078,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return !modelName.lowercase().contains("grok")
     }
     suspend fun getSuggestedChatTitle(): String? {
-        val chatContent = getFormattedChatHistory()
+        // COMPACT EXCERPT: head + tail of the conversation, per-message truncation,
+        // hard char cap — never the whole chat (which could be 100s of messages).
+        val chatContent = getChatHistoryForTitle()
+
+        // Nothing usable to title from (empty chat, or all turns were filtered out)
+        if (chatContent.isBlank()) return null
 
         // 1. Get the current provider (important for llama.cpp logic)
         val lanProvider = sharedPreferencesHelper.getLanProvider()
@@ -5034,7 +5114,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         // 3. Determine if the current model is a reasoning model
         // We need this to decide if we should pass kwargs
-        // val activeModelInfo = getActiveLlmModel()
         val isReasoning = isReasoningModel(_activeChatModel.value)
 
         // 4. Call the service function with all the necessary context
@@ -5046,10 +5125,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             isLanModel = isLanModel,
             lanProvider = lanProvider,        // Pass the provider
             isReasoningModel = isReasoning,  // Pass reasoning status
-            isThinkingEnabled = false ,       // IMPORTANT: Set to false for titles so it doesn't return <think>...</think>
-            client = if (isLanModel) lanHttpClient else null // <--- ADD THIS
+            isThinkingEnabled = false,      // IMPORTANT: Set to false for titles so it doesn't return <​think>...<​/think>
+            client = if (isLanModel) lanHttpClient else null
         )
     }
+
 
 
     fun getBuiltInModels(): List<LlmModel> {
