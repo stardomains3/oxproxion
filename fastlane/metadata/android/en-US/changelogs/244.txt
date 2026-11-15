@@ -1,0 +1,1 @@
+- In dimmed Reader Mode, tapping outside the highlighted item brings you back to the normal chat view.

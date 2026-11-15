@@ -143,6 +143,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private var menuClosedByTouch = false
     private var isReadingMode = false
     private var readerFocusPosition: Int? = null
+    private var readerDismissTouchListener: RecyclerView.SimpleOnItemTouchListener? = null
+
     private var originalRvPaddingTop = -1
     private var originalRvPaddingBottom = -1
 
@@ -4165,6 +4167,34 @@ $cleanContent
         dimmingActive = true
 
     }*/
+
+    private fun installReaderDismissListener() {
+        if (readerDismissTouchListener != null) return
+        readerDismissTouchListener = object : RecyclerView.SimpleOnItemTouchListener() {
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                if (e.action != MotionEvent.ACTION_DOWN) return false
+                val pos = readerFocusPosition ?: return false
+                val itemView = rv.findViewHolderForAdapterPosition(pos)?.itemView ?: return false
+
+                // Touch coordinates are RecyclerView-local, same as child bounds
+                val insideItem = e.x >= itemView.left && e.x <= itemView.right &&
+                        e.y >= itemView.top && e.y <= itemView.bottom
+
+                if (!insideItem) {
+                    toggleReadingMode()   // exits reader mode (focus cleared)
+                    return true          // consume the tap
+                }
+                return false             // tap on the focused item → pass through
+            }
+        }
+        chatRecyclerView.addOnItemTouchListener(readerDismissTouchListener!!)
+    }
+
+    private fun removeReaderDismissListener() {
+        readerDismissTouchListener?.let { chatRecyclerView.removeOnItemTouchListener(it) }
+        readerDismissTouchListener = null
+    }
+
     private fun centerFocusedItem(position: Int) {
         chatRecyclerView.post {
             val vh = chatRecyclerView.findViewHolderForAdapterPosition(position)
@@ -4233,8 +4263,10 @@ $cleanContent
         chatAdapter.setReaderFocus(readerFocusPosition)
         if (readerFocusPosition != null) {
             centerFocusedItem(readerFocusPosition!!)
+            installReaderDismissListener()
         } else {
             restoreRecyclerViewPadding()
+            removeReaderDismissListener()
         }
 
     }
