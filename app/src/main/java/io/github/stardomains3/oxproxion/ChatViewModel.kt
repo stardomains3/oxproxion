@@ -137,7 +137,16 @@ data class ModelData(
     val name: String,
     val architecture: Architecture,
     @SerialName("created") val created: Long,
-    @SerialName("supported_parameters") val supportedParameters: List<String>? = null
+    @SerialName("supported_parameters") val supportedParameters: List<String>? = null,
+    val reasoning: ModelReasoning? = null
+)
+
+@Serializable
+data class ModelReasoning(
+    val mandatory: Boolean? = null,
+    @SerialName("default_enabled") val defaultEnabled: Boolean? = null,
+    @SerialName("supported_efforts") val supportedEfforts: List<String>? = null,
+    @SerialName("default_effort") val defaultEffort: String? = null
 )
 
 @Serializable
@@ -508,7 +517,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Bump this whenever LlmModel gains a field that requires re-fetching the
         // cached OpenRouter catalogue (e.g. isPureImageModel). Users with an older
         // cached list get one automatic refresh, then never again.
-        private const val MODEL_LIST_SCHEMA_VERSION = 2
+        private const val MODEL_LIST_SCHEMA_VERSION = 3
         // --- Suggested-title context budgeting ---
         // Overall excerpt cap (~1.5k tokens). Plenty for a title, small enough
         // that it won't hurt even a 2k-context LAN model.
@@ -1031,6 +1040,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val modelForRequest =
                     _activeChatModel.value ?: throw IllegalStateException("No active chat model")
+                // --- NEW: mandatory reasoning check ---
+                if (!activeModelIsLan() &&
+                    _isReasoningEnabled.value != true &&
+                    isMandatoryReasoningModel(modelForRequest)
+                ) {
+                    _isReasoningEnabled.value = true
+                    sharedPreferencesHelper.saveReasoningPreference(true)
+                    _toastUiEvent.postValue(Event("Reasoning is mandatory for this model — enabled automatically"))
+                }
+                // --- END NEW ---
 
                 // Branch logic for LAN vs OpenRouter
                 if (isImageGenerationModel(modelForRequest)) {
@@ -1385,6 +1404,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val modelForRequest =
                     _activeChatModel.value ?: throw IllegalStateException("No active chat model")
+                // --- NEW: mandatory reasoning check (same block as above) ---
+                if (!activeModelIsLan() &&
+                    _isReasoningEnabled.value != true &&
+                    isMandatoryReasoningModel(modelForRequest)
+                ) {
+                    _isReasoningEnabled.value = true
+                    sharedPreferencesHelper.saveReasoningPreference(true)
+                    _toastUiEvent.postValue(Event("Reasoning is mandatory for this model — enabled automatically"))
+                }
+                // --- END NEW ---
 
                 if (isImageGenerationModel(modelForRequest)) {
 
@@ -3687,12 +3716,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 reasoningEffort = if (lanProvider == LAN_PROVIDER_OLLAMA) {
                     if (_isReasoningEnabled.value == true) {
                         if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
-                            sharedPreferencesHelper.getReasoningEffort() ?: "medium"
-                        } else {
-                            "medium"
-                        }
+                            // Map to Ollama's supported set: none/low/medium/high
+                            when (sharedPreferencesHelper.getReasoningEffort()) {
+                                "low", "medium", "high" -> sharedPreferencesHelper.getReasoningEffort()
+                                "minimal" -> "low"
+                                "default" -> "medium"   // Ollama has no "default" — medium is the sensible stand-in
+                                else -> "high"          // max, xhigh, anything unknown
+                            }
+                        } else "medium"
                     } else "none"
-                } else null,
+                } else null
+                ,
 
                 chatTemplateKwargs = llamaCppKwargs,
                 tools = if (_isToolsEnabled.value == true) buildTools() else null,
@@ -3983,7 +4017,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } else null
 
             val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
-            val effort = if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
+            val effort = if (maxRTokens == null) resolveReasoningEffort(modelForRequest) else null
 
             // --- Build ChatRequest with ALL features ---
             val chatRequest = ChatRequest(
@@ -4360,12 +4394,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     reasoningEffort = if (lanProvider == LAN_PROVIDER_OLLAMA) {
                         if (_isReasoningEnabled.value == true) {
                             if (sharedPreferencesHelper.getAdvancedReasoningEnabled()) {
-                                sharedPreferencesHelper.getReasoningEffort() ?: "medium"
-                            } else {
-                                "medium"
-                            }
+                                // Map to Ollama's supported set: none/low/medium/high
+                                when (sharedPreferencesHelper.getReasoningEffort()) {
+                                    "low", "medium", "high" -> sharedPreferencesHelper.getReasoningEffort()
+                                    "minimal" -> "low"
+                                    "default" -> "medium"   // Ollama has no "default" — medium is the sensible stand-in
+                                    else -> "high"          // max, xhigh, anything unknown
+                                }
+                            } else "medium"
                         } else "none"
-                    } else null,
+                    } else null
+                    ,
 
                     // NEW: Nativ (mlx-vlm) — top-level toggle
                     enableThinking = if (isReasoningModel && lanProvider == LAN_PROVIDER_NATIV) {
@@ -4660,8 +4699,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 } else null
 
                 val maxRTokens = sharedPreferencesHelper.getReasoningMaxTokens()?.takeIf { it > 0 }
-                val effort =
-                    if (maxRTokens == null) sharedPreferencesHelper.getReasoningEffort() else null
+                val effort = if (maxRTokens == null) resolveReasoningEffort(modelForRequest) else null
                 val chatRequest = ChatRequest(
                     model = modelForRequest,
                     messagesForApiRequest.sanitizedForApi(),
@@ -6073,7 +6111,32 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         _openRouterModels.postValue(sortedList)
     }
+    fun getOpenRouterModelById(modelId: String?): LlmModel? {
+        if (modelId == null) return null
+        return sharedPreferencesHelper.getOpenRouterModels()
+            .find { it.apiIdentifier == modelId }
+    }
+    fun isMandatoryReasoningModel(modelIdentifier: String?): Boolean {
+        if (modelIdentifier == null) return false
+        return sharedPreferencesHelper.getOpenRouterModels()
+            .find { it.apiIdentifier == modelIdentifier }
+            ?.reasoningMandatory == true
+    }
 
+    private fun resolveReasoningEffort(modelId: String): String? {
+        val stored = sharedPreferencesHelper.getReasoningEffort()
+        if (stored == "default") return null  // user wants provider default → omit field
+
+        // Look up the model's supported efforts (catalogue first, custom models second)
+        val efforts = sharedPreferencesHelper.getOpenRouterModels()
+            .find { it.apiIdentifier == modelId }?.reasoningEfforts ?: emptyList()
+
+        // No info (custom model, old cache): send as-is and let OpenRouter map it
+        if (efforts.isEmpty()) return stored
+
+        // Stored effort not supported by this model → fall back to its default (omit)
+        return if (stored in efforts) stored else null
+    }
     fun fetchOpenRouterModels() {
         viewModelScope.launch {
             try {
@@ -6089,6 +6152,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             isImageGenerationCapable = it.architecture.output_modalities?.contains("image") ?: false,
                             isPureImageModel = it.architecture.output_modalities == listOf("image"),
                             isReasoningCapable = it.supportedParameters?.contains("reasoning") ?: false,
+                            reasoningEfforts = it.reasoning?.supportedEfforts ?: emptyList(),
+                            reasoningDefaultEffort = it.reasoning?.defaultEffort,
+                            reasoningMandatory = it.reasoning?.mandatory == true,
                             isTranscription = false,
                             created = it.created,
                             isFree = it.id.endsWith(":free")
@@ -6156,7 +6222,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             isTranscription = models.any { it.isTranscription },
                             created = base.created,
                             isFree = base.isFree,
-                            isLANModel = false
+                            isLANModel = false,
+                            reasoningEfforts = models.mapNotNull { it.reasoningEfforts }.firstOrNull { it.isNotEmpty() } ?: emptyList(),
+                            reasoningDefaultEffort = models.mapNotNull { it.reasoningDefaultEffort }.firstOrNull(),
+                            reasoningMandatory = models.any { it.reasoningMandatory }
                         )
 
                     }

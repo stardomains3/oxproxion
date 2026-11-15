@@ -3,11 +3,13 @@ package io.github.stardomains3.oxproxion
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 
 class AiBehaviorSettingsFragment : Fragment(R.layout.fragment_settings_ai_behavior) {
+    private val viewModel: ChatViewModel by activityViewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -23,6 +25,22 @@ class AiBehaviorSettingsFragment : Fragment(R.layout.fragment_settings_ai_behavi
         val toolsButton = view.findViewById<MaterialButton>(R.id.toolsButton)
         val openRouterTransformsSwitch = view.findViewById<MaterialSwitch>(R.id.openRouterTransformsSwitch)
         val autoDisableWebSearchSwitch = view.findViewById<MaterialSwitch>(R.id.autoDisableWebSearchSwitch)
+        val advancedReasoningButton =
+            view.findViewById<MaterialButton>(R.id.advancedReasoningButton)
+
+        // Show only when the active model supports reasoning.
+        // Observe so it updates if the model changes while this screen is open.
+        viewModel.activeChatModel.observe(viewLifecycleOwner) { modelId ->
+            advancedReasoningButton.visibility =
+                if (viewModel.isReasoningModel(modelId)) View.VISIBLE else View.GONE
+        }
+        advancedReasoningButton.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, AdvancedReasoningFragment())
+                .addToBackStack(null)
+                .commit()
+        }
 
         // ---- Load current state ----
         val memoryCount = prefs.getChatMemoryCount()
