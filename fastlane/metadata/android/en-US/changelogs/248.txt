@@ -1,0 +1,1 @@
+- Fixed issue in System Message, Presets, and Prompt libraries where after a user move of an item the drop-down wouldn't work.

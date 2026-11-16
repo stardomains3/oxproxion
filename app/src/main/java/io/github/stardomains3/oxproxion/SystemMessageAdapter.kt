@@ -30,11 +30,12 @@ class SystemMessageAdapter(
         val context = holder.itemView.context
         if (systemMessage.title == selectedMessage.title && systemMessage.prompt == selectedMessage.prompt) {
             holder.title.setTextColor(ContextCompat.getColor(context, R.color.ora))
-            //  holder.prompt.setTextColor(ContextCompat.getColor(context, R.color.ora))
         } else {
-            // holder.title.setTextColor(ContextCompat.getColor(context, R.color.white))
-            // holder.prompt.setTextColor(ContextCompat.getColor(context, R.color.white))
+            val typedValue = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+            holder.title.setTextColor(ContextCompat.getColor(context, typedValue.resourceId))
         }
+
 
         // Bind expand/collapse state
         holder.prompt.visibility = if (systemMessage.isExpanded) View.VISIBLE else View.GONE
@@ -47,9 +48,13 @@ class SystemMessageAdapter(
         holder.expandIcon.isFocusable = true
 
         // Chevron click: Toggle expand/collapse ONLY (no selection/pop)
+        // Chevron click: Toggle expand/collapse ONLY (no selection/pop)
         holder.expandIcon.setOnClickListener {
-            systemMessage.isExpanded = !systemMessage.isExpanded
-            notifyItemChanged(position)
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                systemMessage.isExpanded = !systemMessage.isExpanded
+                notifyItemChanged(currentPos)
+            }
         }
 
         // Title click: Auto-expand if compact + select (existing flow)

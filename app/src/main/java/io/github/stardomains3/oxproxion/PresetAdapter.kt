@@ -23,7 +23,7 @@ class PresetAdapter( private val onItemClicked: (Preset) -> Unit, private val on
         notifyItemMoved(from, to)
     }
 
-    fun getItems(): List<Preset> = items
+    fun getItems(): List<Preset> = items.toList()
 
     class PresetVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val title: TextView = itemView.findViewById(R.id.textPresetTitle)
@@ -68,9 +68,13 @@ class PresetAdapter( private val onItemClicked: (Preset) -> Unit, private val on
 
         // Expand/collapse on chevron click only
         holder.expandIcon.setOnClickListener {
-            preset.isExpanded = !preset.isExpanded
-            notifyItemChanged(position)
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                preset.isExpanded = !preset.isExpanded
+                notifyItemChanged(currentPos)
+            }
         }
+
 
         // Apply preset on list item click (root view)
         holder.itemView.setOnClickListener { onItemClicked(preset) }

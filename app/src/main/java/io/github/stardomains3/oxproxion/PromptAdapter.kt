@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 
 class PromptAdapter(
@@ -28,8 +29,11 @@ class PromptAdapter(
         holder.expandIcon.rotation = if (prompt.isExpanded) 180f else 0f
 
         holder.expandIcon.setOnClickListener {
-            prompt.isExpanded = !prompt.isExpanded
-            notifyItemChanged(position)
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                prompt.isExpanded = !prompt.isExpanded
+                notifyItemChanged(currentPos)
+            }
         }
 
         // Title and prompt text click - send to chat
@@ -38,7 +42,7 @@ class PromptAdapter(
 
         // Copy button - copy to clipboard and dismiss
         holder.copyButton.setOnClickListener { onCopyClick(prompt) }
-        holder.itemView.findViewById<androidx.cardview.widget.CardView>(R.id.card_area).setOnClickListener { onItemClick(prompt) }
+        holder.cardArea.setOnClickListener { onItemClick(prompt) }
 
         // Menu button - show edit/delete menu
         holder.menuButton.setOnClickListener { onMenuClick(holder.menuButton, prompt) }
@@ -52,5 +56,6 @@ class PromptAdapter(
         val menuButton: ImageView = view.findViewById(R.id.menu_button)
         val copyButton: ImageView = view.findViewById(R.id.copy_button)
         val expandIcon: ImageView = view.findViewById(R.id.expand_icon)
+        val cardArea: CardView = view.findViewById(R.id.card_area)
     }
 }

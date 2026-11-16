@@ -206,21 +206,29 @@ class SystemMessageLibraryFragment : Fragment() {
 
             // Drag-and-drop reordering (customs only; default fixed at top)
             val callback = object : ItemTouchHelper.SimpleCallback(
-                ItemTouchHelper.UP or ItemTouchHelper.DOWN,  // Vertical drag only
-                0  // No swipe
+                ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+                0
             ) {
                 override fun onMove(
                     recyclerView: RecyclerView,
                     viewHolder: RecyclerView.ViewHolder,
                     target: RecyclerView.ViewHolder
                 ): Boolean {
-                    val fromPos = viewHolder.bindingAdapterPosition  // Updated: Use bindingAdapterPosition instead of deprecated adapterPosition
-                    val toPos = target.bindingAdapterPosition  // Updated: Use bindingAdapterPosition instead of deprecated adapterPosition
+                    val fromPos = viewHolder.bindingAdapterPosition
+                    val toPos = target.bindingAdapterPosition
+
                     // Only allow reordering if both are custom (index > 0)
                     if (fromPos > 0 && toPos > 0) {
                         Collections.swap(systemMessages, fromPos, toPos)
+
+                        // Keep allSystemMessages in sync with the new order
+                        if (allSystemMessages.size == systemMessages.size) {
+                            Collections.swap(allSystemMessages, fromPos, toPos)
+                        }
+
                         systemMessageAdapter.notifyItemMoved(fromPos, toPos)
-                        // Persist: Save reordered customs (skip default)
+
+                        // Persist: Save reordered customs (skip default at index 0)
                         val customs = systemMessages.drop(1).toMutableList()
                         sharedPreferencesHelper.saveCustomSystemMessages(customs)
                         return true
@@ -232,18 +240,21 @@ class SystemMessageLibraryFragment : Fragment() {
                     // No swipe
                 }
 
-                override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-                    // No drag on default (position 0)
-                    return if (viewHolder.bindingAdapterPosition > 0) {  // Updated: Use bindingAdapterPosition instead of deprecated adapterPosition
-                        makeMovementFlags(
-                            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
-                            0
-                        )
+                override fun getMovementFlags(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder
+                ): Int {
+                    // Disable dragging if a search filter is currently active to prevent overwriting unfiltered items
+                    val isFiltering = ::searchView.isInitialized && searchView.query.isNotEmpty()
+
+                    return if (!isFiltering && viewHolder.bindingAdapterPosition > 0) {
+                        makeMovementFlags(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0)
                     } else {
                         0
                     }
                 }
             }
+
             val itemTouchHelper = ItemTouchHelper(callback)
             itemTouchHelper.attachToRecyclerView(recyclerView)
         }

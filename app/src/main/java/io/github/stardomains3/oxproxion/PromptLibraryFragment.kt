@@ -189,19 +189,39 @@ class PromptLibraryFragment : Fragment() {
             adapter = promptAdapter
 
             // Drag-and-drop reordering (all items)
+            // Inside setupRecyclerView(view: View):
             val callback = object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
-                override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                override fun onMove(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                    target: RecyclerView.ViewHolder
+                ): Boolean {
                     val fromPos = viewHolder.bindingAdapterPosition
                     val toPos = target.bindingAdapterPosition
+                    if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION) return false
+
                     Collections.swap(prompts, fromPos, toPos)
+                    if (allPrompts.size == prompts.size) {
+                        Collections.swap(allPrompts, fromPos, toPos)
+                    }
                     promptAdapter.notifyItemMoved(fromPos, toPos)
                     sharedPreferencesHelper.saveCustomPrompts(prompts)
                     return true
                 }
+
                 override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
-                override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int =
-                    ItemTouchHelper.Callback.makeMovementFlags(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0)
+
+                override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                    val isFiltering = ::searchView.isInitialized && searchView.query.isNotEmpty()
+                    return if (!isFiltering) {
+                        makeMovementFlags(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0)
+                    } else {
+                        0
+                    }
+                }
             }
+            ItemTouchHelper(callback).attachToRecyclerView(recyclerView)
+
             ItemTouchHelper(callback).attachToRecyclerView(recyclerView)
         }
     }
@@ -323,11 +343,16 @@ class PromptLibraryFragment : Fragment() {
 
     private fun deletePrompt(prompt: Prompt) {
         val customPrompts = sharedPreferencesHelper.getCustomPrompts().toMutableList()
-        if (customPrompts.remove(prompt)) {
+        val indexToRemove = customPrompts.indexOfFirst {
+            it.title == prompt.title && it.prompt == prompt.prompt
+        }
+        if (indexToRemove != -1) {
+            customPrompts.removeAt(indexToRemove)
             sharedPreferencesHelper.saveCustomPrompts(customPrompts)
             loadPrompts()
         }
     }
+
 
     override fun onResume() {
         super.onResume()
