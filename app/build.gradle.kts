@@ -27,8 +27,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 37
-        versionCode = 248
-        versionName = "2.2.33"
+        versionCode = 249
+        versionName = "2.2.34"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.markwon.strikethrough)
     implementation(libs.markwon.syntax.highlight)
     implementation(libs.prism4j.core)
+    implementation(libs.markwon.jlatexmath)
 
     // Core / UI
     implementation(libs.androidx.documentfile)
@@ -130,6 +131,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.json)
     implementation(libs.linkify)
+
 
     // Database & KSP
     ksp(libs.androidx.room.compiler)

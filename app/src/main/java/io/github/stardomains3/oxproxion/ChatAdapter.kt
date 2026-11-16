@@ -12,6 +12,8 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Environment
 import android.os.StrictMode
+import android.text.SpannableString
+import android.text.Spanned
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -44,6 +46,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 class ChatAdapter(
     private val scope: CoroutineScope, // <--- 1. REQUIRED: Pass viewLifecycleOwner.lifecycleScope here
@@ -73,7 +76,15 @@ class ChatAdapter(
     private var focusedPosition: Int? = null
 
     private val collapsedStates = mutableMapOf<String, Boolean>()
-    private val renderCache = HashMap<FlexibleMessage, CharSequence>()
+    private data class CachedRender(
+        val textSizePx: Float,
+        val textColor: Int,
+        val maxWidthPx: Int,
+        val content: Spanned
+    )
+
+    private val renderCache = HashMap<FlexibleMessage, CachedRender>()
+
     private val noCopyFactory = NoCopySpannableFactory.getInstance()
     var isSpeaking = false
     var currentSpeakingPosition = -1
@@ -85,6 +96,7 @@ class ChatAdapter(
 
     // 2. OPTIMIZATION: Conflated Channel for throttling
     private val updateChannel = Channel<FlexibleMessage>(Channel.CONFLATED)
+
     fun setReaderModeUi(enabled: Boolean) {
         if (isReaderMode == enabled) return
         isReaderMode = enabled
@@ -107,7 +119,7 @@ class ChatAdapter(
                     notifyItemChanged(messages.size - 1, "STREAMING")
                 }
                 // Throttle updates to ~20fps
-                delay(50)
+                delay(50.milliseconds)
             }
         }
     }
@@ -155,49 +167,75 @@ class ChatAdapter(
         }
         return null
     }
-    private fun getPreRenderedContent(message: FlexibleMessage): CharSequence {
-        // 1. Check Cache
-        if (renderCache.containsKey(message)) {
-            return renderCache[message]!!
-        }
-
-        // 2. Extract Text (JSON Logic)
-        val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
-            // Show a clean, formatted indicator of what tool was used
-            "🔧 **Tool Used:** ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
-        } else {
-            getMessageText(message.content)
-        }
-
-        //  val reasoningText = message.reasoning?.let { "\n\n$it" } ?: ""
-        // val rawText = reasoningText + text
-
-        // 3. Run Regex (Expensive)
-        // val fullText = ensureTableSpacing(rawText)
-        //val fullText = rawText
-        val fullText = text
-
-
-        // 4. Render Markdown with Safety (Expensive)
-        val renderedContent = try {
-            // Note: Use toMarkdown() instead of setMarkdown() to get the CharSequence
-            markwon.toMarkdown(fullText)
+    private fun renderMarkdown(
+        rawText: String,
+        textView: TextView
+    ): Spanned {
+        return try {
+            LatexPreprocessor.render(markwon, rawText, textView)
         } catch (e: RuntimeException) {
-            // 5. Prism4j Crash Handler
-            if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
-                // Fallback: Return the plain text so the app doesn't crash
-                fullText
+            if (e.message?.contains("Prism4j") == true ||
+                e.message?.contains("entry nodes") == true
+            ) {
+                SpannableString(rawText)
             } else {
-                // If it's a different error, we still want to know
                 throw e
             }
         }
-
-        // 6. Save to Cache
-        renderCache[message] = renderedContent
-
-        return renderedContent
     }
+
+    private fun setRenderedMarkdown(
+        textView: TextView,
+        rawText: String
+    ) {
+        markwon.setParsedMarkdown(
+            textView,
+            renderMarkdown(rawText, textView)
+        )
+    }
+
+    private fun getPreRenderedContent(
+        message: FlexibleMessage,
+        textView: TextView
+    ): Spanned {
+        val style = LatexPreprocessor.styleFor(textView)
+
+        renderCache[message]?.let { cached ->
+            if (cached.textSizePx == style.textSizePx &&
+                cached.textColor == style.textColor &&
+                cached.maxWidthPx == style.maxWidthPx
+            ) {
+                return cached.content
+            }
+        }
+
+        val text =
+            if (message.role == "assistant" &&
+                message.toolCalls != null &&
+                getMessageText(message.content).isBlank()
+            ) {
+                "🔧 **Tool Used:** ${
+                    message.toolCalls
+                        .map { it.function.name }
+                        .distinct()
+                        .joinToString()
+                }"
+            } else {
+                getMessageText(message.content)
+            }
+
+        val rendered = renderMarkdown(text, textView)
+
+        renderCache[message] = CachedRender(
+            textSizePx = style.textSizePx,
+            textColor = style.textColor,
+            maxWidthPx = style.maxWidthPx,
+            content = rendered
+        )
+
+        return rendered
+    }
+
 
 
     /*private fun ensureTableSpacing(md: String): String {
@@ -242,23 +280,15 @@ class ChatAdapter(
 
     fun finalizeStreaming() {
         scope.launch(Dispatchers.Main) {
-            delay(100)
+            delay(100.milliseconds)
+
             if (messages.isNotEmpty()) {
-                val lastIndex = messages.size - 1
-                val message = messages[lastIndex]
-
-                // OPTIMIZATION:
-                // 1. Force the heavy calculation (Regex + Markdown) NOW.
-                // This populates the renderCache[message] with the fixed table spacing.
-                getPreRenderedContent(message)
-
-                // 2. Notify the view.
-                // When onBindViewHolder runs, it will call getPreRenderedContent,
-                // find the data we just cached, and skip the heavy work.
-                notifyItemChanged(lastIndex)
+                // The full bind performs and caches the final Markdown/LaTeX render.
+                notifyItemChanged(messages.lastIndex)
             }
         }
     }
+
     fun setMessages(newMessages: List<FlexibleMessage>) {
         if (isUserApplyingEdit) {
             applyEditUpdate(newMessages)
@@ -412,6 +442,7 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         holder.itemView.alpha = if (focusedPosition == null || focusedPosition == position) 1f else 0.0f
+
         val message = messages[position]
         var contentText = getMessageText(message.content)
 
@@ -437,9 +468,9 @@ class ChatAdapter(
 
     inner class UserViewHolder(itemView: View, private val markwon: Markwon) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
+        private val copyButtonuser: ImageButton = itemView.findViewById(R.id.copyButtonuser)
         private val readingModeButton: ImageButton = itemView.findViewById(R.id.readingModeButton)
         private val buttonScrollView: HorizontalScrollView = itemView.findViewById(R.id.buttonScrollView)
-        private val copyButtonuser: ImageButton = itemView.findViewById(R.id.copyButtonuser)
         private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
         private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
@@ -487,15 +518,8 @@ class ChatAdapter(
                     }
 
                     // YOUR original try-catch (Prism4j-safe!)
-                    try {
-                        markwon.setMarkdown(messageTextView, displayContent)
-                    } catch (e: RuntimeException) {
-                        if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
-                            messageTextView.text = displayContent
-                        } else {
-                            throw e
-                        }
-                    }
+                    setRenderedMarkdown(messageTextView, displayContent)
+
 
                     collapseToggleButton.visibility = View.VISIBLE
                     collapseToggleButton.setImageResource(
@@ -508,27 +532,13 @@ class ChatAdapter(
                     }
                 } else {
                     // Short: full Markwon
-                    try {
-                        markwon.setMarkdown(messageTextView, rawUserContent)
-                    } catch (e: RuntimeException) {
-                        if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
-                            messageTextView.text = rawUserContent
-                        } else {
-                            throw e
-                        }
-                    }
+                    setRenderedMarkdown(messageTextView, rawUserContent)
+
                 }
             } else {
                 // Non-user: full
-                try {
-                    markwon.setMarkdown(messageTextView, rawUserContent)
-                } catch (e: RuntimeException) {
-                    if (e.message?.contains("Prism4j") == true || e.message?.contains("entry nodes") == true) {
-                        messageTextView.text = rawUserContent
-                    } else {
-                        throw e
-                    }
-                }
+                setRenderedMarkdown(messageTextView, rawUserContent)
+
             }
 
             // Preview: prefer Coil with the cheap content:// URI when available,
@@ -556,7 +566,6 @@ class ChatAdapter(
             imageView.setOnClickListener { openImageInExternalViewer(message) }
 
 
-
             copyButtonuser.setOnClickListener { //rawUserContent
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Text", rawUserContent)
@@ -569,6 +578,10 @@ class ChatAdapter(
                 Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
                 true
             }
+            readingModeButton.setOnClickListener { onReadingMode(bindingAdapterPosition) }
+
+
+
             editButton.setOnClickListener {
                 if (rawUserContent.isNotBlank()) {
                     onEditMessage(bindingAdapterPosition, rawUserContent)
@@ -577,12 +590,11 @@ class ChatAdapter(
             resendButton.setOnClickListener {
                 onRedoMessage(bindingAdapterPosition, message.content)
             }
-            readingModeButton.setOnClickListener { onReadingMode(bindingAdapterPosition) }
             deleteButton.setOnClickListener {
                 onDeleteMessage(bindingAdapterPosition)
             }
-
         }
+
         private fun openImageInExternalViewer(message: FlexibleMessage) {
             try {
                 val dataUrl = getImageDataUrl(message.content) ?: return
@@ -616,6 +628,9 @@ class ChatAdapter(
                 Toast.makeText(itemView.context, "Could not open image", Toast.LENGTH_SHORT).show()
             }
         }
+
+
+
         private fun showImageFromBase64(message: FlexibleMessage) {
             val base64 = getImageBase64(message.content)
             if (base64 != null) {
@@ -631,7 +646,6 @@ class ChatAdapter(
                 imageView.visibility = View.GONE
             }
         }
-
 
     }
 
@@ -708,9 +722,9 @@ class ChatAdapter(
             messageTextView.typeface = currentTypeface
 
             // 1. DISPLAY TEXT (Optimized: Uses Cache)
-            val finalContent = getPreRenderedContent(message)
-            // messageTextView.text = finalContent
-            markwon.setParsedMarkdown(messageTextView, finalContent as android.text.Spanned)
+            val finalContent = getPreRenderedContent(message, messageTextView)
+            markwon.setParsedMarkdown(messageTextView, finalContent)
+
             // 2. LOGIC TEXT (Fast extraction)
             val text = if (message.role == "assistant" && message.toolCalls != null && getMessageText(message.content).isBlank()) {
                 "Tool Call: ${message.toolCalls.map { it.function.name }.distinct().joinToString()}"
@@ -763,6 +777,8 @@ class ChatAdapter(
             val reasoningText = cleanReasoning.takeIf { it.isNotBlank() }
                 ?.let { "```\n$it\n```\n\n---\n\n" }
                 ?: ""
+            val fullRawMarkdown = reasoningText + text
+
 
 
             // 3. UI STATE LOGIC
@@ -851,18 +867,22 @@ class ChatAdapter(
             } else {
                 generatedImageView.visibility = View.GONE
             }
+            readingModeButton.setOnClickListener { onReadingMode(bindingAdapterPosition) }
+
 
             // 6. BUTTON LISTENERS (Lazy Calculation)
             htmlButton.setOnClickListener {
                 // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-                val fullRawMarkdown = reasoningText + text
+
+
                 if (fullRawMarkdown.isNotBlank()) {
                     onShowMarkdown.invoke(fullRawMarkdown)
                 }
             }
             htmlButton.setOnLongClickListener {
                 // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-                val fullRawMarkdown = reasoningText + text
+
+
                 if (fullRawMarkdown.isNotBlank()) {
                     onSaveHtml.invoke(fullRawMarkdown)
                     true // Consume long press
@@ -871,7 +891,7 @@ class ChatAdapter(
 
             copyButton.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Copied Text", messageTextView.text.toString())
+                val clip = ClipData.newPlainText("Copied Text", text)
                 clipboard.setPrimaryClip(clip)
             }
             editButton.setOnClickListener {
@@ -883,18 +903,19 @@ class ChatAdapter(
 
             copyButton.setOnLongClickListener {
                 // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-                val fullRawMarkdown = reasoningText + text
+
+
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Copied Markdown", fullRawMarkdown)
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(itemView.context, "Raw Markdown copied to clipboard", Toast.LENGTH_SHORT).show()
                 true
             }
-            readingModeButton.setOnClickListener { onReadingMode(bindingAdapterPosition) }
+
             shareButton.setOnClickListener {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, messageTextView.text.toString())
+                    putExtra(Intent.EXTRA_TEXT, text)
                     putExtra(Intent.EXTRA_SUBJECT, "AI Assistant Message")
                 }
                 itemView.context.startActivity(Intent.createChooser(shareIntent, "Share message via"))
@@ -902,7 +923,8 @@ class ChatAdapter(
 
             shareButton.setOnLongClickListener {
                 //val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-                val fullRawMarkdown = reasoningText + text
+
+
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, fullRawMarkdown)
@@ -921,7 +943,8 @@ class ChatAdapter(
             ttsButton.setImageResource(iconRes)
 
             ttsButton.setOnClickListener {
-                val textToSpeak = messageTextView.text.toString()
+                val textToSpeak = text
+
                 if (textToSpeak.isNotEmpty()) {
                     ForegroundService.stopTtsSpeaking()
                     onSpeakText(textToSpeak, position)
@@ -931,7 +954,8 @@ class ChatAdapter(
             }
 
             ttsButton.setOnLongClickListener {
-                val textToSpeak = messageTextView.text.toString()
+                val textToSpeak = text
+
                 if (textToSpeak.isNotEmpty()) {
                     ForegroundService.stopTtsSpeaking()
                     onSynthesizeToWavFile(textToSpeak, position)
@@ -943,7 +967,8 @@ class ChatAdapter(
 
             aipdfButton.setOnClickListener {
                 // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-                val fullRawMarkdown = reasoningText + text
+
+
                 CoroutineScope(Dispatchers.Main).launch {
                     val pdfUri = withContext(Dispatchers.IO) {
                         try {
@@ -959,37 +984,51 @@ class ChatAdapter(
                             null
                         }
                     }
-
                     if (pdfUri != null) {
                         val context = itemView.context
+                        val fossifyPackage = "org.fossify.filemanager"
 
-                        // Disable StrictMode check for file:// URI
-                        try {
-                            val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
-                            m.invoke(null)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                        // 1. Check if Fossify is installed
+                        val isInstalled = try {
+                            context.packageManager.getPackageInfo(fossifyPackage, 0)
+                            true
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            false
                         }
 
-                        // Define the target folder path (keeping 'oxproxion')
-                        val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "oxproxion")
+                        if (isInstalled) {
+                            // 2. Installed: Show Snackbar with Open Action
+                            // We use 'itemView' as the anchor for the Snackbar
+                            Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
+                                .setAction("Open Folder") {
+                                    //  val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                    val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"OpenChat")
+                                    val intent = Intent(Intent.ACTION_VIEW)
+                                    intent.setPackage(fossifyPackage)
+                                    intent.setDataAndType(Uri.fromFile(path), "resource/folder")
 
-                        // Create intent to view the folder
-                        val intent = Intent(Intent.ACTION_VIEW)
-                        intent.setDataAndType(Uri.fromFile(path), "resource/folder")
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    // Flags to open as separate app
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
-                        // Create the system chooser intent
-                        val chooserIntent = Intent.createChooser(intent, "Open Folder")
+                                    // StrictMode Hack for file:// URI
+                                    try {
+                                        val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                                        m.invoke(null)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
 
-                        // Show Snackbar with the action
-                        Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
-                            .setAction("Open Folder") {
-                                context.startActivity(chooserIntent)
-                            }
-                            .show()
+                                    // Launch using the ItemView's context
+                                    context.startActivity(intent)
+                                }
+                                .show()
+                        } else {
+                            // 3. Not Installed: Fallback to standard Toast
+                            Toast.makeText(context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+                        }
+                        //Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
                     } else {
-                        // Keep the failure toast as it provides immediate error feedback
                         Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -1011,14 +1050,16 @@ class ChatAdapter(
 
             markdownButton.setOnClickListener {
                 //    val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-                val fullRawMarkdown = reasoningText + text
+
+
                 onSaveMarkdown(bindingAdapterPosition, fullRawMarkdown)
             }
 
             markdownButton.setOnLongClickListener {
-                onSaveText(bindingAdapterPosition, messageTextView.text.toString())
+                onSaveText(bindingAdapterPosition, text)
                 true
             }
+
             saveFileButton.setOnClickListener {
                 //  onSaveAsFile.invoke(messageTextView.text.toString())
                 onSaveAsFile.invoke(text)
@@ -1041,7 +1082,6 @@ class ChatAdapter(
         }
         private fun bindReasoning(message: FlexibleMessage) {
             val reasoning = getCleanReasoning(message)
-            // Read live — hide only when Advanced Reasoning is ON and "Include in response" is OFF
             val prefs = SharedPreferencesHelper(itemView.context)
             val suppress = prefs.getAdvancedReasoningEnabled() && prefs.getReasoningExclude()
             if (reasoning.isBlank() || suppress) {

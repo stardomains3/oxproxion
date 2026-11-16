@@ -21,3 +21,10 @@
 #-renamesourcefileattribute SourceFile
 -dontwarn okhttp3.internal.Util
 -dontwarn org.commonmark.ext.gfm.strikethrough.Strikethrough
+# jlatexmath Android drawable wrapper
+-keep class ru.noties.jlatexmath.** { *; }
+-dontwarn ru.noties.jlatexmath.**
+
+# jlatexmath parser, environments, atoms, and reflectively loaded implementations
+-keep class org.scilab.forge.jlatexmath.** { *; }
+-dontwarn org.scilab.forge.jlatexmath.**

@@ -1,0 +1,1 @@
+- LaTeX now renders in the normal chat view.

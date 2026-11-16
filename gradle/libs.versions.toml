@@ -36,7 +36,7 @@ markwon-simple = { module = "io.noties.markwon:simple-ext", version.ref = "markw
 biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 markwon-syntax-highlight = { module = "io.noties.markwon:syntax-highlight", version.ref = "markwon"}
 prism4j-core    = { module = "io.noties:prism4j", version.ref = "prism4j" }
-# prism4j-bundler = { module = "io.noties:prism4j-bundler", version.ref = "prism4j" }
+markwon-jlatexmath = { module = "io.noties.markwon:ext-latex", version.ref = "markwon" }
 markwon-image-coil = { module = "io.noties.markwon:image-coil", version.ref = "markwon" }
 linkify = { module = "io.noties.markwon:linkify", version.ref = "markwon" }
 coil-kt = { module = "io.coil-kt:coil", version.ref = "coil" }
