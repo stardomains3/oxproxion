@@ -1,0 +1,1 @@
+- Fixed some asymmetry issues with buttons in the menu.

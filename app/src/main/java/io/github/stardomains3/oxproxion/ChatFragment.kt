@@ -728,6 +728,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             override fun afterTextChanged(s: android.text.Editable?) {
                 updateButtonVisibility()
                 magicCorrectButton.isVisible = !s.isNullOrEmpty()
+                updateMenuRowVisibilities()
             }
         })
         pdfGenerator = PdfGenerator(requireContext())
@@ -850,6 +851,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             // 2. The button in the Menu Area (presetsButton)
             // ONLY show in menu if it's NOT on the chat screen AND NOT in the top bar
             presetsButton.isVisible = !isPresetsOnChatScreen && !isTopBarEnabled
+            updateMenuRowVisibilities()
         }
         viewModel.chatMessages.observe(viewLifecycleOwner) { messages ->
             chatAdapter.setMessages(messages)
@@ -968,10 +970,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             }
             saveChatButton.isEnabled = hasMessages
             resetChatButton.isEnabled = hasMessages
-           // pdfChatButton.isVisible = hasMessages
-            //copyChatButton.isVisible = hasMessages
-            buttonsRow2.isVisible = hasMessages
-            fullReaderButton.isVisible = hasMessages
+            updateMenuRowVisibilities()
         }
 
         fun areAnimationsEnabled(context: Context): Boolean {
@@ -4553,46 +4552,63 @@ $cleanContent
         backcopyButton.visibility = View.VISIBLE
     }
     private fun updateMenuRowVisibilities() {
-        // Grab the rows in order (excluding buttonsRow2 as we discussed)
-        val rows = listOf(
-            view?.findViewById<LinearLayout>(R.id.buttonsRow1),
-            view?.findViewById<LinearLayout>(R.id.buttonsRow3)
-        )
+        val root = view ?: return
+        val hasMessages = !viewModel.chatMessages.value.isNullOrEmpty()
 
-        var isFirstVisibleRow = true
+        val row1   = root.findViewById<LinearLayout>(R.id.buttonsRow1)
+        val row3   = root.findViewById<LinearLayout>(R.id.buttonsRow3)
+        val row2   = root.findViewById<LinearLayout>(R.id.buttonsRow2)
 
-        rows.forEach { row ->
-            if (row != null) {
-                var hasVisibleChild = false
-                // Check every child inside this row
-                for (i in 0 until row.childCount) {
-                    if (row.getChildAt(i).isVisible) {
-                        hasVisibleChild = true
-                        break
-                    }
-                }
+        val density = resources.displayMetrics.density
+        val rowGap  = (12 * density).toInt()
+        val btnGap  = (14 * density).toInt()
 
-                if (hasVisibleChild) {
-                    row.visibility = View.VISIBLE
+        // 1) Chat-content gated items — OWNED here, so they can't go stale
+        fullReaderButton.isVisible = hasMessages
+        row2?.isVisible = hasMessages
 
-                    // Dynamically fix the margins!
-                    val params = row.layoutParams as LinearLayout.LayoutParams
-                    val marginDp = if (isFirstVisibleRow) 0 else 12 // 0 for the top row, 12 for the rest
-                    val marginPx = (marginDp * resources.displayMetrics.density).toInt()
+        // 2) Content rows: derive visibility from children (safe for row1/row3/aux only)
+        for (row in listOfNotNull(row1, row3)) {
+            row.isVisible = hasVisibleChild(row)
+        }
 
-                    if (params.topMargin != marginPx) {
-                        params.topMargin = marginPx
-                        row.layoutParams = params
-                    }
+        // 3) Vertical spacing — kills the "0-height VISIBLE row keeps its 12dp margin" ghost
+        var firstSeen = false
+        for (row in listOfNotNull(row1, row3, row2)) {
+            if (!row.isVisible) continue   // GONE rows contribute nothing
+            val lp = row.layoutParams as? LinearLayout.LayoutParams ?: continue
+            val wantTop = if (firstSeen) rowGap else 0
+            if (lp.topMargin != wantTop) {
+                lp.topMargin = wantTop
+                row.layoutParams = lp
+            }
+            firstSeen = true
+            normalizeRowMargins(row, btnGap)
+        }
+    }
 
-                    // We found the first row, so the next ones are no longer first
-                    isFirstVisibleRow = false
-                } else {
-                    row.visibility = View.GONE
-                }
+    private fun hasVisibleChild(row: LinearLayout): Boolean {
+        for (i in 0 until row.childCount) if (row.getChildAt(i).isVisible) return true
+        return false
+    }
+
+    // Gap *between* buttons, never after the last one (keeps wrap_content rows optically centered)
+    private fun normalizeRowMargins(row: LinearLayout, btnGap: Int) {
+        var lastVisible = -1
+        for (i in 0 until row.childCount) if (row.getChildAt(i).isVisible) lastVisible = i
+        for (i in 0 until row.childCount) {
+            val child = row.getChildAt(i)
+            val lp = child.layoutParams as? LinearLayout.LayoutParams ?: continue
+            val want = if (i == lastVisible) 0 else btnGap
+            if (lp.marginEnd != want) {
+                lp.marginEnd = want
+                child.layoutParams = lp
             }
         }
     }
+
+
+
     @SuppressLint("MissingPermission")
     private fun startVoiceRecording() {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
