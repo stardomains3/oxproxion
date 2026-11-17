@@ -989,12 +989,19 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 if (messages.isNotEmpty()) {
                     val lastMessage = messages.last()
                     if (lastMessage.role == "assistant" &&
-                        viewModel.getMessageText(lastMessage.content) != "working...") {
+                        viewModel.getMessageText(lastMessage.content) != "working..." &&
+                        lastMessage.toolCalls == null) {
+                        // Speak directly — no ViewHolder needed, so it works
+                        // even if the user scrolled away and the bubble is off-screen
                         chatRecyclerView.post {
                             val position = messages.size - 1
-                            val holder = chatRecyclerView.findViewHolderForAdapterPosition(position) as? ChatAdapter.AssistantViewHolder
-                            holder?.ttsButton?.performClick()
+                            val text = viewModel.getMessageText(lastMessage.content)
+                            if (text.isNotEmpty()) {
+                                ForegroundService.stopTtsSpeaking()
+                                speakText(text, position)
+                            }
                         }
+
                     }
                 }
             }

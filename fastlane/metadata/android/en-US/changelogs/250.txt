@@ -1,0 +1,2 @@
+- Fix an issue where if you're in conversation mode, and you scrolled it would not speak the latest message.
+- Another Fix for Prompt library after a list item move not showing the details.

@@ -222,7 +222,7 @@ class PromptLibraryFragment : Fragment() {
             }
             ItemTouchHelper(callback).attachToRecyclerView(recyclerView)
 
-            ItemTouchHelper(callback).attachToRecyclerView(recyclerView)
+
         }
     }
 
