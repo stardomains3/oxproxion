@@ -32,6 +32,11 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         view.findViewById<View>(R.id.cardSecurity).setOnClickListener {
             openCategory(SecuritySettingsFragment())
         }
+        // PERMISSIONS
+        view.findViewById<View>(R.id.cardPermissions).setOnClickListener {
+            openCategory(PermissionsSettingsFragment())
+        }
+
         // HELP — opens HelpFragment directly, no category page needed
         view.findViewById<View>(R.id.cardHelp).setOnClickListener {
             parentFragmentManager.beginTransaction()

@@ -118,7 +118,6 @@
                         android:layout_height="wrap_content"
                         android:checked="false" />
                 </LinearLayout>
-
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -126,7 +125,7 @@
                     android:layout_marginBottom="16dp"
                     android:background="#1A000000" />
 
-                <!-- 4. Auto Back after receiving a Share -->
+                <!-- 4. System Notification Settings -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -137,17 +136,25 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Auto Back After Receiving a Share"
+                        android:text="System Notification Settings"
                         android:textColor="?android:attr/textColorPrimary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/autoBackSwitch"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/systemNotiSettingsButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
+                        android:text="Open"
+                        android:textColor="?android:attr/textColorPrimary"
+                        app:strokeColor="@color/chestnut"
+                        app:strokeWidth="1dp"
+                        app:backgroundTint="?attr/colorSurface" />
                 </LinearLayout>
+
+
+
+
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

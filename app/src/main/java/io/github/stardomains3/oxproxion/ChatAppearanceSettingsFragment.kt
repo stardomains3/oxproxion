@@ -19,7 +19,7 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
         val prefs = SharedPreferencesHelper(requireContext())
         val viewModel: ChatViewModel by activityViewModels()
         val convoModeSwitch = view.findViewById<MaterialSwitch>(R.id.convoModeSwitch)
-
+        val autoBackSwitch = view.findViewById<MaterialSwitch>(R.id.autoBackSwitch)
         val streamingSwitch = view.findViewById<MaterialSwitch>(R.id.streamingSwitch)
         val extendedTopBarSwitch = view.findViewById<MaterialSwitch>(R.id.extendedTopBarSwitch)
         val extendedDockSwitch = view.findViewById<MaterialSwitch>(R.id.extendedDockSwitch)
@@ -43,6 +43,7 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
         presetsExtendedSwitch.isChecked = viewModel.isPresetsExtendedEnabled.value ?: false
         scrollProgressSwitch.isChecked = viewModel.isScrollProgressEnabled.value ?: true
         convoModeSwitch.isChecked = prefs.getConversationModeEnabled()
+        autoBackSwitch.isChecked = prefs.getAutoBack()
 
 
         // ---- Streaming (moved from chat menu, Lyria guard preserved) ----
@@ -120,6 +121,10 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
         showCitationsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveShowCitations(isChecked)
         }
+        // ---- Auto Back After Receiving a Share ----
+        autoBackSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveAutoBack(isChecked)
+        }
 
         // ---- Style all switches ----
         styleAllSwitches(
@@ -134,7 +139,8 @@ class ChatAppearanceSettingsFragment : Fragment(R.layout.fragment_settings_chat_
             R.id.volumeScrollSwitch,
             R.id.animateBarOnErrorSwitch,
             R.id.showCitationsSwitch,
-            R.id.convoModeSwitch
+            R.id.convoModeSwitch,
+            R.id.autoBackSwitch
 
         )
     }

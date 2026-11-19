@@ -1,9 +1,12 @@
 package io.github.stardomains3.oxproxion
 
+import android.content.Intent
+import android.provider.Settings
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 
 class NotificationSettingsFragment : Fragment(R.layout.fragment_settings_notifications) {
@@ -19,13 +22,14 @@ class NotificationSettingsFragment : Fragment(R.layout.fragment_settings_notific
         val notificationsSwitch = view.findViewById<MaterialSwitch>(R.id.notificationsSwitch)
         val copyOrDismissSwitch = view.findViewById<MaterialSwitch>(R.id.copyOrdismissSwitch)
         val copyOrOpenSwitch = view.findViewById<MaterialSwitch>(R.id.copyOropenSwitch)
-        val autoBackSwitch = view.findViewById<MaterialSwitch>(R.id.autoBackSwitch)
+
 
         // ---- Load current state ----
         notificationsSwitch.isChecked = prefs.getNotiPreference()
         copyOrDismissSwitch.isChecked = prefs.getUseCopyButton2()
         copyOrOpenSwitch.isChecked = prefs.getUseCopyButton()
-        autoBackSwitch.isChecked = prefs.getAutoBack()
+        val systemNotiSettingsButton =
+            view.findViewById<MaterialButton>(R.id.systemNotiSettingsButton)
 
         // ---- Listeners (verbatim from your original) ----
         notificationsSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -40,8 +44,11 @@ class NotificationSettingsFragment : Fragment(R.layout.fragment_settings_notific
             prefs.saveUseCopyButton(isChecked)  // true = Copy button, false = Open button
         }
 
-        autoBackSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.saveAutoBack(isChecked)
+        // ---- Open the system's App Notification Settings screen ----
+        systemNotiSettingsButton.setOnClickListener {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName)
+            startActivity(intent)
         }
 
         // ---- Style switches ----
@@ -49,8 +56,8 @@ class NotificationSettingsFragment : Fragment(R.layout.fragment_settings_notific
             view,
             R.id.notificationsSwitch,
             R.id.copyOrdismissSwitch,
-            R.id.copyOropenSwitch,
-            R.id.autoBackSwitch
+            R.id.copyOropenSwitch
         )
     }
 }
+
