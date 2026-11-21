@@ -51,13 +51,13 @@ data class ImageConfig(
     val aspectRatio: String  // e.g., "16:9"
 )
 
-@Serializable
+/*@Serializable
 data class Message(
     val role: String,
     val content: String?,
     val toolCalls: List<ToolCall>? = null,
     val annotations: List<Annotation>? = null
-)
+)*/
 
 
 @Serializable
@@ -121,7 +121,7 @@ data class ChatResponse(
     val provider: String? = null,
     val model: String,
     val `object`: String,
-    val created: Long,
+    val created: Long? = null,
     val choices: List<Choice>,
     val usage: UsageResponse? = null,
     val citations: List<String>? = null
@@ -199,7 +199,7 @@ data class UsageResponse(
 
 @Serializable
 data class PromptTokensDetails(
-    val cached_tokens: Int
+    val cached_tokens: Int = 0
 )
 
 @Serializable
@@ -209,7 +209,7 @@ data class CostDetails(
 
 @Serializable
 data class CompletionTokensDetails(
-    val reasoning_tokens: Int
+    val reasoning_tokens: Int = 0
 )
 @Serializable
 data class ImageData(
@@ -232,7 +232,7 @@ data class FunctionTool(
 
 @Serializable
 data class ToolCall(
-    val id: String,
+    val id: String = "",
     val type: String,
     val function: FunctionCall
 )
@@ -273,14 +273,15 @@ data class SearchSource(
 
 @Serializable
 data class StreamedChatResponse(
-    val id: String,
-    val model: String,
-    val `object`: String,
-    val created: Long,
-    val choices: List<StreamedChoice>,
+    val id: String? = null,
+    val model: String? = null,
+    val `object`: String? = null,
+    val created: Long? = null,
+    val choices: List<StreamedChoice> = emptyList(),
     val provider: String? = null,
     val error: ApiError? = null
 )
+
 
 @Serializable
 data class ApiError(

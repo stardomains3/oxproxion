@@ -122,8 +122,6 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
-import kotlin.collections.copy
-import kotlin.compareTo
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
@@ -164,7 +162,8 @@ enum class SortOrder {
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json { ignoreUnknownKeys = true
+        coerceInputValues = true}
     private val _sharedText = MutableStateFlow<String?>(null)
     val sharedText: StateFlow<String?> = _sharedText
     private var shouldAutoOffWebSearch = false
@@ -249,7 +248,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private fun createHttpClient(): HttpClient {
         val timeoutMs = sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L
         return HttpClient(OkHttp) {
-            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true
+                coerceInputValues = true}) }
             install(DefaultRequest) {
                 header("User-Agent", "oxproxion/${BuildConfig.VERSION_NAME}")
             }
@@ -273,7 +273,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         return HttpClient(OkHttp) {
             install(ContentNegotiation) {
-                json(Json { ignoreUnknownKeys = true })
+                json(Json { ignoreUnknownKeys = true
+                    coerceInputValues = true})
             }
             install(DefaultRequest) {
                 header("User-Agent", "oxproxion/${BuildConfig.VERSION_NAME}")
@@ -313,7 +314,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         return HttpClient(OkHttp) {
             install(ContentNegotiation) {
-                json(Json { ignoreUnknownKeys = true })
+                json(Json { ignoreUnknownKeys = true
+                    coerceInputValues = true})
             }
             install(DefaultRequest) {
                 header("User-Agent", "oxproxion/${BuildConfig.VERSION_NAME}")
@@ -2143,6 +2145,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             ).show()
         }*/
         val toolResults = mutableListOf<FlexibleMessage>()
+        val resultCache = mutableMapOf<String, String>()
 
         for (toolCall in uniqueToolCalls) {  // Now looping over uniques only
             val result: String = when (toolCall.function.name) {
@@ -2806,6 +2809,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 else -> "Error: Unknown tool call"
             }
+            resultCache["${toolCall.function.name}:${toolCall.function.arguments}"] = result
             toolResults.add(
                 FlexibleMessage(
                     role = "tool",
@@ -2813,6 +2817,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     toolCallId = toolCall.id
                 )
             )
+        }
+        // Answer duplicate calls so no tool_call_id goes unresponded
+        for (toolCall in toolCalls) {
+            val alreadyAnswered = toolResults.any { it.toolCallId != null && it.toolCallId == toolCall.id }
+            if ( !alreadyAnswered) {
+                resultCache["${toolCall.function.name}:${toolCall.function.arguments}"]?.let { cached ->
+                    toolResults.add(
+                        FlexibleMessage(
+                            role = "tool",
+                            content = JsonPrimitive(cached),
+                            toolCallId = toolCall.id
+                        )
+                    )
+                }
+            }
         }
         withContext(Dispatchers.Main) {
             updateMessages { it.addAll(toolResults) }
@@ -3926,6 +3945,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
 
+                    // Synthesize ids for backends that don't emit tool_call ids
+                    for (i in toolCallBuffer.indices) {
+                        if (toolCallBuffer[i].id.isBlank()) {
+                            toolCallBuffer[i] = toolCallBuffer[i].copy(id = "call_${UUID.randomUUID()}")
+                        }
+                    }
 
                     val hadToolCalls = toolCallBuffer.isNotEmpty()
                     val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
@@ -4285,7 +4310,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
                         formatCitations(accumulatedAnnotations)
                     } else ""
-
+                    for (i in toolCallBuffer.indices) {
+                        if (toolCallBuffer[i].id.isBlank()) {
+                            toolCallBuffer[i] = toolCallBuffer[i].copy(id = "call_${UUID.randomUUID()}")
+                        }
+                    }
                     // --- 6. Final UI Update ---
                     val hadToolCalls = toolCallBuffer.isNotEmpty()
                     if (hadToolCalls && !toolCallsHandledForTurn) {
@@ -4501,7 +4530,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                     if (choice?.message?.toolCalls?.isNotEmpty() == true && !toolCallsHandledForTurn && _isToolsEnabled.value == true) {
-                        val toolCalls = choice.message.toolCalls
+                        val toolCalls = choice.message.toolCalls.map { tc ->
+                            if (tc.id.isBlank()) tc.copy(id = "call_${UUID.randomUUID()}") else tc
+                        }
+
 
                         val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
                             formatCitations(choice.message.annotations)
@@ -4827,7 +4859,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Trust the presence of tool calls over the finish_reason for robustness.
                     if (choice?.message?.toolCalls?.isNotEmpty() == true && !toolCallsHandledForTurn && _isToolsEnabled.value == true) {
-                        val toolCalls = choice.message.toolCalls
+                        val toolCalls = choice.message.toolCalls.map { tc ->
+                            if (tc.id.isBlank()) tc.copy(id = "call_${UUID.randomUUID()}") else tc
+                        }
+
                         // Create the complete assistant message from the response
                         //old  val citationsMarkdown = formatCitations(choice.message.annotations)
                         val citationsMarkdown = if (sharedPreferencesHelper.getShowCitations()) {
@@ -5089,13 +5124,40 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     /** Strips blank reasoning/thinking so they're omitted (null) from the JSON payload. */
-    private fun List<FlexibleMessage>.sanitizedForApi(): List<FlexibleMessage> =
-        map { msg ->
+    private fun List<FlexibleMessage>.sanitizedForApi(): List<FlexibleMessage> {
+        val cleaned = map { msg ->
             val cleanReasoning = msg.reasoning?.takeIf { it.isNotBlank() }
             val cleanThinking = msg.thinking?.takeIf { it.isNotBlank() }
             if (cleanReasoning == msg.reasoning && cleanThinking == msg.thinking) msg
             else msg.copy(reasoning = cleanReasoning, thinking = cleanThinking)
         }
+
+        // Repair pass: recover missing tool_call_ids by pairing tool messages
+        // with the preceding assistant message's tool_calls (by position).
+        var lastCalls: List<ToolCall>? = null
+        var toolIdx = 0
+        return cleaned.map { msg ->
+            when {
+                msg.role == "assistant" && !msg.toolCalls.isNullOrEmpty() -> {
+                    lastCalls = msg.toolCalls
+                    toolIdx = 0
+                    msg
+                }
+                msg.role == "tool" -> {
+                    val id = msg.toolCallId?.takeIf { it.isNotBlank() }
+                        ?: lastCalls?.getOrNull(toolIdx)?.id?.takeIf { it.isNotBlank() }
+                    toolIdx++
+                    if (id == null) msg.copy(role = "user", toolCallId = null)
+                    else msg.copy(toolCallId = id)
+                }
+                else -> {
+                    lastCalls = null
+                    msg
+                }
+            }
+        }
+    }
+
     fun checkRemainingCredits() {
         viewModelScope.launch {
             val remaining = withContext(Dispatchers.IO) {

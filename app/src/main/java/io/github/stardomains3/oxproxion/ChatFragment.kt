@@ -3061,50 +3061,52 @@ $cleanContent
     override fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
-                val hasMessages = (viewModel.chatMessages.value?.size ?: 0) > 0
-                if (isSpeaking) {
-                    return false // Let the system handle Volume Up
+                if (isSpeaking) return false // Let the system handle Volume Up
+
+                // NEW: Singular reading mode → step to the PREVIOUS AI bubble (skip user bubbles)
+                if (doVolScroll && isReadingMode && readerFocusPosition != null) {
+                    when {
+                        event?.isLongPress == true -> jumpReaderFocus(toEnd = false) // first AI bubble
+                        event?.repeatCount == 0 -> stepReaderFocus(forward = false)
+                    }
+                    return true // always consume so volume doesn't change while reading
                 }
+
+                // Existing behavior (full reader mode / normal chat) — unchanged
+                val hasMessages = (viewModel.chatMessages.value?.size ?: 0) > 0
                 if (doVolScroll && hasMessages) {
                     when {
                         event?.isLongPress == true -> {
                             scrollToTopButton.performClick()
                             scrollToPreviousScreen()
                         }
-                        event?.repeatCount == 0 -> {
-                            scrollToPreviousScreen()
-                            // Find what's at the top now
-                            /*  val firstPos = layoutManager.findFirstVisibleItemPosition()
-                              if (firstPos > 0) {
-                                  // Jump to the message exactly above the current top one
-                                  layoutManager.scrollToPositionWithOffset(firstPos - 1, -12)
-                              }*/
-                        }
+                        event?.repeatCount == 0 -> scrollToPreviousScreen()
                     }
                     return true
                 }
             }
 
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                val messages = viewModel.chatMessages.value ?: emptyList()
-                if (isSpeaking) {
-                    return false // Let the system handle Volume Down
+                if (isSpeaking) return false // Let the system handle Volume Down
+
+                // NEW: Singular reading mode → step to the NEXT AI bubble (skip user bubbles)
+                if (doVolScroll && isReadingMode && readerFocusPosition != null) {
+                    when {
+                        event?.isLongPress == true -> jumpReaderFocus(toEnd = true) // last AI bubble
+                        event?.repeatCount == 0 -> stepReaderFocus(forward = true)
+                    }
+                    return true
                 }
+
+                // Existing behavior — unchanged
+                val messages = viewModel.chatMessages.value ?: emptyList()
                 if (doVolScroll && messages.isNotEmpty()) {
                     when {
                         event?.isLongPress == true -> {
                             scrollToBottomButton.performClick()
                             scrollToNextScreen()
                         }
-                        event?.repeatCount == 0 -> {
-                            scrollToNextScreen()
-                            // Find what's at the top now
-                            /*  val firstPos = layoutManager.findFirstVisibleItemPosition()
-                              if (firstPos < messages.size - 1) {
-                                  // Jump so the next message in the list becomes the new top message
-                                  layoutManager.scrollToPositionWithOffset(firstPos + 1, -12)
-                              }*/
-                        }
+                        event?.repeatCount == 0 -> scrollToNextScreen()
                     }
                     return true
                 }
@@ -4869,6 +4871,49 @@ $cleanContent
             .setNegativeButton("Cancel", null)
             .show()
     }
+    // Mirrors the adapter's substitution exactly: only "pure" tool-call
+// bubbles (blank text + toolCalls) render as "🔧 Tool Used: ..."
+    private fun isToolCallBubble(m: FlexibleMessage): Boolean =
+        m.role == "assistant" &&
+                !m.toolCalls.isNullOrEmpty() &&
+                viewModel.getMessageText(m.content).isBlank()
+
+    // Focusable = real assistant text, not a placeholder, not a pure tool call
+    private fun isFocusableAiMessage(m: FlexibleMessage): Boolean =
+        m.role == "assistant" &&
+                viewModel.getMessageText(m.content) != "working..." &&
+                !isToolCallBubble(m)
+
+    private fun findNearestAiBubble(fromExclusive: Int, forward: Boolean): Int? {
+        val messages = viewModel.chatMessages.value ?: return null
+        var i = if (forward) fromExclusive + 1 else fromExclusive - 1
+        while (i in messages.indices) {
+            if (isFocusableAiMessage(messages[i])) return i
+            i = if (forward) i + 1 else i - 1
+        }
+        return null
+    }
+
+    private fun stepReaderFocus(forward: Boolean) {
+        val current = readerFocusPosition ?: return
+        val next = findNearestAiBubble(current, forward) ?: return
+        readerFocusPosition = next
+        chatAdapter.setReaderFocus(next)
+        centerFocusedItem(next)
+    }
+
+    private fun jumpReaderFocus(toEnd: Boolean) {
+        val messages = viewModel.chatMessages.value ?: return
+        val indices = messages.indices.filter { isFocusableAiMessage(messages[it]) }
+        if (indices.isEmpty()) return
+        val target = if (toEnd) indices.last() else indices.first()
+        readerFocusPosition = target
+        chatAdapter.setReaderFocus(target)
+        centerFocusedItem(target)
+    }
+
+
+
 
     private fun showImageOutputFormatDialog(model: String, caps: ChatViewModel.ImageGenCapabilities) {
         if (caps.outputFormats.isEmpty()) return

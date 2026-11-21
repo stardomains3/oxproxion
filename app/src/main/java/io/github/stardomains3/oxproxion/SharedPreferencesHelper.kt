@@ -20,7 +20,8 @@ class SharedPreferencesHelper(context: Context) {
     private val apiKeysPrefs: SharedPreferences =
         context.getSharedPreferences(API_KEYS_PREFS_STORE, Context.MODE_PRIVATE)
     val mainPrefs: SharedPreferences = context.getSharedPreferences(MAIN_PREFS, Context.MODE_PRIVATE)
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json { ignoreUnknownKeys = true
+        coerceInputValues = true}
     private val gson = Gson() // Kept temporarily for migration only
     interface OnTimeoutChangedListener {
         fun onTimeoutChanged(newMinutes: Int)

@@ -1,0 +1,5 @@
+- Updated some dependencies.
+- If user is in dimming reader mode and has volume keys to navigate to previous/next message preference on, those keys will do that for AI message bubbles.
+- Fix: Saved chats with tool calls from older versions can now be reloaded and continued without errors.
+- Fix: Handle models/servers that don't return tool call ids.
+- Fix: Prevent errors when a model returns duplicate tool calls in a single response.
