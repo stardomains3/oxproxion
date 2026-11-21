@@ -601,7 +601,7 @@ object LatexPreprocessor {
 
         return -1
     }
-    private fun normalizeLatex(source: String): String {
+     fun normalizeLatex(source: String): String {
         return source
             // JLaTeXMath does not support esint's closed-surface integral.
             // Fallback: retain the surface integral, but not the closed-loop marker.
@@ -623,7 +623,11 @@ object LatexPreprocessor {
                 "\\end{matrix}\\right]"
             )
     }
-
+    fun render(markwon: Markwon, source: String, style: Style): Spanned {
+        val prepared = prepare(source)
+        val parsed = markwon.toMarkdown(prepared.markdown)
+        return decorate(parsed, prepared, style)
+    }
     private fun isEscaped(source: String, index: Int): Boolean {
         var count = 0
         var i = index - 1

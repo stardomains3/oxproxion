@@ -1,6 +1,7 @@
 package io.github.stardomains3.oxproxion
 
 import android.animation.ObjectAnimator
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -966,9 +967,6 @@ class ChatAdapter(
             }
 
             aipdfButton.setOnClickListener {
-                // val fullRawMarkdown = ensureTableSpacing(reasoningText + text)
-
-
                 CoroutineScope(Dispatchers.Main).launch {
                     val pdfUri = withContext(Dispatchers.IO) {
                         try {
@@ -984,55 +982,45 @@ class ChatAdapter(
                             null
                         }
                     }
+
                     if (pdfUri != null) {
                         val context = itemView.context
-                        val fossifyPackage = "org.fossify.filemanager"
 
-                        // 1. Check if Fossify is installed
-                        val isInstalled = try {
-                            context.packageManager.getPackageInfo(fossifyPackage, 0)
-                            true
-                        } catch (e: PackageManager.NameNotFoundException) {
-                            false
-                        }
+                        Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
+                            .setAction("Open Folder") {
+                                val path = File(
+                                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                    "oxproxion"
+                                )
 
-                        if (isInstalled) {
-                            // 2. Installed: Show Snackbar with Open Action
-                            // We use 'itemView' as the anchor for the Snackbar
-                            Snackbar.make(itemView, "PDF saved to Downloads", Snackbar.LENGTH_LONG)
-                                .setAction("Open Folder") {
-                                    //  val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                    val path = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"OpenChat")
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setPackage(fossifyPackage)
-                                    intent.setDataAndType(Uri.fromFile(path), "resource/folder")
-
-                                    // Flags to open as separate app
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-
-                                    // StrictMode Hack for file:// URI
-                                    try {
-                                        val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
-                                        m.invoke(null)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
-
-                                    // Launch using the ItemView's context
-                                    context.startActivity(intent)
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.fromFile(path), "resource/folder")
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                                 }
-                                .show()
-                        } else {
-                            // 3. Not Installed: Fallback to standard Toast
-                            Toast.makeText(context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
-                        }
-                        //Toast.makeText(itemView.context, "PDF saved to Downloads", Toast.LENGTH_SHORT).show()
+
+                                // StrictMode hack for the file:// folder URI (same as before)
+                                try {
+                                    val m = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                                    m.invoke(null)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+
+                                // ✅ No setPackage(): system chooser offers ALL file managers
+                                try {
+                                    context.startActivity(Intent.createChooser(intent, "Open folder with"))
+                                } catch (e: ActivityNotFoundException) {
+                                    Toast.makeText(context, "No file manager found", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .show()
                     } else {
                         Toast.makeText(itemView.context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
+
 
             pngButton.setOnClickListener {
                 onCaptureItemToBitmap(bindingAdapterPosition, "png")

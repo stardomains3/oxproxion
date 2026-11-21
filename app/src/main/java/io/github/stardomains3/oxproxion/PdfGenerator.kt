@@ -11,13 +11,18 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
+import io.noties.markwon.syntax.Prism4jThemeDarkula
+import io.noties.markwon.syntax.SyntaxHighlightPlugin
+import io.noties.prism4j.Prism4j
 import android.graphics.drawable.Drawable
 import android.graphics.pdf.PdfDocument
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.Layout
+import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.BackgroundColorSpan
 import android.util.Base64
 import android.util.DisplayMetrics
 import android.util.Log
@@ -33,17 +38,17 @@ import androidx.core.graphics.toColorInt
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withSave
 import androidx.core.graphics.withTranslation
+import androidx.core.net.toUri
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
+import io.noties.markwon.SpanFactory
 import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.ext.tables.TableTheme
 import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
-import io.noties.markwon.syntax.Prism4jThemeDarkula
-import io.noties.markwon.syntax.SyntaxHighlightPlugin
-import io.noties.prism4j.Prism4j
+import io.noties.markwon.simple.ext.SimpleExtPlugin
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -55,7 +60,6 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
-import androidx.core.net.toUri
 
 class PdfGenerator(private val context: Context) {
     private data class MdBlock(val isTable: Boolean, val content: String)
@@ -68,39 +72,133 @@ class PdfGenerator(private val context: Context) {
     //private val markwon = Markwon.builder(context)
     //  .build()
 
+    /* old markwon  val prism4j = Prism4j(ExampleGrammarLocator())
+     // val theme = Prism4jThemeDefault.create()
+      val theme = Prism4jThemeDarkula.create()
+      val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
+      val customTheme = TableTheme.buildWithDefaults(context) // Or TableTheme.buildWithDefaults(context) if you want default values first
+          .tableBorderColor(Color.LTGRAY)
+          .tableBorderWidth(2)
+          .tableCellPadding(1)
+
+          .tableHeaderRowBackgroundColor("#121314".toColorInt())
+
+          //.borderWidth(2f)
+          .build()
+      private val markwon = Markwon.builder(context)
+      .usePlugin(HtmlPlugin.create())
+      .usePlugin(StrikethroughPlugin.create())
+      .usePlugin(syntaxHighlightPlugin)
+     // .usePlugin(TablePlugin.create(context))
+      .usePlugin(TablePlugin.create(customTheme))
+
+      .usePlugin(TaskListPlugin.create(context))    // <-- Add Task List plugin
+      .usePlugin(object : AbstractMarkwonPlugin() {
+          override fun configureTheme(builder: MarkwonTheme.Builder) {
+              builder
+                  .codeTextColor(Color.LTGRAY)
+                  .codeBackgroundColor(Color.BLACK)
+                  .codeBlockBackgroundColor(Color.BLACK)
+                  //.blockQuoteColor(Color.BLACK)
+                  .isLinkUnderlined(true)
+
+          }
+      })
+      .build()*/
     val prism4j = Prism4j(ExampleGrammarLocator())
-    // val theme = Prism4jThemeDefault.create()
     val theme = Prism4jThemeDarkula.create()
     val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
-    val customTheme = TableTheme.buildWithDefaults(context) // Or TableTheme.buildWithDefaults(context) if you want default values first
+
+    // ✅ CRITICAL: Custom table theme FIRST
+    val customTableTheme = TableTheme.buildWithDefaults(context)
         .tableBorderColor(Color.LTGRAY)
         .tableBorderWidth(2)
-        .tableCellPadding(1)
-
+        .tableCellPadding(8)  // Increased for better readability
         .tableHeaderRowBackgroundColor("#121314".toColorInt())
-
-        //.borderWidth(2f)
         .build()
-    private val markwon = Markwon.builder(context)
-        .usePlugin(HtmlPlugin.create())
-        .usePlugin(StrikethroughPlugin.create())
-       .usePlugin(syntaxHighlightPlugin)
-        // .usePlugin(TablePlugin.create(context))
-        .usePlugin(TablePlugin.create(customTheme))
 
-        .usePlugin(TaskListPlugin.create(context))    // <-- Add Task List plugin
+    private val markwon  = Markwon.builder(context)
+        // ✅ TablePlugin EARLY with custom theme
+        .usePlugin(TablePlugin.create(customTableTheme))
+
+        // Core plugins next
+        .usePlugin(HtmlPlugin.create())
+        //.usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
+        .usePlugin(StrikethroughPlugin.create())
+
+        // ✅ TaskList before syntax/images
+        .usePlugin(TaskListPlugin.create(
+            "#007541".toColorInt(),
+            "#007541".toColorInt(),
+            "#F8F8F8".toColorInt()
+        ))
+
+        .usePlugin(syntaxHighlightPlugin)
+
+        // ✅ Images AFTER table/syntax
+        // .usePlugin(CoilImagesPlugin.create(context))
+
+        // Movement method LAST (after table/images)
+        //  .usePlugin(MovementMethodPlugin.create())
+
+        // Custom plugins
+        /*.usePlugin(object : AbstractMarkwonPlugin() {
+            override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
+                builder.linkResolver(LinkResolverDef())
+            }
+        })*/
+        .usePlugin(SimpleExtPlugin.create { plugin ->
+            plugin.addExtension(2, '=', SpanFactory { _, _ ->
+                val typedValue = TypedValue()
+                context.theme.resolveAttribute(
+                    android.R.attr.textColorHighlight, typedValue, true
+                )
+                BackgroundColorSpan(typedValue.data)
+            })
+        })
         .usePlugin(object : AbstractMarkwonPlugin() {
             override fun configureTheme(builder: MarkwonTheme.Builder) {
                 builder
                     .codeTextColor(Color.LTGRAY)
-                    .codeBackgroundColor(Color.BLACK)
-                    .codeBlockBackgroundColor(Color.BLACK)
-                    //.blockQuoteColor(Color.BLACK)
+                    .codeBackgroundColor(Color.argb(128, 0, 0, 0))
+                    .codeBlockBackgroundColor(Color.argb(128, 0, 0, 0))
+                    .blockQuoteColor(Color.BLACK)
                     .isLinkUnderlined(true)
-
             }
         })
         .build()
+
+    /*private val markwon =  Markwon.builder(context)
+    .usePlugin(HtmlPlugin.create())
+    .usePlugin(LinkifyPlugin.create())
+    .usePlugin(StrikethroughPlugin.create())
+    .usePlugin(TablePlugin.create(context))      // <-- Add Tables plugin
+    .usePlugin(TaskListPlugin.create(context))    // <-- Add Task List plugin
+    .usePlugin(CoilImagesPlugin.create(context))
+    .usePlugin(object : AbstractMarkwonPlugin() {
+        override fun configureTheme(builder: MarkwonTheme.Builder) {
+            builder
+                .codeTextColor(Color.LTGRAY)
+                .codeBackgroundColor(Color.DKGRAY)
+                .codeBlockBackgroundColor(Color.DKGRAY)
+                .blockQuoteColor(Color.BLACK)
+                .isLinkUnderlined(true)
+        }
+    })
+    .build()*/
+    /* private val markwon = Markwon.builder(context)
+     .usePlugin(HtmlPlugin.create())
+     .usePlugin(object : AbstractMarkwonPlugin() {
+         override fun configureTheme(builder: MarkwonTheme.Builder) {
+             builder
+                 .codeTextColor(Color.LTGRAY)
+                 .codeBackgroundColor(Color.DKGRAY)
+                 .codeBlockBackgroundColor(Color.DKGRAY)
+                 .blockQuoteColor(Color.BLACK)
+                 .isLinkUnderlined(true)
+         }
+     })
+     .build()*/
     fun generateMarkdownPdfWithImage(markdown: String, imageUri: String): String? {
         try {
             val processedMarkdown = processMarkdownLinks(markdown)
@@ -151,7 +249,7 @@ class PdfGenerator(private val context: Context) {
                     textHeight += renderedTables[index]!!.height
                 } else {
                     if (block.content.isNotBlank()) {
-                        val spanned = markwon.toMarkdown(block.content)
+                        val spanned = toSpanned(block.content, contentWidth, "#d0d0d0".toColorInt())
                         val layout = StaticLayout.Builder.obtain(
                             spanned, 0, spanned.length, textPaint, contentWidth
                         )
@@ -181,12 +279,16 @@ class PdfGenerator(private val context: Context) {
 
             // Render the image (if present)
             if (imageBitmap != null) {
-                val scaledBitmap = imageBitmap.scale(contentWidth, imageHeight.toInt())
+                // Scale the bitmap properly for PDF embedding
+                val scaledBitmap = imageBitmap.scale(contentWidth, imageHeight.toInt(), false)  // false for faster downscaling; change to true for better quality if needed
                 canvas.drawBitmap(scaledBitmap, margin, currentY, null)
                 currentY += imageHeight
                 if (textHeight > 0) {
                     currentY += 20f // Padding between image and text
                 }
+                // Recycle bitmaps to free memory
+                scaledBitmap.recycle()
+                imageBitmap.recycle()
             }
 
             // Render text blocks
@@ -197,7 +299,7 @@ class PdfGenerator(private val context: Context) {
                     currentY += bmp.height
                 } else {
                     if (block.content.isNotBlank()) {
-                        val spanned = markwon.toMarkdown(block.content)
+                        val spanned = toSpanned(block.content, contentWidth, "#d0d0d0".toColorInt())
                         val layout = StaticLayout.Builder.obtain(
                             spanned, 0, spanned.length, textPaint, contentWidth
                         )
@@ -219,8 +321,8 @@ class PdfGenerator(private val context: Context) {
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, "${System.currentTimeMillis()}.pdf")
                 put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                //put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/oxproxion")
-               // put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             }
             val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
             if (uri == null) {
@@ -235,13 +337,15 @@ class PdfGenerator(private val context: Context) {
             document.close()
             return uri.toString()
         } catch (e: IOException) {
-           // Log.e("PdfGenerator", "Error creating Markdown PDF with image", e)
+            Log.e("PdfGenerator", "Error creating Markdown PDF with image", e)
             return null
         } catch (e: Exception) {
-         //   Log.e("PdfGenerator", "Error rendering Markdown PDF with image", e)
+            Log.e("PdfGenerator", "Error rendering Markdown PDF with image", e)
             return null
         }
     }
+
+
     fun generateMarkdownPdf(markdown: String): String? {
         try {
             val processedMarkdown = processMarkdownLinks(markdown)
@@ -281,7 +385,7 @@ class PdfGenerator(private val context: Context) {
                     totalHeight += renderedTables[index]!!.height
                 } else {
                     if (block.content.isNotBlank()) {
-                        val spanned = markwon.toMarkdown(block.content)
+                        val spanned = toSpanned(block.content, contentWidth, "#d0d0d0".toColorInt())
                         val layout = StaticLayout.Builder.obtain(
                             spanned, 0, spanned.length, textPaint, contentWidth
                         )
@@ -312,7 +416,7 @@ class PdfGenerator(private val context: Context) {
                     currentY += bmp.height
                 } else {
                     if (block.content.isNotBlank()) {
-                        val spanned = markwon.toMarkdown(block.content)
+                        val spanned = toSpanned(block.content, contentWidth, "#d0d0d0".toColorInt())
                         val layout = StaticLayout.Builder.obtain(
                             spanned, 0, spanned.length, textPaint, contentWidth
                         )
@@ -335,7 +439,7 @@ class PdfGenerator(private val context: Context) {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, "${System.currentTimeMillis()}.pdf")
                 put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
                 put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/oxproxion")
-                //put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                // put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             }
             val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
             if (uri == null) {
@@ -350,10 +454,10 @@ class PdfGenerator(private val context: Context) {
             document.close()
             return uri.toString()
         } catch (e: IOException) {
-         //   Log.e("PdfGenerator", "Error creating Markdown PDF", e)
+            Log.e("PdfGenerator", "Error creating Markdown PDF", e)
             return null
         } catch (e: Exception) {
-         //   Log.e("PdfGenerator", "Error rendering Markdown PDF", e)
+            Log.e("PdfGenerator", "Error rendering Markdown PDF", e)
             return null
         }
     }
@@ -497,7 +601,7 @@ class PdfGenerator(private val context: Context) {
             document.close()
             return file.absolutePath
         } catch (e: IOException) {
-         //   Log.e("PdfGenerator", "Error creating PDF with generated images", e)
+            Log.e("PdfGenerator", "Error creating PDF with generated images", e)
             return null
         }
     }
@@ -511,10 +615,12 @@ class PdfGenerator(private val context: Context) {
             val inputStream = context.contentResolver.openInputStream(uri)
             BitmapFactory.decodeStream(inputStream)
         } catch (e: Exception) {
-         //   Log.e("PdfGenerator", "Failed to load bitmap from URI: $uriString", e)
+            Log.e("PdfGenerator", "Failed to load bitmap from URI: $uriString", e)
             null
         }
     }
+
+
 
 
 
@@ -540,7 +646,7 @@ class PdfGenerator(private val context: Context) {
 
         // 3. Create the file inside that folder
         val file = File(parentDir, "chat_${System.currentTimeMillis()}.pdf")
-       /* val file = File(
+        /*val file = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             "chat_${System.currentTimeMillis()}.pdf"
         )*/
@@ -595,7 +701,7 @@ class PdfGenerator(private val context: Context) {
 
         try {
             val document = PdfDocument()
-            val pageInfo = PdfDocument.PageInfo.Builder(PdfGenerator.PageSize.A4.width(), totalHeight.toInt(), 1).create()
+            val pageInfo = PdfDocument.PageInfo.Builder(PageSize.A4.width(), totalHeight.toInt(), 1).create()
             val page = document.startPage(pageInfo)
             val canvas = page.canvas
 
@@ -647,10 +753,12 @@ class PdfGenerator(private val context: Context) {
             return file.absolutePath
 
         } catch (e: IOException) {
-           // Log.e("PdfGenerator", "Error creating PDF", e)
+            Log.e("PdfGenerator", "Error creating PDF", e)
             return null
         }
     }
+
+
     private fun processMarkdownLinks(markdown: String): String {
         // Regex to match Markdown links: [text](url)
         // Handles optional spaces around text and url
@@ -702,7 +810,8 @@ class PdfGenerator(private val context: Context) {
                 height += bmp.height
             } else {
                 if (block.content.isNotBlank()) {
-                    val spanned = markwon.toMarkdown(block.content)
+                    val spanned = toSpanned(block.content, bubbleContentWidth.toInt(), Color.WHITE)
+
                     val layout = StaticLayout.Builder
                         .obtain(spanned, 0, spanned.length, textPaint, bubbleContentWidth.toInt())
                         .setAlignment(Layout.Alignment.ALIGN_NORMAL) // keep left
@@ -781,7 +890,8 @@ class PdfGenerator(private val context: Context) {
                 renderedTables[index]!!.height.toFloat()
             } else {
                 if (block.content.isNotBlank()) {
-                    val spanned = markwon.toMarkdown(block.content)
+                    val spanned = toSpanned(block.content, bubbleContentWidth.toInt(), Color.WHITE)
+
                     val layout = StaticLayout.Builder
                         .obtain(spanned, 0, spanned.length, textPaint, bubbleContentWidth.toInt())
                         .setAlignment(Layout.Alignment.ALIGN_NORMAL)
@@ -812,6 +922,7 @@ class PdfGenerator(private val context: Context) {
             var y = startY + bubblePadding
 
             // Image first if any
+            // Image first if any
             if (image != null) {
                 val imageLeft = bubbleLeft + bubblePadding
                 val dst = RectF(imageLeft, y, imageLeft + scaledImageWidth, y + imagePartHeight)
@@ -834,6 +945,7 @@ class PdfGenerator(private val context: Context) {
                 y += imagePartHeight + if (blocks.isNotEmpty()) bubbleSpacing else 0f
             }
 
+
             // Draw blocks in order
             blocks.forEachIndexed { index, block ->
                 if (block.isTable) {
@@ -842,7 +954,8 @@ class PdfGenerator(private val context: Context) {
                     y += bmp.height
                 } else {
                     if (block.content.isNotBlank()) {
-                        val spanned = markwon.toMarkdown(block.content)
+                        val spanned = toSpanned(block.content, bubbleContentWidth.toInt(), Color.WHITE)
+
                         val layout = StaticLayout.Builder
                             .obtain(spanned, 0, spanned.length, textPaint, bubbleContentWidth.toInt())
                             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
@@ -860,13 +973,14 @@ class PdfGenerator(private val context: Context) {
         }
     }
 
+
     private fun decodeImage(imageUrl: String): Bitmap? {
         return try {
             val base64Data = imageUrl.substringAfter("base64,")
             val imageBytes = Base64.decode(base64Data, Base64.DEFAULT)
             BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
         } catch (e: Exception) {
-           // Log.e("PdfGenerator", "Failed to decode image for PDF", e)
+            Log.e("PdfGenerator", "Failed to decode image for PDF", e)
             null
         }
     }
@@ -909,6 +1023,19 @@ class PdfGenerator(private val context: Context) {
         }
         flushText()
         return out
+    }
+    private fun toSpanned(
+        markdown: String,
+        maxWidthPx: Int,
+        textColor: Int = Color.WHITE
+    ): Spanned {
+        val style = LatexPreprocessor.Style(
+            textSizePx = 26f,                 // matches your TextPaint textSize
+            textColor = textColor,
+            maxWidthPx = maxWidthPx,
+            density = 26f / 16f                      // see note below
+        )
+        return LatexPreprocessor.render(markwon, markdown, style)
     }
 
     private fun isTableSeparatorLine(s: String): Boolean {
@@ -954,7 +1081,14 @@ class PdfGenerator(private val context: Context) {
         activity.runOnUiThread {
             host.addView(tv)
             root.addView(host)
-            markwon.setMarkdown(tv, "\n$markdownTable\n")
+            val style = LatexPreprocessor.Style(
+                textSizePx = textSizePx,
+                textColor = textColor,
+                maxWidthPx = widthPx,
+                density =  26f / 16f
+            )
+            val spanned = LatexPreprocessor.render(markwon, "\n$markdownTable\n", style)
+            markwon.setParsedMarkdown(tv, spanned)
 
             val listener = object : ViewTreeObserver.OnGlobalLayoutListener {
                 private var passCount = 0
@@ -1000,4 +1134,3 @@ class PdfGenerator(private val context: Context) {
         val A4 = Rect(0, 0, 595, 842)
     }
 }
-

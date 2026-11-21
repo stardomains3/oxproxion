@@ -6,6 +6,9 @@ import kotlinx.serialization.builtins.ListSerializer
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import ru.noties.jlatexmath.JLatexMathDrawable
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -5813,7 +5816,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 // Fix table spacing and convert to HTML
                 //val fixedText = ensureTableSpacing(rawText)
                 val fixedText = rawText
-                val contentHtml = markdownToHtmlFragment(fixedText)
+                val contentHtml = markdownToHtmlFragmentWithLatex(fixedText)
 
                 // We use a simple div with NO margin/padding for the container
                 // We use inline styles for the labels to keep colors but remove icons
@@ -7012,6 +7015,73 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             null
         }
     }
+
+    /**
+     * Markdown → HTML, with LaTeX rendered as inline <img> data URLs.
+     * Tokens are replaced AFTER the markdown→HTML conversion, so the parser
+     * never touches the huge base64 tags.
+     */
+    private fun markdownToHtmlFragmentWithLatex(markdown: String): String {
+        val prepared = LatexPreprocessor.prepare(markdown)
+        var html = markdownToHtmlFragment(prepared.markdown)
+        if (prepared.items.isEmpty()) return html
+
+        for (item in prepared.items) {
+            val imgHtml = renderLatexItemToHtml(item)
+            // Fallback: escaped raw text ($x^2$), so a bad expression
+            // never breaks the whole print job
+            html = html.replace(item.token, imgHtml ?: escapeHtmlText(item.raw))
+        }
+        return html
+    }
+
+    private fun escapeHtmlText(s: String): String =
+        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    private fun renderLatexItemToHtml(item: LatexPreprocessor.Item): String? {
+        return try {
+            // Render at 2x, display at 1x -> crisp in print (raster supersampling)
+            val displayTextPx = if (item.block) 18f else 16f
+            val ss = 2f
+
+            val drawable = JLatexMathDrawable.builder(
+                LatexPreprocessor.normalizeLatex(item.latex.trim())
+            )
+                .textSize(displayTextPx * ss)
+                .color(0xFF24292f.toInt())     // ✅ PRINT body color — NOT white!
+                .background(Color.TRANSPARENT)
+                .build()
+
+            val w = drawable.intrinsicWidth.coerceAtLeast(1)
+            val h = drawable.intrinsicHeight.coerceAtLeast(1)
+
+            // Cap display width at ~700 CSS px (fits A4 print content width)
+            val scale = if (w > 700f * ss) (700f * ss) / w else 1f
+            val bmpW = (w * scale).toInt().coerceAtLeast(1)
+            val bmpH = (h * scale).toInt().coerceAtLeast(1)
+
+            val bmp = Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            canvas.scale(scale, scale)
+            drawable.setBounds(0, 0, w, h)
+            drawable.draw(canvas)
+
+            val baos = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, baos)
+            bmp.recycle()
+            val b64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
+
+            val displayW = (bmpW / ss).toInt()
+            if (item.block) {
+                """<img src="data:image/png;base64,$b64" width="$displayW" style="display:block; margin:0.6em auto; height:auto;" alt="math" />"""
+            } else {
+                """<img src="data:image/png;base64,$b64" width="$displayW" style="vertical-align:middle; height:auto;" alt="math" />"""
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun getFormattedChatHistoryStyledHtml(): String = withContext(Dispatchers.IO) {
         val messages = _chatMessages.value?.filter { message ->
             val contentText = getMessageText(message.content).trim()
@@ -7043,8 +7113,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                // old val fixedText = ensureTableSpacing(rawText)
                 val fixedText = rawText
 
-                // ✅ 2. Then convert that fixed Markdown to HTML
-                val contentHtml = markdownToHtmlFragment(fixedText)
+                val contentHtml = markdownToHtmlFragmentWithLatex(fixedText)
 
                 when (message.role) {
                     "user" -> {

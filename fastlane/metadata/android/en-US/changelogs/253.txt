@@ -1,0 +1,2 @@
+- Fixed an issue where the PDF generation of an individual message wouldn't be created.
+- Math LaTex now renders in PDFs, ePUBS, and print-outs.
