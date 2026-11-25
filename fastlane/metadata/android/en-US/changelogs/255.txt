@@ -1,0 +1,3 @@
+- Fix: Swiping away the app upwards from Recents screen stops the foreground service.
+- Fix: System should more reliably restart the service if it terminates it for low memory.
+- Add: User can now change the text color in the AI and User bubbles.

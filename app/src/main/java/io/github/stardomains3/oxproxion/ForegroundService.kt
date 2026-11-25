@@ -73,6 +73,16 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
         instance = this
         initTTS()
     }
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        if (isTtsActive) {
+            // let it finish; stop when done
+            // handleTtsFinished() path won't stop the service, so schedule it:
+            stop()  // or omit this branch if you want speech to continue
+        } else {
+            stop()
+        }
+    }
 
     private fun initTTS() {
         tts = TextToSpeech(this, this)
@@ -166,7 +176,7 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
 
         startForeground(1, notification, foregroundServiceType)
         isRunningForeground = true
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent): IBinder? {

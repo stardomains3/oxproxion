@@ -2,12 +2,14 @@ package io.github.stardomains3.oxproxion
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
@@ -23,6 +25,8 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
     private lateinit var amoledSwitch: MaterialSwitch
     private lateinit var aiColorButton: MaterialButton      // <-- add
     private lateinit var userColorButton: MaterialButton
+    private lateinit var aiTextColorButton: MaterialButton
+    private lateinit var userTextColorButton: MaterialButton
     private val DEFAULT_AI_DAY = 0xFFFFFFFF.toInt()
     private val DEFAULT_AI_NIGHT = 0xFF2C2C2C.toInt()
     private val DEFAULT_USER_DAY = 0xFFEAEAEA.toInt()
@@ -37,7 +41,11 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
 
         val aiDefaultButton = view.findViewById<MaterialButton>(R.id.aiColorDefaultButton)
         val userDefaultButton = view.findViewById<MaterialButton>(R.id.userColorDefaultButton)
+        aiTextColorButton = view.findViewById(R.id.aiTextColorButton)
+        userTextColorButton = view.findViewById(R.id.userTextColorButton)
 
+        val aiTextDefaultButton = view.findViewById<MaterialButton>(R.id.aiTextColorDefaultButton)
+        val userTextDefaultButton = view.findViewById<MaterialButton>(R.id.userTextColorDefaultButton)
 
         prefs = SharedPreferencesHelper(requireContext())
         val themeToggleGroup =
@@ -75,10 +83,14 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
 
         aiColorButton.setOnClickListener {
-            showBubbleColorPicker("AI Bubble Color", isAi = true, aiColorButton)
+            val ctx = requireContext()
+            val initial = prefs.getAiBubbleColor(ctx) ?: defaultFor(ctx, isAi = true)
+            showColorPickerDialog("AI Bubble Color", initial) { prefs.setAiBubbleColor(ctx, it) }
         }
         userColorButton.setOnClickListener {
-            showBubbleColorPicker("User Bubble Color", isAi = false, userColorButton)
+            val ctx = requireContext()
+            val initial = prefs.getUserBubbleColor(ctx) ?: defaultFor(ctx, isAi = false)
+            showColorPickerDialog("User Bubble Color", initial) { prefs.setUserBubbleColor(ctx, it) }
         }
         aiDefaultButton.setOnClickListener {
             prefs.resetAiBubbleColor(requireContext())
@@ -88,6 +100,25 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             prefs.resetUserBubbleColor(requireContext())
             //updateColorSwatches()
         }
+        aiTextColorButton.setOnClickListener {
+            val ctx = requireContext()
+            val initial = prefs.getAiTextColor(ctx) ?: resolveTextColorPrimary(ctx)
+            showColorPickerDialog("AI Text Color", initial) { prefs.setAiTextColor(ctx, it) }
+        }
+        userTextColorButton.setOnClickListener {
+            val ctx = requireContext()
+            val initial = prefs.getUserTextColor(ctx) ?: resolveTextColorPrimary(ctx)
+            showColorPickerDialog("User Text Color", initial) { prefs.setUserTextColor(ctx, it) }
+        }
+        aiTextDefaultButton.setOnClickListener {
+            prefs.resetAiTextColor(requireContext())
+
+        }
+        userTextDefaultButton.setOnClickListener {
+            prefs.resetUserTextColor(requireContext())
+
+        }
+
         // readingFocusDimSwitch.isChecked = prefs.getReadingFocusDimEnabled()
 
         fontButton.text = prettyFontName(prefs.getSelectedFont())
@@ -213,32 +244,29 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         val name = stored?.takeIf { it.isNotBlank() } ?: "geologica_light"
         return name.replace("_", " ").replaceFirstChar { it.uppercase() }
     }
-    private fun showBubbleColorPicker(title: String, isAi: Boolean, swatchButton: MaterialButton) {
+    private fun showColorPickerDialog(title: String, initialColor: Int, onSave: (Int) -> Unit) {
         val ctx = requireContext()
-        val current = (if (isAi) prefs.getAiBubbleColor(ctx) else prefs.getUserBubbleColor(ctx))
-            ?: defaultFor(ctx, isAi)
-
         val dialogView = layoutInflater.inflate(R.layout.dialog_color_picker, null)
         val picker = dialogView.findViewById<ColorPickerView>(R.id.colorPicker)
         val preview = dialogView.findViewById<View>(R.id.previewBubble)
         val hexLabel = dialogView.findViewById<TextView>(R.id.previewHexLabel)
 
-        var picked = current  // committed only on "Set Color"
+        var picked = initialColor   // committed only on "Set Color"
 
         val updatePreview = { color: Int ->
             preview.background = previewDrawable(ctx, color)
             hexLabel.text = "#%06X".format(0xFFFFFF and color)
         }
-        updatePreview(current)
+        updatePreview(initialColor)
 
-        picker.setInitialColor(current)
+        picker.setInitialColor(initialColor)
         picker.subscribe(object : ColorPickerPopup.ColorPickerObserver() {
             override fun onColor(color: Int, fromUser: Boolean, shouldPropagate: Boolean) {
                 picked = color
-                updatePreview(color)          // live preview as they drag
+                updatePreview(color)
             }
             override fun onColorPicked(color: Int) { picked = color }
-            override fun onCancel() { /* dialog handles it */ }
+            override fun onCancel() { /* Cancel button handles dismissal */ }
         })
 
         val dialog = MaterialAlertDialogBuilder(ctx)
@@ -250,14 +278,15 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             dialog.dismiss()
         }
         dialogView.findViewById<MaterialButton>(R.id.setColorButton).setOnClickListener {
-            if (isAi) prefs.setAiBubbleColor(ctx, picked)
-            else prefs.setUserBubbleColor(ctx, picked)
-            //  updateColorSwatches()
+            onSave(picked)
+            //   updateColorSwatches()
             dialog.dismiss()
         }
 
         dialog.show()
     }
+
+
     private fun previewDrawable(context: Context, color: Int): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -275,14 +304,20 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         }
     }
 
-    private fun updateColorSwatches() {
-        val ctx = requireContext()
-        aiColorButton.iconTint = android.content.res.ColorStateList.valueOf(
-            prefs.getAiBubbleColor(ctx) ?: defaultFor(ctx, true)
-        )
-        userColorButton.iconTint = android.content.res.ColorStateList.valueOf(
-            prefs.getUserBubbleColor(ctx) ?: defaultFor(ctx, false)
-        )
+    private fun resolveTextColorPrimary(context: Context): Int {
+        val tv = android.util.TypedValue()
+        context.theme.resolveAttribute(android.R.attr.textColorPrimary, tv, true)
+        return when {
+            // Attr resolved to a plain color — use it directly
+            tv.type >= android.util.TypedValue.TYPE_FIRST_COLOR_INT &&
+                    tv.type <= android.util.TypedValue.TYPE_LAST_COLOR_INT -> tv.data
+
+            // Attr resolved to a ColorStateList resource — get its default color
+            tv.resourceId != 0 -> ContextCompat.getColor(context, tv.resourceId)
+
+            // Shouldn't happen, but don't crash on it
+            else -> Color.BLACK
+        }
     }
 
 

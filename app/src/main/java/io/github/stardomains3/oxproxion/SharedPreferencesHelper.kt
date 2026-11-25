@@ -93,6 +93,10 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_AI_NIGHT = "bubble_ai_color_night"
         private const val KEY_USER_DAY = "bubble_user_color_day"
         private const val KEY_USER_NIGHT = "bubble_user_color_night"
+        private const val KEY_AI_TEXT_DAY = "bubble_ai_text_day"
+        private const val KEY_AI_TEXT_NIGHT = "bubble_ai_text_night"
+        private const val KEY_USER_TEXT_DAY = "bubble_user_text_day"
+        private const val KEY_USER_TEXT_NIGHT = "bubble_user_text_night"
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val MAX_TOKENS_ENABLED = "max_tokens_enabled"
         private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
@@ -471,6 +475,37 @@ class SharedPreferencesHelper(context: Context) {
                 Configuration.UI_MODE_NIGHT_YES
 
     // --- AI bubble ---
+    fun getAiTextColor(context: Context): Int? = readBubbleColor(context,
+        Companion.KEY_AI_TEXT_DAY,
+        Companion.KEY_AI_TEXT_NIGHT
+    )
+    fun setAiTextColor(context: Context, color: Int) = writeBubbleColor(context,
+        Companion.KEY_AI_TEXT_DAY,
+        Companion.KEY_AI_TEXT_NIGHT, color)
+    fun resetAiTextColor(context: Context) = writeBubbleColor(context,
+        Companion.KEY_AI_TEXT_DAY,
+        Companion.KEY_AI_TEXT_NIGHT,
+        Companion.BUBBLE_COLOR_UNSET
+    )
+    // --- User bubble TEXT color ---
+    fun getUserTextColor(context: Context): Int? =
+        readBubbleColor(context,
+            Companion.KEY_USER_TEXT_DAY,
+            Companion.KEY_USER_TEXT_NIGHT
+        )
+
+    fun setUserTextColor(context: Context, color: Int) =
+        writeBubbleColor(context,
+            Companion.KEY_USER_TEXT_DAY,
+            Companion.KEY_USER_TEXT_NIGHT, color)
+
+    fun resetUserTextColor(context: Context) =
+        writeBubbleColor(context,
+            Companion.KEY_USER_TEXT_DAY,
+            Companion.KEY_USER_TEXT_NIGHT,
+            Companion.BUBBLE_COLOR_UNSET
+        )
+
     fun getAiBubbleColor(context: Context): Int? =
         readBubbleColor(context, KEY_AI_DAY, KEY_AI_NIGHT)
 

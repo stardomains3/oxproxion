@@ -227,7 +227,95 @@
                         app:strokeColor="@color/chestnut"
                         app:backgroundTint="?attr/colorSurface" />
                 </LinearLayout>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#1A000000" />
 
+                <!-- AI Text Color -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="AI Text Color"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/aiTextColorButton"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp"
+
+                        app:icon="@drawable/ic_colorize"
+                        app:iconSize="16dp"
+                        app:iconGravity="textStart"
+                        app:strokeColor="@color/chestnut"
+                        app:backgroundTint="?attr/colorSurface" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/aiTextColorDefaultButton"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="0dp"
+                        android:text="Default"
+                        app:strokeColor="@color/chestnut"
+                        app:backgroundTint="?attr/colorSurface" />
+                </LinearLayout>
+
+
+
+                <!-- User Text Color -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="User Text Color"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/userTextColorButton"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp"
+                        app:icon="@drawable/ic_colorize"
+                        app:iconSize="16dp"
+                        app:iconGravity="textStart"
+                        app:strokeColor="@color/chestnut"
+                        app:backgroundTint="?attr/colorSurface" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/userTextColorDefaultButton"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="0dp"
+                        android:text="Default"
+                        app:strokeColor="@color/chestnut"
+                        app:backgroundTint="?attr/colorSurface" />
+                </LinearLayout>
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"

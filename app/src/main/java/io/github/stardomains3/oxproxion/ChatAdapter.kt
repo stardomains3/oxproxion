@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -78,6 +79,8 @@ class ChatAdapter(
     private var customAiColor: Int? = null
     private var customUserColor: Int? = null
     private var bubbleColorsLoaded = false
+    private var customAiTextColor: Int? = null
+    private var customUserTextColor: Int? = null
 
     private val collapsedStates = mutableMapOf<String, Boolean>()
     private data class CachedRender(
@@ -485,6 +488,7 @@ class ChatAdapter(
 
         fun bind(message: FlexibleMessage) {
             ensureBubbleColors(itemView.context)
+            messageTextView.setTextColor(customUserTextColor ?: resolveTextColorPrimary(itemView.context))
             buttonScrollView.visibility = if (isReaderMode) View.GONE else View.VISIBLE
             messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
@@ -726,6 +730,7 @@ class ChatAdapter(
 
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
             ensureBubbleColors(itemView.context)
+            messageTextView.setTextColor(customAiTextColor ?: resolveTextColorPrimary(itemView.context))
             buttonScrollView.visibility = if (isReaderMode) View.GONE else View.VISIBLE
             bindReasoning(message)
             messageTextView.textSize = 16f * currentFontScale / 100f
@@ -1163,6 +1168,8 @@ class ChatAdapter(
         val prefs = SharedPreferencesHelper(context)
         customAiColor = prefs.getAiBubbleColor(context)
         customUserColor = prefs.getUserBubbleColor(context)
+        customAiTextColor = prefs.getAiTextColor(context)
+        customUserTextColor = prefs.getUserTextColor(context)
     }
 
     /** Call from ChatFragment.onResume() so returning from settings updates without recreate. */
@@ -1195,6 +1202,21 @@ class ChatAdapter(
                 ((r * factor).toInt() shl 16) or
                 ((g * factor).toInt() shl 8) or
                 (b * factor).toInt()
+    }
+    private fun resolveTextColorPrimary(context: Context): Int {
+        val tv = android.util.TypedValue()
+        context.theme.resolveAttribute(android.R.attr.textColorPrimary, tv, true)
+        return when {
+            // Attr resolved to a plain color — use it directly
+            tv.type >= android.util.TypedValue.TYPE_FIRST_COLOR_INT &&
+                    tv.type <= android.util.TypedValue.TYPE_LAST_COLOR_INT -> tv.data
+
+            // Attr resolved to a ColorStateList resource — get its default color
+            tv.resourceId != 0 -> ContextCompat.getColor(context, tv.resourceId)
+
+            // Shouldn't happen, but don't crash on it
+            else -> Color.BLACK
+        }
     }
 
 
