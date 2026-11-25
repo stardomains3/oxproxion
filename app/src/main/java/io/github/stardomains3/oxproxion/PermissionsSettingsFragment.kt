@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.PowerManager
 import androidx.core.graphics.toColorInt
 import android.provider.Settings
@@ -24,6 +25,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import java.io.File
 
 class PermissionsSettingsFragment : Fragment(R.layout.fragment_settings_permissions) {
 
@@ -101,6 +103,7 @@ class PermissionsSettingsFragment : Fragment(R.layout.fragment_settings_permissi
 
         // ---- SAF folder fix (same launcher seed as HelpFragment) ----
         view.findViewById<MaterialButton>(R.id.safGrantButton).setOnClickListener {
+            ensureFolderExists()
             val downloadsUri =
                 "content://com.android.externalstorage.documents/document/primary%3ADownload".toUri()
             folderPickerLauncher.launch(downloadsUri)
@@ -198,7 +201,9 @@ class PermissionsSettingsFragment : Fragment(R.layout.fragment_settings_permissi
             text = if (ignoringBattery) "Unrestricted" else "Restricted"
             setTextColor((if (ignoringBattery) COLOR_GRANTED else COLOR_DENIED).toColorIntCompat())
         }
-        // Button always visible so the user can review/change it
+// No button once unrestricted — user can still revert via "Android App Settings" below
+        view?.findViewById<MaterialButton>(R.id.batteryGrantButton)?.isVisible = !ignoringBattery
+
 
         // App settings button always visible
     }
@@ -240,6 +245,15 @@ class PermissionsSettingsFragment : Fragment(R.layout.fragment_settings_permissi
                 )
                 startActivity(intent)
             }
+        }
+    }
+    private fun ensureFolderExists() {
+        val folder = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            "oxproxion"
+        )
+        if (!folder.exists()) {
+            folder.mkdirs()
         }
     }
 

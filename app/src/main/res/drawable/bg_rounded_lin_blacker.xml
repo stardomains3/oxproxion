@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!--  <solid android:color="#18191a"/> oxproxion color-->
+    <!--<solid android:color="#111213"/> darker-->
+    <solid android:color="#000000"/>
+    <!-- <solid android:color="#FF272727"/> -->
+    <corners android:radius="24dp"/>
+</shape>

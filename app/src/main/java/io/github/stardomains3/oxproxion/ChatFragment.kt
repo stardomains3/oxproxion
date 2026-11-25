@@ -4,6 +4,7 @@ import android.Manifest
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import androidx.appcompat.app.AlertDialog
 import android.app.Activity
 import android.app.NotificationManager
 import android.content.ClipData
@@ -13,10 +14,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Color.luminance
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -146,6 +149,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private var readerDismissTouchListener: RecyclerView.SimpleOnItemTouchListener? = null
 
     private var originalRvPaddingTop = -1
+    private var toolApprovalDialog: AlertDialog? = null
+
+
     private var originalRvPaddingBottom = -1
 
     private lateinit var fullReaderButton: MaterialButton
@@ -160,7 +166,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
     private var fromPtt = false
 
     private lateinit var chatFrameView: FrameLayout
-    private var dimOverlay: View? = null
+
     private var currentSpeakingPosition = -1
     private lateinit var settingsButton: MaterialButton
     private lateinit var homeButton: MaterialButton
@@ -493,6 +499,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         sendChatButton = view.findViewById(R.id.sendChatButton)
         extBG = view.findViewById(R.id.extBG)
         topBarLayout = view.findViewById(R.id.topBarLayout)
+
         fontSizeControlsContainer = view.findViewById(R.id.fontSizeControlsContainer)
         originalSendIcon = sendChatButton.icon
         resetChatButton = view.findViewById(R.id.resetChatButton)
@@ -540,10 +547,32 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         settingsButton = view.findViewById(R.id.settingsButton)
         presetsButton = view.findViewById(R.id.presetsButton)
         presetsButton2 = view.findViewById(R.id.presetsButton2)
-        arguments?.getString("shared_text")?.let { sharedText ->
-            setSharedText(sharedText)
-            arguments?.remove("shared_text") // To prevent re-processing
+        // AMOLED: swap input/topbar backgrounds (drawables can't follow the theme overlay)
+        val effectiveDark = when (sharedPreferencesHelper.getThemeMode()) {
+            SharedPreferencesHelper.THEME_DARK  -> true
+            SharedPreferencesHelper.THEME_LIGHT -> false
+            else -> (resources.configuration.uiMode and
+                    Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         }
+        val amoledBg = effectiveDark && sharedPreferencesHelper.isAmoledModeEnabled()
+        chatInputContainer.setBackgroundResource(
+            if (amoledBg) R.drawable.bg_rounded_lin_blacker else R.drawable.bg_rounded_lin
+        )
+        headerContainer.setBackgroundResource(
+            if (amoledBg) R.drawable.bg_rounded_frameamoled else R.drawable.bg_rounded_frame
+        )
+
+        if (amoledBg) {
+            // Sets the background to solid black
+            buttonsRow2.setBackgroundColor("#000000".toColorInt())
+        } else {
+            // Sets the background to your XML drawable resource
+            buttonsRow2.setBackgroundResource(R.drawable.bg_charcoal_rounded)
+        }
+        applyHeaderButtonStrokes(amoledBg)
+        topBarLayout.setBackgroundResource(
+            if (amoledBg) R.drawable.bg_rounded_lin_blacker else R.drawable.bg_rounded_lin
+        )
         textToSpeech = TextToSpeech(requireContext()) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 textToSpeech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -641,70 +670,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 ttsAvailable = false
             }
         }
-        val prism4j = Prism4j(ExampleGrammarLocator())
-        val theme = Prism4jThemeDarkula.create()
-        val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
-
-// ✅ CRITICAL: Custom table theme FIRST
-        val customTableTheme = TableTheme.buildWithDefaults(requireContext())
-            .tableBorderColor(Color.LTGRAY)
-            .tableBorderWidth(2)
-            .tableCellPadding(8)  // Increased for better readability
-            .tableHeaderRowBackgroundColor("#121314".toColorInt())
-            .build()
-
-        markwon = Markwon.builder(requireContext())
-            // ✅ TablePlugin EARLY with custom theme
-            .usePlugin(TablePlugin.create(customTableTheme))
-
-            // Core plugins next
-            .usePlugin(HtmlPlugin.create())
-            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
-            .usePlugin(StrikethroughPlugin.create())
-            .usePlugin(SoftBreakAddsNewLinePlugin.create())
-            // ✅ TaskList before syntax/images
-            .usePlugin(TaskListPlugin.create(
-                "#007541".toColorInt(),
-                "#007541".toColorInt(),
-                "#F8F8F8".toColorInt()
-            ))
-
-           .usePlugin(syntaxHighlightPlugin)
-
-            // ✅ Images AFTER table/syntax
-            .usePlugin(CoilImagesPlugin.create(requireContext()))
-
-            // Movement method LAST (after table/images)
-           // .usePlugin(MovementMethodPlugin.create())
-            .usePlugin(MovementMethodPlugin.create(LinkMovementMethod.getInstance()))
-
-
-            // Custom plugins
-            .usePlugin(object : AbstractMarkwonPlugin() {
-                override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
-                    builder.linkResolver(LinkResolverDef())
-                }
-            })
-            .usePlugin(SimpleExtPlugin.create { plugin ->
-                plugin.addExtension(2, '=', SpanFactory { _, _ ->
-                    val typedValue = TypedValue()
-                    requireContext().theme.resolveAttribute(
-                        android.R.attr.textColorHighlight, typedValue, true
-                    )
-                    BackgroundColorSpan(typedValue.data)
-                })
-            })
-            .usePlugin(object : AbstractMarkwonPlugin() {
-                override fun configureTheme(builder: MarkwonTheme.Builder) {
-                    builder
-                        .codeTextColor(Color.LTGRAY)
-                        .codeBackgroundColor(Color.argb(128, 0, 0, 0))
-                        .codeBlockBackgroundColor(Color.argb(128, 0, 0, 0))
-                        .blockQuoteColor(Color.BLACK)
-                        .isLinkUnderlined(true)
-                }
-            })
-            .build()
+        markwon = buildMarkwon()
         // 🔥 Cache formatters (init once)
         dateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         timeFmt = SimpleDateFormat("HH:mm:ss", Locale.US)
@@ -742,30 +708,101 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         setupTextFilePicker()
         updateSystemMessageButtonState()
         updateInitialUI()
-        val rootView = view as FrameLayout // The root FrameLayout (fragment_container)
+        val rootView = view as FrameLayout
         overlayView = View(requireContext()).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
             visibility = View.GONE
-            setBackgroundColor(requireContext().getColor(android.R.color.transparent))
-            // This listener logic is now correct
+            elevation = 9f   // above floatingTranscribeButton (8dp) so it dims too
+            setBackgroundColor(Color.argb(204, 0, 0, 0))   // same 0.8 black you had
+
             setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    if (headerContainer.isVisible && isTouchOutsideHeader(event.rawX, event.rawY) && !isTouchOnMenuButton(event.rawX, event.rawY)) {
+                if (event.action != MotionEvent.ACTION_DOWN) return@setOnTouchListener false
+                if (!headerContainer.isVisible) return@setOnTouchListener false
+                val x = event.rawX
+                val y = event.rawY
+                when {
+                    // Inside the menu popup → pass through
+                    !isTouchOutsideHeader(x, y) -> false
+                    // NEW: on the menu button → pass through, let its own click
+                    // listener toggle the menu (prevents hide+show flash)
+                    isTouchOnMenuButton(x, y) -> false
+                    else -> {
                         hideMenu()
                         menuClosedByTouch = true
-                        // Return false to pass the touch to the button underneath
-                        return@setOnTouchListener false
+                        isTouchInside(chatFrameView, x, y)
                     }
                 }
-                // If touch is inside the header, let it pass through to the header
-                false
             }
+
         }
         rootView.addView(overlayView)
-        dimOverlay = view.findViewById<View>(R.id.dimOverlay)
+
+        viewModel.pendingToolApproval.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { pending ->
+                val dialogView = layoutInflater.inflate(R.layout.dialog_tool_approval, null)
+                val namesContainer = dialogView.findViewById<LinearLayout>(R.id.toolNamesContainer)
+                val paramsText = dialogView.findViewById<TextView>(R.id.toolParamsText)
+                val approveButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.approveButton)
+                val denyButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.denyButton)
+
+                // Resolve the theme's primary text color for the programmatically-added views
+                val typedValue = android.util.TypedValue()
+                requireContext().theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                val primaryColor = androidx.core.content.ContextCompat.getColor(requireContext(), typedValue.resourceId)
+
+                // --- Tool names, one line each ---
+                pending.toolCalls.forEach { tc ->
+                    namesContainer.addView(
+                        TextView(requireContext()).apply {
+                            text = "•  ${tc.function.name}"
+                            textSize = 15f
+                            setTextColor("#a0610a".toColorInt())
+                        }
+                    )
+                }
+
+                // --- Parameters: pretty-printed JSON per tool, EACH CAPPED at 400 chars.
+                //     Per-tool (not total) so one huge make_file payload can never
+                //     starve the other tools' params out of view. Display-only —
+                //     approval/denial still operates on the full ToolCall objects.
+                paramsText.text = pending.toolCalls.joinToString("\n\n") { tc ->
+                    val pretty = runCatching {
+                        kotlinx.serialization.json.Json.parseToJsonElement(tc.function.arguments).toString()
+                    }.getOrDefault(tc.function.arguments)
+                    "«${tc.function.name}»\n${truncateForDisplay(pretty)}"
+                }
+
+                toolApprovalDialog = MaterialAlertDialogBuilder(
+                    requireContext(),
+                    com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog_Centered
+                )
+                    .setView(dialogView)
+                    .setOnCancelListener { viewModel.denyPendingTools() }   // tap-outside = deny, never dangle
+                    .create()
+
+                approveButton.setOnClickListener {
+                    toolApprovalDialog?.dismiss()
+                    viewModel.approvePendingTools()
+                }
+                denyButton.setOnClickListener {
+                    toolApprovalDialog?.dismiss()
+                    viewModel.denyPendingTools()
+                }
+
+                toolApprovalDialog?.show()
+
+                // --- Dim behind + orange outline ---
+                toolApprovalDialog?.window?.apply {
+                    setDimAmount(0.8f)
+                    //  setBackgroundDrawableResource(R.drawable.bg_ai_message_outlined)
+                }
+            }
+        }
+
+
         viewModel.activeChatModel.observe(viewLifecycleOwner) { model ->
             if (model != null) {
                 modelNameTextView.text = viewModel.getModelDisplayName(model)
@@ -984,6 +1021,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         }
 
         viewModel.isAwaitingResponse.observe(viewLifecycleOwner) { isAwaiting ->
+            // If the request chain died (stop button, timeout) while the
+// approval dialog was open, close the orphaned dialog.
+            if (!isAwaiting && toolApprovalDialog != null) {
+                toolApprovalDialog?.dismiss()
+                toolApprovalDialog = null
+            }
+
             if (!isAwaiting && sharedPreferencesHelper.getConversationModeEnabled()) {
                 val messages = viewModel.chatMessages.value ?: return@observe
                 if (messages.isNotEmpty()) {
@@ -1409,7 +1453,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         updateModelSourceIndicator()
         val savedScale = sharedPreferencesHelper.getFontSizeCh()
         chatAdapter.updateFontSize(savedScale)
-        rootView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+        /*rootView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
                 // 1. IMPORTANT: Remove the listener immediately so it doesn't fire
                 // every time the layout changes (like when a message arrives)
@@ -1423,7 +1467,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
                 AppCompatDelegate.setDefaultNightMode(mode)
 
             }
-        })
+        })*/
         if (viewModel.activeModelIsLan()) {
             checkLocalNetworkPermission()
         }
@@ -1813,6 +1857,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             textToSpeech.stop()
             textToSpeech.shutdown()
         }
+        toolApprovalDialog = null
+
         mediaRecorder?.release()
         mediaRecorder = null
         voiceRecordFile?.delete()
@@ -2532,6 +2578,7 @@ $cleanContent
         }
 
         settingsButton.setOnClickListener {
+            hideKeyboard()
             hideMenu()
             parentFragmentManager.beginTransaction()
                 .hide(this)
@@ -3117,18 +3164,27 @@ $cleanContent
         return false // Event not handled by this fragment
     }
     private fun showMenu() {
+        liftHeaderAboveDim()                    // menu popup above the dim layer
         overlayView?.visibility = View.VISIBLE
         headerContainer.visibility = View.VISIBLE
-        (chatFrameView as ViewGroup).bringChildToFront(headerContainer)
-        dimOverlay?.visibility = View.VISIBLE
         updateChatMemoryButtonText()
         chatMemoryMenuButton.isVisible = true
-        updateMenuRowVisibilities()   // <-- add this
-        centerWatermarkIcon.animate()
-            .alpha(0f)
-            .setDuration(300)
-            .start()
+        updateMenuRowVisibilities()
+        centerWatermarkIcon.animate().alpha(0f).setDuration(300).start()
     }
+
+    private fun hideMenu() {
+        overlayView?.visibility = View.GONE
+        headerContainer.visibility = View.GONE
+        returnHeaderToChatFrame()
+
+        val hasMessages = !(viewModel.chatMessages.value.isNullOrEmpty())
+        if (!hasMessages) {
+            centerWatermarkIcon.visibility = View.VISIBLE
+            centerWatermarkIcon.animate().alpha(0.50f).setDuration(300).start()
+        }
+    }
+
 
     private fun applyPttRestIconSize() {
         pttButton.post {
@@ -3166,21 +3222,7 @@ $cleanContent
         chatMemoryMenuButton.text = if (count == Int.MAX_VALUE) "All" else count.toString()
     }
 
-    private fun hideMenu() {
-        dimOverlay?.visibility = View.GONE
-        headerContainer.visibility = View.GONE
-        overlayView?.visibility = View.GONE
 
-        // Only restore watermark if the chat is empty
-        val hasMessages = !(viewModel.chatMessages.value.isNullOrEmpty())
-        if (!hasMessages) {
-            centerWatermarkIcon.visibility = View.VISIBLE
-            centerWatermarkIcon.animate()
-                .alpha(0.50f)
-                .setDuration(300)
-                .start()
-        }
-    }
 
     private fun scrollToPreviousScreen() {
         chatRecyclerView.post {
@@ -3347,7 +3389,6 @@ $cleanContent
             }
         }
 
-        // --- Drag + tap logic ---
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
@@ -3359,8 +3400,15 @@ $cleanContent
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialX = lp.leftMargin
-                    initialY = lp.topMargin
+                    // ✅ Measure REAL position: convert view coords → parent-relative margins.
+                    // Works regardless of gravity (end-anchored XML default, or start-anchored saved pos).
+                    val parentLoc = IntArray(2)
+                    val viewLoc = IntArray(2)
+                    (v.parent as View).getLocationOnScreen(parentLoc)
+                    v.getLocationOnScreen(viewLoc)
+
+                    initialX = viewLoc[0] - parentLoc[0]
+                    initialY = viewLoc[1] - parentLoc[1]
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
@@ -3373,12 +3421,16 @@ $cleanContent
 
                     if (!isDragging && (abs(dx) > 10 || abs(dy) > 10)) {
                         isDragging = true
+                        // Switch to START gravity ONCE, using the measured position,
+                        // so the button stays exactly where it visually is.
+                        lp.gravity = Gravity.TOP or Gravity.START
+                        lp.leftMargin = initialX
+                        lp.topMargin = initialY
                     }
 
                     if (isDragging) {
-                        lp.leftMargin = (initialX + dx).toInt()
-                        lp.topMargin = (initialY + dy).toInt()
-                        lp.gravity = Gravity.TOP or Gravity.START
+                        lp.leftMargin = initialX + dx.toInt()
+                        lp.topMargin = initialY + dy.toInt()
                         v.layoutParams = lp
                     }
                     true
@@ -3386,12 +3438,10 @@ $cleanContent
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (isDragging) {
-                        // Save position after drag
                         sharedPreferencesHelper.saveFloatingTranscribePos(
                             lp.leftMargin, lp.topMargin
                         )
                     } else if (event.action == MotionEvent.ACTION_UP) {
-                        // Plain tap → toggle Immersive View
                         toggleReadingMode()
                     }
                     true
@@ -3401,6 +3451,7 @@ $cleanContent
             }
         }
     }
+
 
 
 
@@ -3581,6 +3632,7 @@ $cleanContent
         if (!hidden) {  // Fragment is now visible
             updateSystemMessageButtonState()
             updatePttButtonVisibility()
+            chatAdapter.refreshBubbleColors()
            // chatEditText.requestFocus()
             updateFloatingImmersiveVisibility()
           //  chatRecyclerView.post { applyReadingFocusDim() }
@@ -4397,6 +4449,10 @@ $cleanContent
             start()
         }
     private fun updateScrollProgress() {
+        if (!isScrollProgressEnabled) {          // ← respects the setting
+            progressBar.visibility = View.GONE
+            return
+        }
         val offset = chatRecyclerView.computeVerticalScrollOffset()
         val extent = chatRecyclerView.computeVerticalScrollExtent()
         val range = chatRecyclerView.computeVerticalScrollRange() - extent
@@ -4528,6 +4584,12 @@ $cleanContent
         glowAnimator.start()
         fadeAnimator.start()
     }
+    // Fragment-level helper (near your other private funs)
+    private fun truncateForDisplay(s: String, maxChars: Int = 400): String {
+        if (s.length <= maxChars) return s
+        return s.take(maxChars) + "\n…(truncated for display, +${s.length - maxChars} chars)"
+    }
+
     private fun animateBarBackground(view: View, targetColor: Int) {
         // 1. Get the background and .mutate() it
         val bgDrawable = view.background?.mutate() as? android.graphics.drawable.GradientDrawable
@@ -5310,6 +5372,121 @@ $cleanContent
 
             loadDataWithBaseURL(null, fullHtml, "text/html", "UTF-8", null)
         }
+    }
+    private fun liftHeaderAboveDim() {
+        val root = view as? FrameLayout ?: return
+        if (headerContainer.parent === root) return
+        (headerContainer.parent as? ViewGroup)?.removeView(headerContainer)
+        root.addView(headerContainer, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        ))
+        headerContainer.elevation = 10f   // above the dim overlay (9f)
+    }
+
+    private fun returnHeaderToChatFrame() {
+        val frame = chatFrameView as? FrameLayout ?: return
+        if (headerContainer.parent === frame) return
+        (headerContainer.parent as? ViewGroup)?.removeView(headerContainer)
+        frame.addView(headerContainer, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        ))
+        headerContainer.elevation = 0f
+    }
+
+    private fun isTouchInside(v: View, x: Float, y: Float): Boolean {
+        val loc = IntArray(2)
+        v.getLocationOnScreen(loc)
+        return x >= loc[0] && x <= loc[0] + v.width &&
+                y >= loc[1] && y <= loc[1] + v.height
+    }
+    // AMOLED: outline all header buttons; otherwise only the chat-memory button
+    private fun applyHeaderButtonStrokes(amoled: Boolean) {
+        val chestnut = ContextCompat.getColor(requireContext(), R.color.chestnut)
+        val strokePx = (1 * resources.displayMetrics.density).toInt()  // 1dp
+
+        fun walk(view: View) {
+            when (view) {
+                is MaterialButton -> {
+                    if (amoled || view === chatMemoryMenuButton) {
+                        view.strokeColor = ColorStateList.valueOf(chestnut)
+                        view.strokeWidth = strokePx
+                    } else {
+                        view.strokeWidth = 0
+                    }
+                }
+                is ViewGroup -> {
+                    for (i in 0 until view.childCount) walk(view.getChildAt(i))
+                }
+            }
+        }
+        walk(headerContainer)
+    }
+    private fun buildMarkwon(): Markwon {
+
+        val prism4j = Prism4j(ExampleGrammarLocator())
+        val theme = Prism4jThemeDarkula.create()
+        val syntaxHighlightPlugin = SyntaxHighlightPlugin.create(prism4j, theme)
+        val aiBubble = sharedPreferencesHelper.getAiBubbleColor(requireContext())
+            ?: if (sharedPreferencesHelper.isNightMode(requireContext())) 0xFF2C2C2C.toInt()
+            else 0xFFFFFFFF.toInt()
+        val darkBubble = luminance(aiBubble) < 128
+
+        val codeBg = if (darkBubble) 0xFF22272E.toInt()      // your rgb(34,39,46)
+        else Color.argb(128, 0, 0, 0)           // current day behavior
+        val quoteColor = if (darkBubble) 0xFF22272E.toInt()
+        else Color.BLACK
+// ✅ CRITICAL: Custom table theme FIRST
+        val customTableTheme = TableTheme.buildWithDefaults(requireContext())
+            .tableBorderColor(Color.LTGRAY)
+            .tableBorderWidth(2)
+            .tableCellPadding(8)  // Increased for better readability
+            .tableHeaderRowBackgroundColor("#121314".toColorInt())
+            .build()
+        return Markwon.builder(requireContext())
+            .usePlugin(TablePlugin.create(customTableTheme))
+            .usePlugin(HtmlPlugin.create())
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES))
+            .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(TaskListPlugin.create(
+                "#007541".toColorInt(),
+                "#007541".toColorInt(),
+                "#F8F8F8".toColorInt()
+            ))
+            .usePlugin(syntaxHighlightPlugin)
+            // ✅ Images AFTER table/syntax
+            .usePlugin(CoilImagesPlugin.create(requireContext()))
+            //.usePlugin(MovementMethodPlugin.create())
+            .usePlugin(MovementMethodPlugin.create(LinkMovementMethod.getInstance()))
+            .usePlugin(object : AbstractMarkwonPlugin() {
+                override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
+                    builder.linkResolver(LinkResolverDef())
+                }
+            })
+            .usePlugin(object : AbstractMarkwonPlugin() {
+                override fun configureTheme(builder: MarkwonTheme.Builder) {
+                    builder
+                        .codeTextColor(Color.LTGRAY)
+                        .codeBackgroundColor(codeBg)
+                        .codeBlockBackgroundColor(codeBg)
+                        .blockQuoteColor(quoteColor)
+                        .isLinkUnderlined(true)
+                }
+            })
+            .usePlugin(SoftBreakAddsNewLinePlugin.create())
+            .usePlugin(SimpleExtPlugin.create { plugin ->
+                plugin.addExtension(2, '=') { _, _ ->
+                    val typedValue = TypedValue()
+                    requireContext().theme.resolveAttribute(
+                        android.R.attr.textColorHighlight, typedValue, true
+                    )
+                    BackgroundColorSpan(typedValue.data)
+                }
+            })
+            .build()
     }
     private fun hasFolderPermission(): Boolean {
         val uriString = sharedPreferencesHelper.getSafFolderUri() ?: return false

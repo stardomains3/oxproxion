@@ -1,25 +1,45 @@
 package io.github.stardomains3.oxproxion
 
+import android.content.Context
+import android.content.res.Configuration
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.orbitalsonic.soniccolorpicker.views.ColorPickerView
+import com.orbitalsonic.soniccolorpicker.picker.ColorPickerPopup
 
 class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
-
+    private lateinit var prefs: SharedPreferencesHelper
+    private lateinit var amoledContainer: View
+    private lateinit var amoledSwitch: MaterialSwitch
+    private lateinit var aiColorButton: MaterialButton      // <-- add
+    private lateinit var userColorButton: MaterialButton
+    private val DEFAULT_AI_DAY = 0xFFFFFFFF.toInt()
+    private val DEFAULT_AI_NIGHT = 0xFF2C2C2C.toInt()
+    private val DEFAULT_USER_DAY = 0xFFEAEAEA.toInt()
+    private val DEFAULT_USER_NIGHT = 0xFF222f3d.toInt()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.setNavigationOnClickListener { parentFragmentManager.popBackStack() }
+        aiColorButton = view.findViewById(R.id.aiColorButton)
+        userColorButton = view.findViewById(R.id.userColorButton)
 
-        val prefs = SharedPreferencesHelper(requireContext())
+        val aiDefaultButton = view.findViewById<MaterialButton>(R.id.aiColorDefaultButton)
+        val userDefaultButton = view.findViewById<MaterialButton>(R.id.userColorDefaultButton)
 
+
+        prefs = SharedPreferencesHelper(requireContext())
         val themeToggleGroup =
             view.findViewById<MaterialButtonToggleGroup>(R.id.themeToggleGroup)
         val preferFullscreenChatSwitch =
@@ -28,8 +48,19 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
             view.findViewById<MaterialSwitch>(R.id.floatingTranscribeSwitch)
         val keepScreenOnSwitch =
             view.findViewById<MaterialSwitch>(R.id.keepScreenOnSwitch)
+
+
         val fontButton = view.findViewById<MaterialButton>(R.id.fontButton)
         val fontSizeButton = view.findViewById<MaterialButton>(R.id.fontSizeButton)
+        // in onViewCreated:
+        amoledContainer = view.findViewById(R.id.amoledContainer)
+        amoledSwitch = view.findViewById<MaterialSwitch>(R.id.amoledSwitch).apply {
+            isChecked = prefs.isAmoledModeEnabled()
+            setOnCheckedChangeListener { _, isChecked ->
+                prefs.setAmoledModeEnabled(isChecked)
+                requireActivity().recreate() // re-apply theme everywhere
+            }
+        }
 //val readingFocusDimSwitch = view.findViewById<MaterialSwitch>(R.id.readingFocusDimSwitch)
 
 
@@ -43,6 +74,20 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         floatingTranscribeSwitch.isChecked = prefs.getFloatingTranscribeEnabled()
         keepScreenOnSwitch.isChecked = prefs.getKeepScreenOnPreference()
 
+        aiColorButton.setOnClickListener {
+            showBubbleColorPicker("AI Bubble Color", isAi = true, aiColorButton)
+        }
+        userColorButton.setOnClickListener {
+            showBubbleColorPicker("User Bubble Color", isAi = false, userColorButton)
+        }
+        aiDefaultButton.setOnClickListener {
+            prefs.resetAiBubbleColor(requireContext())
+            // updateColorSwatches()
+        }
+        userDefaultButton.setOnClickListener {
+            prefs.resetUserBubbleColor(requireContext())
+            //updateColorSwatches()
+        }
         // readingFocusDimSwitch.isChecked = prefs.getReadingFocusDimEnabled()
 
         fontButton.text = prettyFontName(prefs.getSelectedFont())
@@ -88,6 +133,20 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
+        view.findViewById<View>(R.id.themeInfoIcon).setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("About theme changes")
+                .setMessage(
+                    "Switching theme or AMOLED restarts the screen. " +
+                            "Best done when:\n\n" +
+                            "• No message is incoming\n" +
+                            "• TTS is not playing\n" +
+                            "• No tool approval is pending"
+                )
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
 
 
 
@@ -105,15 +164,24 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         fontSizeButton.setOnClickListener {
             requestChatUi("font_size")
         }
+        updateAmoledVisibility()
 
         // ---- Style switches ----
         styleAllSwitches(
             view,
             R.id.preferFullscreenChatSwitch,
             R.id.floatingTranscribeSwitch,
-            R.id.keepScreenOnSwitch
+            R.id.keepScreenOnSwitch,
+            R.id.autoBackSwitch,
+            R.id.amoledSwitch
             //   R.id.readingFocusDimSwitch
         )
+        // updateColorSwatches()
+    }
+    override fun onResume() {
+        super.onResume()
+        view?.findViewById<MaterialButton>(R.id.fontButton)?.text =
+            prettyFontName(prefs.getSelectedFont())
     }
 
     // 🔥 Tell ChatFragment to show something, then unwind to it.
@@ -127,10 +195,101 @@ class DisplaySettingsFragment : Fragment(R.layout.fragment_settings_display) {
         parentFragmentManager.popBackStack() // Display → Settings
         parentFragmentManager.popBackStack() // Settings → Chat
     }
+    // Show only when the *effective* theme is dark
+    private fun updateAmoledVisibility() {
+        val themeMode = prefs.getThemeMode()
+        val systemDark = (resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val effectiveDark = when (themeMode) {
+            SharedPreferencesHelper.THEME_DARK -> true
+            SharedPreferencesHelper.THEME_LIGHT -> false
+            else -> systemDark
+        }
+        amoledContainer.visibility = if (effectiveDark) View.VISIBLE else View.GONE
+    }
 
     // "geologica_light" → "Geologica light" (good enough for a label)
     private fun prettyFontName(stored: String?): String {
         val name = stored?.takeIf { it.isNotBlank() } ?: "geologica_light"
         return name.replace("_", " ").replaceFirstChar { it.uppercase() }
     }
+    private fun showBubbleColorPicker(title: String, isAi: Boolean, swatchButton: MaterialButton) {
+        val ctx = requireContext()
+        val current = (if (isAi) prefs.getAiBubbleColor(ctx) else prefs.getUserBubbleColor(ctx))
+            ?: defaultFor(ctx, isAi)
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_color_picker, null)
+        val picker = dialogView.findViewById<ColorPickerView>(R.id.colorPicker)
+        val preview = dialogView.findViewById<View>(R.id.previewBubble)
+        val hexLabel = dialogView.findViewById<TextView>(R.id.previewHexLabel)
+
+        var picked = current  // committed only on "Set Color"
+
+        val updatePreview = { color: Int ->
+            preview.background = previewDrawable(ctx, color)
+            hexLabel.text = "#%06X".format(0xFFFFFF and color)
+        }
+        updatePreview(current)
+
+        picker.setInitialColor(current)
+        picker.subscribe(object : ColorPickerPopup.ColorPickerObserver() {
+            override fun onColor(color: Int, fromUser: Boolean, shouldPropagate: Boolean) {
+                picked = color
+                updatePreview(color)          // live preview as they drag
+            }
+            override fun onColorPicked(color: Int) { picked = color }
+            override fun onCancel() { /* dialog handles it */ }
+        })
+
+        val dialog = MaterialAlertDialogBuilder(ctx)
+            .setTitle(title)
+            .setView(dialogView)
+            .create()
+
+        dialogView.findViewById<MaterialButton>(R.id.cancelColorButton).setOnClickListener {
+            dialog.dismiss()
+        }
+        dialogView.findViewById<MaterialButton>(R.id.setColorButton).setOnClickListener {
+            if (isAi) prefs.setAiBubbleColor(ctx, picked)
+            else prefs.setUserBubbleColor(ctx, picked)
+            //  updateColorSwatches()
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+    private fun previewDrawable(context: Context, color: Int): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(color)
+            cornerRadius = 16f * context.resources.displayMetrics.density
+        }
+    private fun defaultFor(ctx: Context, isAi: Boolean): Int {
+        val night = (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        return when {
+            isAi && night -> DEFAULT_AI_NIGHT
+            isAi -> DEFAULT_AI_DAY
+            night -> DEFAULT_USER_NIGHT
+            else -> DEFAULT_USER_DAY
+        }
+    }
+
+    private fun updateColorSwatches() {
+        val ctx = requireContext()
+        aiColorButton.iconTint = android.content.res.ColorStateList.valueOf(
+            prefs.getAiBubbleColor(ctx) ?: defaultFor(ctx, true)
+        )
+        userColorButton.iconTint = android.content.res.ColorStateList.valueOf(
+            prefs.getUserBubbleColor(ctx) ?: defaultFor(ctx, false)
+        )
+    }
+
+
+    private fun isSystemDark() =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+
+
+
 }

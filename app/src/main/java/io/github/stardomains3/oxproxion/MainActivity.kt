@@ -3,6 +3,7 @@ package io.github.stardomains3.oxproxion
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -11,6 +12,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricPrompt
@@ -27,6 +29,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        /* ------------------------------------------------------ */
+        /* 0. Theme setup — MUST run before super.onCreate()      */
+        /* ------------------------------------------------------ */
+        val prefs = SharedPreferencesHelper(this)
+
+        // Night mode (move it here from ChatFragment's global-layout hack)
+        when (prefs.getThemeMode()) {
+            SharedPreferencesHelper.THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+            SharedPreferencesHelper.THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }.let { AppCompatDelegate.setDefaultNightMode(it) }
+
+        // AMOLED overlay
+        val isDark = (resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (isDark && prefs.isAmoledModeEnabled()) {
+            theme.applyStyle(R.style.ThemeOverlay_Oxproxion_Amoled, true)
+        }
+
         super.onCreate(savedInstanceState)
 
         /* ------------------------------------------------------ */

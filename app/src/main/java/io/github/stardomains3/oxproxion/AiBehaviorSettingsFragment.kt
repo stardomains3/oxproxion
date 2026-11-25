@@ -18,7 +18,7 @@ class AiBehaviorSettingsFragment : Fragment(R.layout.fragment_settings_ai_behavi
         toolbar.setNavigationOnClickListener { parentFragmentManager.popBackStack() }
 
         val prefs = SharedPreferencesHelper(requireContext())
-
+        val toolApprovalSwitch = view.findViewById<MaterialSwitch>(R.id.toolApprovalSwitch)
         val inferenceParamsButton = view.findViewById<MaterialButton>(R.id.inferenceParamsButton)
         val chatMemoryButton = view.findViewById<MaterialButton>(R.id.chatMemoryButton)
         val promptsButton = view.findViewById<MaterialButton>(R.id.promptsButton)
@@ -47,6 +47,8 @@ class AiBehaviorSettingsFragment : Fragment(R.layout.fragment_settings_ai_behavi
         chatMemoryButton.text = if (memoryCount == Int.MAX_VALUE) "All messages" else "$memoryCount messages"
         openRouterTransformsSwitch.isChecked = prefs.getOpenRouterTransformsEnabled()
         autoDisableWebSearchSwitch.isChecked = prefs.getDisableWebSearchAfterSend()
+        toolApprovalSwitch.isChecked = prefs.getToolApprovalEnabled()
+
 
         // ---- Listeners (verbatim from your original) ----
         inferenceParamsButton.setOnClickListener {
@@ -81,6 +83,9 @@ class AiBehaviorSettingsFragment : Fragment(R.layout.fragment_settings_ai_behavi
                 .addToBackStack(null)
                 .commit()
         }
+        toolApprovalSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.saveToolApprovalEnabled(isChecked)
+        }
 
         openRouterTransformsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.saveOpenRouterTransformsEnabled(isChecked)
@@ -94,7 +99,8 @@ class AiBehaviorSettingsFragment : Fragment(R.layout.fragment_settings_ai_behavi
         styleAllSwitches(
             view,
             R.id.openRouterTransformsSwitch,
-            R.id.autoDisableWebSearchSwitch
+            R.id.autoDisableWebSearchSwitch,
+            R.id.toolApprovalSwitch
         )
     }
 }

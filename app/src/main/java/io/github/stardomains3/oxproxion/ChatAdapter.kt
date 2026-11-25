@@ -75,6 +75,9 @@ class ChatAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private var isReaderMode = false
     private var focusedPosition: Int? = null
+    private var customAiColor: Int? = null
+    private var customUserColor: Int? = null
+    private var bubbleColorsLoaded = false
 
     private val collapsedStates = mutableMapOf<String, Boolean>()
     private data class CachedRender(
@@ -473,6 +476,7 @@ class ChatAdapter(
         private val readingModeButton: ImageButton = itemView.findViewById(R.id.readingModeButton)
         private val buttonScrollView: HorizontalScrollView = itemView.findViewById(R.id.buttonScrollView)
         private val resendButton: ImageButton = itemView.findViewById(R.id.resendButton)
+        val bubbleContainer: ConstraintLayout = itemView.findViewById(R.id.messageContainer)
         private val editButton: ImageButton = itemView.findViewById(R.id.editButton)
         private val imageView: ImageView = itemView.findViewById(R.id.userImageView)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
@@ -480,6 +484,7 @@ class ChatAdapter(
 
 
         fun bind(message: FlexibleMessage) {
+            ensureBubbleColors(itemView.context)
             buttonScrollView.visibility = if (isReaderMode) View.GONE else View.VISIBLE
             messageTextView.textSize = 16f * currentFontScale / 100f
             messageTextView.typeface = currentTypeface
@@ -490,6 +495,9 @@ class ChatAdapter(
             collapseToggleButton.visibility = View.GONE
 
             if (pos >= 0 && message.role == "user") {
+                val c = customUserColor
+                if (c != null) bubbleContainer.background = bubbleDrawable(itemView.context, c)
+                else bubbleContainer.setBackgroundResource(R.drawable.bg_user_message)
                 val displayMetrics = itemView.resources.displayMetrics
                 val screenWidthDp = displayMetrics.widthPixels / displayMetrics.density
                 val isTablet = screenWidthDp >= 600
@@ -717,6 +725,7 @@ class ChatAdapter(
         }
 
         fun bind(message: FlexibleMessage, position: Int, isSpeaking: Boolean, currentPosition: Int) {
+            ensureBubbleColors(itemView.context)
             buttonScrollView.visibility = if (isReaderMode) View.GONE else View.VISIBLE
             bindReasoning(message)
             messageTextView.textSize = 16f * currentFontScale / 100f
@@ -789,53 +798,69 @@ class ChatAdapter(
             val isThinking = text == "working..."
             val hasActiveTools = message.toolCalls != null && message.toolCalls.isNotEmpty()
 
-            if (isError) {
-                messageContainer.setBackgroundResource(R.drawable.bg_error_message)
-            } else if (hasActiveTools) {
-                messageContainer.setBackgroundResource(R.drawable.bg_ai_message_outlined)
-            } else {
-                messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
+            when {
+                isError -> messageContainer.setBackgroundResource(R.drawable.bg_error_message)
+                hasActiveTools -> {
+                    val c = customAiColor
+                    if (c != null) messageContainer.background = bubbleDrawable(itemView.context, c, strokeWidthDp = 1)
+                    else messageContainer.setBackgroundResource(R.drawable.bg_ai_message_outlined)
+                }
+
+                else -> {
+                    val c = customAiColor
+                    if (c != null) messageContainer.background = bubbleDrawable(itemView.context, c)
+                    else messageContainer.setBackgroundResource(R.drawable.bg_ai_message)
+                }
             }
+
 
             // 4. ANIMATIONS
             pulseAnimator?.cancel()
             bgColorAnimator?.cancel()
             pulseAnimator = null
             bgColorAnimator = null
-
             if (isThinking) {
-                val originalDrawable = ContextCompat.getDrawable(itemView.context, R.drawable.bg_ai_message) as GradientDrawable
+                val baseColor = customAiColor ?: 0xFF2C2C2C.toInt()
+                val darkColor = darken(baseColor, 0.75f)
+
                 val animatedDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    setColor(0xFF2C2C2C.toInt())
+                    setColor(baseColor)
                     cornerRadius = 16f * itemView.resources.displayMetrics.density
                 }
 
                 messageContainer.background = animatedDrawable
 
+                // 1. Alpha pulse: fades the WHOLE container (bubble + text) in and out.
+                //    This always runs — it's the primary "thinking" signal.
                 val alphaAnimator = ObjectAnimator.ofFloat(messageContainer, "alpha", 0.2f, 1f).apply {
                     duration = 4000
                     repeatCount = ObjectAnimator.INFINITE
                     repeatMode = ObjectAnimator.REVERSE
                 }
-
-                val colorAnimator = ObjectAnimator.ofArgb(
-                    animatedDrawable,
-                    "color",
-                    0xFF222f3d.toInt(),
-                    0xFF2C2C2C.toInt()
-                ).apply {
-                    duration = 2000
-                    repeatCount = ObjectAnimator.INFINITE
-                    repeatMode = ObjectAnimator.REVERSE
-                }
-
                 alphaAnimator.start()
-                colorAnimator.start()
-
                 pulseAnimator = alphaAnimator
-                bgColorAnimator = colorAnimator
-            } else {
+
+                // 2. Color pulse: background-only bonus. Skip it if the two endpoints
+                //    are identical (e.g. pure black) — it would be invisible anyway.
+                if (darkColor != baseColor) {
+                    val colorAnimator = ObjectAnimator.ofArgb(
+                        animatedDrawable,
+                        "color",
+                        darkColor,
+                        baseColor
+                    ).apply {
+                        duration = 2000
+                        repeatCount = ObjectAnimator.INFINITE
+                        repeatMode = ObjectAnimator.REVERSE
+                    }
+                    colorAnimator.start()
+                    bgColorAnimator = colorAnimator
+                } else {
+                    bgColorAnimator = null   // nothing running; stopPulse() null-checks this
+                }
+            }
+            else {
                 messageContainer.alpha = 1f
             }
 
@@ -1021,7 +1046,6 @@ class ChatAdapter(
                 }
             }
 
-
             pngButton.setOnClickListener {
                 onCaptureItemToBitmap(bindingAdapterPosition, "png")
             }
@@ -1061,7 +1085,11 @@ class ChatAdapter(
             bgColorAnimator = null
             messageContainer.alpha = 1f
             messageContainer.clearAnimation()
-            messageContainer.background = ContextCompat.getDrawable(itemView.context, R.drawable.bg_ai_message)
+
+            val c = customAiColor
+            messageContainer.background =
+                if (c != null) bubbleDrawable(itemView.context,c )
+                else ContextCompat.getDrawable(itemView.context, R.drawable.bg_ai_message)
         }
 
         private fun applyCollapseState(isCollapsed: Boolean) {
@@ -1126,7 +1154,50 @@ class ChatAdapter(
 
 
 
+
+
     }
+    private fun ensureBubbleColors(context: Context) {
+        if (bubbleColorsLoaded) return
+        bubbleColorsLoaded = true
+        val prefs = SharedPreferencesHelper(context)
+        customAiColor = prefs.getAiBubbleColor(context)
+        customUserColor = prefs.getUserBubbleColor(context)
+    }
+
+    /** Call from ChatFragment.onResume() so returning from settings updates without recreate. */
+    fun refreshBubbleColors() {
+        bubbleColorsLoaded = false
+        notifyDataSetChanged()
+    }
+
+    private fun bubbleDrawable(
+        context: Context,
+        color: Int,
+        strokeWidthDp: Int = 0,
+        strokeColor: Int = 0xFFA0610A.toInt()   // your existing outline color
+    ): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        setColor(color)
+        cornerRadius = 16f * context.resources.displayMetrics.density
+        if (strokeWidthDp > 0) {
+            setStroke(
+                strokeWidthDp * context.resources.displayMetrics.density.toInt(),
+                strokeColor
+            )
+        }
+    }
+    private fun darken(color: Int, factor: Float): Int {
+        val r = (color shr 16 and 0xFF)
+        val g = (color shr 8 and 0xFF)
+        val b = (color and 0xFF)
+        return (color and 0xFF000000.toInt()) or
+                ((r * factor).toInt() shl 16) or
+                ((g * factor).toInt() shl 8) or
+                (b * factor).toInt()
+    }
+
+
     inner class HiddenViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
 }

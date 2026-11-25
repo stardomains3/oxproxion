@@ -27,8 +27,8 @@ android {
         applicationId = "io.github.stardomains3.oxproxion"
         minSdk = 31
         targetSdk = 37
-        versionCode = 253
-        versionName = "2.2.38"
+        versionCode = 254
+        versionName = "2.2.39"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -105,6 +105,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.oss.licenses.parser)
+    implementation(libs.soniccolorpicker)
 
     // CommonMark Extensions
     implementation(libs.commonmark.task.list)

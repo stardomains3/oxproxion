@@ -18,6 +18,13 @@
 
         <item name="materialAlertDialogTheme">@style/CustomMaterialAlertDialogTheme</item>
     </style>
+    <style name="ThemeOverlay.Oxproxion.Amoled" parent="">
+        <item name="colorSurface">#000000</item>
+        <item name="colorSurfaceVariant">#000000</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="colorOutline">#3A3A3A</item>
+    </style>
+
 
     <style name="Widget.App.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
         <item name="buttonTint">@color/button_tint</item>

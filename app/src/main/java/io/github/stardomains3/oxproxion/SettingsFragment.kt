@@ -37,18 +37,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             openCategory(PermissionsSettingsFragment())
         }
 
-        // HELP — opens HelpFragment directly, no category page needed
         view.findViewById<View>(R.id.cardHelp).setOnClickListener {
-            parentFragmentManager.beginTransaction()
-                /*  .setCustomAnimations(
-                      R.anim.slide_in_right, R.anim.fade_out,
-                      R.anim.fade_in, R.anim.slide_out_right
-                  )*/
-                .hide(this)
-                .add(R.id.fragment_container, HelpFragment())
-                .addToBackStack(null)
-                .commit()
+            openCategory(HelpFragment())
         }
+
 // DISPLAY & THEME
         view.findViewById<View>(R.id.cardDisplay).setOnClickListener {
             openCategory(DisplaySettingsFragment())

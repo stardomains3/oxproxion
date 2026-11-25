@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.PorterDuff
 import android.os.Bundle
+import android.view.ViewGroup
 import android.widget.EditText
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.DialogFragment
@@ -129,10 +130,11 @@ class EditModelDialogFragment : DialogFragment() {
         super.onStart()
         dialog?.window?.let { window ->
             val metrics = resources.displayMetrics
-            val maxHeight = (metrics.heightPixels * 0.85).toInt()
+           // val maxHeight = (metrics.heightPixels * 0.85).toInt()
             val maxWidth = (metrics.widthPixels * 0.90).toInt()
 
-            window.setLayout(maxWidth, maxHeight)
+            // width capped, height wraps content
+            window.setLayout(maxWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
     }
 }

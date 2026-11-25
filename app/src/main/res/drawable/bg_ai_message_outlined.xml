@@ -7,6 +7,6 @@
 
     <!-- Add the outline (stroke) -->
     <stroke
-        android:width="3dp"
+        android:width="1dp"
         android:color="#a0610a" /> <!-- Yellow for visibility; change to green (#00FF00) or theme color -->
 </shape>

@@ -64,6 +64,7 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readLine
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -163,6 +164,12 @@ enum class SortOrder {
 
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
+    // --- Tool approval ---
+    data class PendingToolApproval(val toolCalls: List<ToolCall>)
+    private val _pendingToolApproval = MutableLiveData<Event<PendingToolApproval>>()
+    val pendingToolApproval: LiveData<Event<PendingToolApproval>> = _pendingToolApproval
+
+    private var approvalDeferred: CompletableDeferred<Boolean>? = null
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
     private val json = Json { ignoreUnknownKeys = true
@@ -969,7 +976,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun cancelCurrentRequest() {
         networkJob?.cancel()
         lanFetchJob?.cancel()
+        approvalDeferred?.cancel()   // NEW: wakes a suspended await() with CancellationException
+        approvalDeferred = null      // NEW
     }
+
     private var toolCallsHandledForTurn = false
     private var toolRecursionDepth = 0
     fun sendUserMessage(
@@ -2138,6 +2148,38 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Deduplicate tool calls: Group by name + arguments and execute only once per unique combo
         val uniqueToolCalls = toolCalls.groupBy { "${it.function.name}:${it.function.arguments}" }
             .map { it.value.first() }
+        // --- NEW: approval gate ---
+        if (!awaitToolApproval(uniqueToolCalls)) {
+            toolRecursionDepth--   // mirror the decrement at the bottom of this function
+
+            // Answer EVERY tool_call_id — including the duplicates we deduped —
+            // so the follow-up request stays valid for the API.
+            val denialResults = toolCalls.map { tc ->
+                FlexibleMessage(
+                    role = "tool",
+                    content = JsonPrimitive("User declined to run this tool call."),
+                    toolCallId = tc.id
+                )
+            }
+            withContext(Dispatchers.Main) {
+                updateMessages { it.addAll(denialResults) }
+            }
+
+            // Same system-message prepend you already do at the bottom
+            val messagesForApi = _chatMessages.value?.toMutableList() ?: mutableListOf()
+            val systemMessage = sharedPreferencesHelper.getSelectedSystemMessage().prompt.trim()
+            if (systemMessage.isNotBlank() &&
+                (messagesForApi.isEmpty() || messagesForApi[0].role != "system")
+            ) {
+                messagesForApi.add(0, FlexibleMessage(role = "system", content = JsonPrimitive(systemMessage)))
+            }
+
+            // Model gets told "no" and can respond (e.g., ask the user what to do instead)
+            continueConversation(messagesForApi)
+            return
+        }
+// --- END NEW ---
+
         /*  Log.d("ToolCalls", "Received ${toolCalls.size} tool calls; deduplicated to ${uniqueToolCalls.size}")
         withContext(Dispatchers.Main) {
             val toolNames = uniqueToolCalls.map { it.function.name }.distinct().joinToString(", ")
@@ -7723,6 +7765,34 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             _toastUiEvent.postValue(Event(summary))
             results.joinToString("\n")
         }
+    }
+    /** Gate: suspends until the user answers the dialog. Returns false if denied. */
+    private suspend fun awaitToolApproval(uniqueToolCalls: List<ToolCall>): Boolean {
+        if (!sharedPreferencesHelper.getToolApprovalEnabled()) return true
+
+        val deferred = CompletableDeferred<Boolean>()
+        approvalDeferred = deferred
+
+        withContext(Dispatchers.Main) {
+            _pendingToolApproval.value = Event(PendingToolApproval(uniqueToolCalls))
+        }
+
+        return try {
+            deferred.await()
+        } finally {
+            // Identity check: never clobber a NEWER pending approval
+            if (approvalDeferred === deferred) approvalDeferred = null
+        }
+    }
+
+    fun approvePendingTools() {
+        approvalDeferred?.complete(true)
+        approvalDeferred = null
+    }
+
+    fun denyPendingTools() {
+        approvalDeferred?.complete(false)
+        approvalDeferred = null
     }
 
 

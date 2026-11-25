@@ -2,6 +2,7 @@ package io.github.stardomains3.oxproxion
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -33,6 +34,7 @@ class SharedPreferencesHelper(context: Context) {
         this.timeoutListener = listener
     }
     companion object {
+        private const val KEY_TOOL_APPROVAL = "tool_approval_enabled"
         private const val KEY_WATERMARK_STT_ENABLED = "watermark_stt_enabled"
         private const val KEY_READING_FOCUS_DIM_ENABLED = "reading_focus_dim_enabled"
         private const val KEY_PREFER_FULLSCREEN_CHAT = "prefer_fullscreen_chat"
@@ -66,6 +68,7 @@ class SharedPreferencesHelper(context: Context) {
         const val LAN_PROVIDER_HERMES_AGENT = "hermes_agent"  // NEW - Hermes Agent provider
         private const val KEY_AUTO_BACK = "auto_back_enabled"
         private const val KEY_WEB_FETCH_ENGINE = "web_fetch_engine"
+        const val KEY_AMOLED_MODE_ENABLED = "amoled_mode_enabled"
         private const val KEY_WEB_FETCH_MAX_USES = "web_fetch_max_uses"
         private const val KEY_VOLUME_SCROLL = "volume_scroll_enabled"
         private const val KEY_ENABLED_TOOLS = "enabled_tools"
@@ -85,6 +88,11 @@ class SharedPreferencesHelper(context: Context) {
         const val LAN_API_KEY = "lan_api_key"  // NEW
         private const val KEY_TIMEOUT_MINUTES = "timeout_minutes"
         private const val KEY_DISABLE_WEB_SEARCH_AFTER_SEND = "disable_web_search_after_send"
+        const val BUBBLE_COLOR_UNSET = Int.MIN_VALUE   // -1 is a valid color (white), so use this
+        private const val KEY_AI_DAY = "bubble_ai_color_day"
+        private const val KEY_AI_NIGHT = "bubble_ai_color_night"
+        private const val KEY_USER_DAY = "bubble_user_color_day"
+        private const val KEY_USER_NIGHT = "bubble_user_color_night"
         private const val KEY_SCROLLERS_ENABLED = "scrollers_enabled"
         private const val MAX_TOKENS_ENABLED = "max_tokens_enabled"
         private const val KEY_CUSTOM_PROMPTS = "custom_prompts"
@@ -372,6 +380,13 @@ class SharedPreferencesHelper(context: Context) {
         // Default to TRUE to preserve current behavior for existing users
         return mainPrefs.getBoolean(KEY_DISABLE_WEB_SEARCH_AFTER_SEND, true)
     }
+
+    fun getToolApprovalEnabled(): Boolean =
+        mainPrefs.getBoolean(KEY_TOOL_APPROVAL, false)
+
+    fun saveToolApprovalEnabled(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(KEY_TOOL_APPROVAL, enabled) }
+    }
     fun getReasoningExclude(): Boolean = mainPrefs.getBoolean("reasoning_exclude", false)
     fun saveReasoningExclude(exclude: Boolean) = mainPrefs.edit {
         putBoolean(
@@ -451,6 +466,40 @@ class SharedPreferencesHelper(context: Context) {
             // Optional: You could add a user-facing error (e.g., Toast) here if needed
         }
     }
+    fun isNightMode(context: Context) =
+        (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+
+    // --- AI bubble ---
+    fun getAiBubbleColor(context: Context): Int? =
+        readBubbleColor(context, KEY_AI_DAY, KEY_AI_NIGHT)
+
+    fun setAiBubbleColor(context: Context, color: Int) =
+        writeBubbleColor(context, KEY_AI_DAY, KEY_AI_NIGHT, color)
+
+    fun resetAiBubbleColor(context: Context) =
+        writeBubbleColor(context, KEY_AI_DAY, KEY_AI_NIGHT, BUBBLE_COLOR_UNSET)
+
+    // --- User bubble ---
+    fun getUserBubbleColor(context: Context): Int? =
+        readBubbleColor(context, KEY_USER_DAY, KEY_USER_NIGHT)
+
+    fun setUserBubbleColor(context: Context, color: Int) =
+        writeBubbleColor(context, KEY_USER_DAY, KEY_USER_NIGHT, color)
+
+    fun resetUserBubbleColor(context: Context) =
+        writeBubbleColor(context, KEY_USER_DAY, KEY_USER_NIGHT, BUBBLE_COLOR_UNSET)
+
+    private fun readBubbleColor(context: Context, dayKey: String, nightKey: String): Int? {
+        val key = if (isNightMode(context)) nightKey else dayKey
+        val c = mainPrefs.getInt(key, BUBBLE_COLOR_UNSET)
+        return if (c == BUBBLE_COLOR_UNSET) null else c
+    }
+
+    private fun writeBubbleColor(context: Context, dayKey: String, nightKey: String, value: Int) {
+        val key = if (isNightMode(context)) nightKey else dayKey
+        mainPrefs.edit().putInt(key, value).apply()
+    }
     fun saveSafFolderUri(uri: String) {
         mainPrefs.edit { putString(SAF_FOLDER_URI, uri) }
     }
@@ -463,13 +512,19 @@ class SharedPreferencesHelper(context: Context) {
         // Notify the listener if it exists
         timeoutListener?.onTimeoutChanged(minutes)
     }
-    fun getScrollProgressEnabled(): Boolean = mainPrefs.getBoolean(KEY_SCROLL_PROGRESS_ENABLED, true)  // 🔥 Default TRUE
+    fun getScrollProgressEnabled(): Boolean = mainPrefs.getBoolean(KEY_SCROLL_PROGRESS_ENABLED, false)
     fun saveScrollProgressEnabled(enabled: Boolean) = mainPrefs.edit {
         putBoolean(KEY_SCROLL_PROGRESS_ENABLED, enabled)
     }
     fun getSortOrder(): SortOrder {
         val sortOrderName = mainPrefs.getString(KEY_SORT_ORDER, SortOrder.ALPHABETICAL.name)
         return SortOrder.valueOf(sortOrderName ?: SortOrder.ALPHABETICAL.name)
+    }
+    // --- AMOLED Mode ---
+    fun isAmoledModeEnabled(): Boolean = mainPrefs.getBoolean(KEY_AMOLED_MODE_ENABLED, false)
+
+    fun setAmoledModeEnabled(enabled: Boolean) = mainPrefs.edit {
+        putBoolean(KEY_AMOLED_MODE_ENABLED, enabled)
     }
     fun getUseCopyButton2(): Boolean {
         return mainPrefs.getBoolean(KEY_USE_COPY_BUTTON2, false)  // false = Dismiss, true = Copy
