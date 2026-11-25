@@ -1,0 +1,1 @@
+- Updated and pared down seeded OpenRouter models for initial installations.

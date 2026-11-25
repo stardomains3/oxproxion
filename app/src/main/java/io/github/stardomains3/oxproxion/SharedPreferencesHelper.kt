@@ -912,21 +912,32 @@ class SharedPreferencesHelper(context: Context) {
     fun seedDefaultModelsIfNeeded() {
         if (!mainPrefs.getBoolean(KEY_DEFAULT_MODELS_SEEDED, false)) {
             val defaultModels = listOf(
-                LlmModel("OpenAI: ChatGPT-4o", "openai/chatgpt-4o-latest", true),
-                LlmModel("MoonshotAI: Kimi K2", "moonshotai/kimi-k2", false),
-                LlmModel("xAI: Grok 3", "x-ai/grok-3", false),
-                LlmModel("Mistral: Mistral Medium 3", "mistralai/mistral-medium-3", true),
-                LlmModel("Deepseek: R1 0528", "deepseek/deepseek-r1-0528", false),
-                LlmModel("Deepseek: V3 0324", "deepseek/deepseek-chat-v3-0324", false),
-                LlmModel("Qwen: Qwen3 235B A22B Instruct 2507", "qwen/qwen3-235b-a22b-2507", false),
-                LlmModel("Baidu: ERNIE 4.5 300B A47B", "baidu/ernie-4.5-300b-a47b", false),
-                LlmModel("Google: Gemini 2.5 Flash", "google/gemini-2.5-flash", true),
-                LlmModel("Google: Gemini 2.5 Pro", "google/gemini-2.5-pro", true),
-                LlmModel("xAI: Grok 4", "x-ai/grok-4", true),
-                LlmModel("OpenAI: GPT-4.1", "openai/gpt-4.1", true),
-                LlmModel("Anthropic: Claude Sonnet 4", "anthropic/claude-sonnet-4", true),
-                LlmModel("Perplexity: Sonar Pro", "perplexity/sonar-pro", false)
+                LlmModel(
+                    displayName = "xAI: Grok Latest",
+                    apiIdentifier = "~x-ai/grok-latest",
+                    isVisionCapable = true,          // input_modalities: text, image, file
+                    isReasoningCapable = true,
+                    reasoningEfforts = listOf("xhigh", "high", "medium", "low"),
+                    reasoningDefaultEffort = "high",
+                    reasoningMandatory = true        // reasoning.mandatory: true
+                ),
+                LlmModel(
+                    displayName = "Z.ai: GLM Latest",
+                    apiIdentifier = "~z-ai/glm-latest",
+                    isVisionCapable = false,         // text-only input
+                    isReasoningCapable = true,
+                    reasoningEfforts = listOf("max", "high", "low"),
+                    reasoningDefaultEffort = "max",
+                    reasoningMandatory = true
+                ),
+                LlmModel(
+                    displayName = "Perplexity: Sonar",
+                    apiIdentifier = "perplexity/sonar",
+                    isVisionCapable = true            // input_modalities: text, image
+                    // no reasoning fields — supported_parameters has no "reasoning"/"reasoning_effort"
+                )
             )
+
             val customModels = getCustomModels()
             customModels.addAll(defaultModels)
             saveCustomModels(customModels)
