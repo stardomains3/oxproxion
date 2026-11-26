@@ -1,0 +1,2 @@
+  - Fixed issue with llama.cpp model fetch when an api key is needed: https://github.com/stardomains3/oxproxion/issues/108#issue-6623269268
+  - Some other model fetching optimizations.

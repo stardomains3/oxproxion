@@ -537,7 +537,7 @@ class SharedPreferencesHelper(context: Context) {
 
     private fun writeBubbleColor(context: Context, dayKey: String, nightKey: String, value: Int) {
         val key = if (isNightMode(context)) nightKey else dayKey
-        mainPrefs.edit().putInt(key, value).apply()
+        mainPrefs.edit { putInt(key, value) }
     }
     fun saveSafFolderUri(uri: String) {
         mainPrefs.edit { putString(SAF_FOLDER_URI, uri) }
@@ -566,7 +566,7 @@ class SharedPreferencesHelper(context: Context) {
         putBoolean(KEY_AMOLED_MODE_ENABLED, enabled)
     }
     fun saveNotiActionSlot1(value: String) {
-        mainPrefs.edit().putString("noti_action_slot1", value).apply()
+        mainPrefs.edit { putString("noti_action_slot1", value) }
     }
     fun getNotiActionSlot1(): String =
         mainPrefs.getString("noti_action_slot1",
@@ -574,7 +574,7 @@ class SharedPreferencesHelper(context: Context) {
         ) ?: NOTI_ACTION_DISMISS
 
     fun saveNotiActionSlot2(value: String) {
-        mainPrefs.edit().putString("noti_action_slot2", value).apply()
+        mainPrefs.edit { putString("noti_action_slot2", value) }
     }
     fun getNotiActionSlot2(): String =
         mainPrefs.getString("noti_action_slot2",

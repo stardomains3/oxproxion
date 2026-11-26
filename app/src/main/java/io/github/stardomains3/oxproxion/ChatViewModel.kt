@@ -530,6 +530,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // cached OpenRouter catalogue (e.g. isPureImageModel). Users with an older
         // cached list get one automatic refresh, then never again.
         private const val MODEL_LIST_SCHEMA_VERSION = 3
+        private const val LAN_KEY_PLACEHOLDER = "any-non-empty-string"
+
         // --- Suggested-title context budgeting ---
         // Overall excerpt cap (~1.5k tokens). Plenty for a title, small enough
         // that it won't hurt even a 2k-context LAN model.
@@ -6505,8 +6507,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 val response = lanHttpClient.get("$lanEndpoint/v1/models") {
-                    timeout { requestTimeoutMillis = 10000 }  // Per-call short timeout (Ktor)
+                    timeout { requestTimeoutMillis = 10000 }
+                    header("Authorization", lanAuthHeaderValue())
                 }
+
                 if (!response.status.isSuccess()) {
                     throw Exception("Server returned ${response.status}: ${response.status.description}")
                 }
@@ -6550,11 +6554,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             if (lanEndpoint.isNullOrBlank()) {
                 throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
             }
-            val apiKey = sharedPreferencesHelper.getLanApiKey()
             try {
-                val response = httpClient.get("$lanEndpoint/v1/models") {
+                val response = lanHttpClient.get("$lanEndpoint/v1/models") {
                     timeout { requestTimeoutMillis = 10000 }
-                    header("Authorization", "Bearer $apiKey")
+                    header("Authorization", lanAuthHeaderValue())
                 }
 
                 if (!response.status.isSuccess()) {
@@ -6595,13 +6598,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             if (lanEndpoint.isNullOrBlank()) {
                 throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
             }
-            val apiKey = sharedPreferencesHelper.getLanApiKey()
             try {
-                val response = httpClient.get("$lanEndpoint/v1/models") {
+                val response = lanHttpClient.get("$lanEndpoint/v1/models") {
                     timeout { requestTimeoutMillis = 10000 }
-                    // CRITICAL: You must include the Bearer token used in your curl command
-                    header("Authorization", "Bearer $apiKey")
-                    //  header("Origin", "http://192.168.68.69:1337")
+                    header("Authorization", lanAuthHeaderValue())
                 }
 
                 if (!response.status.isSuccess()) {
@@ -6648,15 +6648,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             if (lanEndpoint.isNullOrBlank()) {
                 throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
             }
-            val apiKey = sharedPreferencesHelper.getLanApiKey()
 
             try {
                 val response = lanHttpClient.get("$lanEndpoint/v1/models") {
                     timeout { requestTimeoutMillis = 10000 }
-                    if (!apiKey.isNullOrBlank() && apiKey != "any-non-empty-string") {
-                        header("Authorization", "Bearer $apiKey")
-                    }
+                    header("Authorization", lanAuthHeaderValue())
                 }
+
                 if (!response.status.isSuccess()) {
                     throw Exception("Server returned ${response.status}: ${response.status.description}")
                 }
@@ -6753,10 +6751,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             if (lanEndpoint.isNullOrBlank()) {
                 throw IllegalStateException("LAN endpoint not configured. Please set it in settings.")
             }
-
             try {
                 val response = lanHttpClient.get("$lanEndpoint/v1/models") {
                     timeout { requestTimeoutMillis = 10000 }
+                    header("Authorization", lanAuthHeaderValue())
                 }
                 if (!response.status.isSuccess()) {
                     throw Exception("Server returned ${response.status}: ${response.status.description}")
@@ -6808,13 +6806,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             throw IllegalStateException("LAN endpoint not configured.")
         }
 
-        val lanKey = sharedPreferencesHelper.getLanApiKey()
-
         val response = lanHttpClient.post("$lanEndpoint/models/load") {
             contentType(ContentType.Application.Json)
-            if (!lanKey.isNullOrBlank()) {
-                header("Authorization", "Bearer $lanKey")
-            }
+            header("Authorization", lanAuthHeaderValue())
             setBody(mapOf("model" to model.apiIdentifier))
         }
 
@@ -6833,15 +6827,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             throw IllegalStateException("LAN endpoint not configured.")
         }
 
-        val lanKey = sharedPreferencesHelper.getLanApiKey()
-
         val response = lanHttpClient.post("$lanEndpoint/models/unload") {
             contentType(ContentType.Application.Json)
-            if (!lanKey.isNullOrBlank()) {
-                header("Authorization", "Bearer $lanKey")
-            }
+            header("Authorization", lanAuthHeaderValue())
             setBody(mapOf("model" to model.apiIdentifier))
         }
+
 
         if (!response.status.isSuccess()) {
             val errorBody = try { response.bodyAsText() } catch (_: Exception) { "Unknown error" }
@@ -7783,6 +7774,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             // Identity check: never clobber a NEWER pending approval
             if (approvalDeferred === deferred) approvalDeferred = null
         }
+    }
+    /**
+     * Bearer value for LAN requests. Real key if the user set one (trimmed);
+     * the historical placeholder otherwise. Never null — some LAN servers
+     * reject a missing Authorization header outright.
+     */
+    private fun lanAuthHeaderValue(): String {
+        val key = sharedPreferencesHelper.getLanApiKey().trim()
+        val effective = if (key.isBlank() || key == LAN_KEY_PLACEHOLDER) LAN_KEY_PLACEHOLDER else key
+        return "Bearer $effective"
     }
 
     fun approvePendingTools() {
