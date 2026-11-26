@@ -1,0 +1,2 @@
+- You can now choose a message Reader mode action for the Notification.
+- Optimized Notification action button slots selection.

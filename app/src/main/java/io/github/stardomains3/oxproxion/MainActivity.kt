@@ -124,6 +124,7 @@ class MainActivity : AppCompatActivity() {
         val sharedPreferencesHelper = SharedPreferencesHelper(this)
         sharedPreferencesHelper.seedDefaultModelsIfNeeded()
         sharedPreferencesHelper.seedDefaultSystemMessagesIfNeeded()
+        sharedPreferencesHelper.migrateNotiActionsIfNeeded()
         if (!sharedPreferencesHelper.hasMigratedMaverick()) {
             // 1. Swap the active model if it was Maverick
             val currentSavedModel = sharedPreferencesHelper.getPreferenceModelnew()
@@ -161,6 +162,10 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction()
                 .add(R.id.fragment_container, chatFragment, "ChatFragment")
                 .commitNow()
+            // NEW: cold-start reader mode from notification
+            if (intent?.getBooleanExtra("open_reader_mode", false) == true) {
+                chatFragment.enterReaderModeFromNotification()
+            }
         }
         // NEW: Auto‑apply "digital assistant" preset for assistant launches
         if (intent?.action in listOf(Intent.ACTION_ASSIST, Intent.ACTION_VOICE_COMMAND)) {
@@ -284,8 +289,12 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.getBooleanExtra("from_notification", false)) {
-            (supportFragmentManager.findFragmentById(R.id.fragment_container) as? ChatFragment)
-                ?.onOpenedFromNotification()
+            val chatFragment = supportFragmentManager.findFragmentById(R.id.fragment_container) as? ChatFragment
+            if (intent.getBooleanExtra("open_reader_mode", false)) {
+                chatFragment?.enterReaderModeFromNotification()
+            } else {
+                chatFragment?.onOpenedFromNotification()
+            }
         }
         handlePresetIntent(intent)
 

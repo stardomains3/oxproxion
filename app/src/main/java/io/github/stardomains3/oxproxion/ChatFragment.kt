@@ -83,7 +83,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.doOnPreDraw
+import androidx.core.view.isEmpty
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -143,6 +145,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
       // private const val READER_DIM_ALPHA = 0.35f
        const val UI_REQUEST_KEY = "chat_ui_request"
    }
+    private var pendingReaderMode = false
     private var menuClosedByTouch = false
     private var isReadingMode = false
     private var readerFocusPosition: Int? = null
@@ -1008,6 +1011,11 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             saveChatButton.isEnabled = hasMessages
             resetChatButton.isEnabled = hasMessages
             updateMenuRowVisibilities()
+            // NEW: consume pending reader-mode request from notification
+            if (pendingReaderMode) {
+                pendingReaderMode = false
+                chatRecyclerView.post { enterReaderModeFromNotification() }
+            }
         }
 
         fun areAnimationsEnabled(context: Context): Boolean {
@@ -4171,6 +4179,21 @@ $cleanContent
         readerFocusPosition = if (isReadingMode) focusPosition else null
         applyReadingMode()
     }
+    fun enterReaderModeFromNotification() {
+        val lastPos = chatAdapter.lastAssistantPosition()
+        if (lastPos == null) {
+            // Messages not loaded yet — retry after layout/first data pass
+            pendingReaderMode = true
+            return
+        }
+
+        if (!isReadingMode) {
+            toggleReadingMode(lastPos)
+        } else {
+            readerFocusPosition = lastPos
+            applyReadingMode()
+        }
+    }
 
     /*private fun applyReadingFocusDim() {
         val shouldDim = isReadingMode && sharedPreferencesHelper.getReadingFocusDimEnabled()
@@ -4257,6 +4280,11 @@ $cleanContent
 
     private fun centerFocusedItem(position: Int) {
         chatRecyclerView.post {
+            // Not laid out yet (height 0) — wait for the next layout pass
+            if (chatRecyclerView.height == 0 || chatRecyclerView.isEmpty()) {
+                chatRecyclerView.doOnLayout { centerFocusedItem(position) }
+                return@post
+            }
             val vh = chatRecyclerView.findViewHolderForAdapterPosition(position)
             if (vh == null) {
                 // Bring it into the viewport so RecyclerView binds it

@@ -337,6 +337,19 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
             this, 12, copyIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val readerIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra("from_notification", true)
+            putExtra("open_reader_mode", true)
+        } ?: Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra("from_notification", true)
+            putExtra("open_reader_mode", true)
+        }
+        val readerPendingIntent = PendingIntent.getActivity(
+            this, 13, readerIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
@@ -362,23 +375,19 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
 
             // Check preference for Copy vs Open button
             val mainPrefs = getSharedPreferences("MainAppPrefs", Context.MODE_PRIVATE)
-            val useCopyButton = mainPrefs.getBoolean("use_copy_button", false)
-            val useCopyButton2 = mainPrefs.getBoolean("use_copy_button2", false)
-
-            if (useCopyButton2) {
-                // NEW COPY BUTTON CODE for second slot - Copies the same text that TTS speaks
-                builder.addAction(android.R.drawable.ic_input_get, "Copy", copyPendingIntent)
-            } else {
-                // OLD DISMISS BUTTON CODE - Just dismisses the notification
-                builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+            when (mainPrefs.getString("noti_action_slot1", "dismiss")) {
+                "copy"   -> builder.addAction(android.R.drawable.ic_input_get, "Copy", copyPendingIntent)
+                "open"   -> builder.addAction(android.R.drawable.ic_menu_info_details, "Open", pendingIntent)
+                "reader" -> builder.addAction(android.R.drawable.ic_menu_view, "Reader", readerPendingIntent)
+                else     -> builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
             }
-
-            if (useCopyButton) {
-                // NEW COPY BUTTON CODE - Copies the same text that TTS speaks
-                builder.addAction(android.R.drawable.ic_input_get, "Copy", copyPendingIntent)
-            } else {
-                // OLD OPEN BUTTON CODE - Opens the app when tapped
-                builder.addAction(android.R.drawable.ic_menu_info_details, "Open", pendingIntent)
+            // Slot 2
+            when (mainPrefs.getString("noti_action_slot2", "open")) {
+                "copy"   -> builder.addAction(android.R.drawable.ic_input_get, "Copy", copyPendingIntent)
+                "open"   -> builder.addAction(android.R.drawable.ic_menu_info_details, "Open", pendingIntent)
+                "reader" -> builder.addAction(android.R.drawable.ic_menu_view, "Reader", readerPendingIntent)
+                "dismiss"-> builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+                else     -> builder.addAction(android.R.drawable.ic_menu_info_details, "Open", pendingIntent)
             }
 
             if (isTtsUpdate) {

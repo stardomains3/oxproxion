@@ -40,6 +40,10 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_PREFER_FULLSCREEN_CHAT = "prefer_fullscreen_chat"
         private const val KEY_FLOATING_TRANSCRIBE_X = "floating_transcribe_x"
         private const val KEY_FLOATING_TRANSCRIBE_Y = "floating_transcribe_y"
+        const val NOTI_ACTION_READER = "reader"
+        const val NOTI_ACTION_COPY = "copy"
+        const val NOTI_ACTION_OPEN = "open"
+        const val NOTI_ACTION_DISMISS = "dismiss"
         private const val KEY_VOICE_INPUT_MODEL = "voice_input_model"
         private const val KEY_VOICE_INPUT_PROVIDER = "voice_input_provider" // "lan", "cloud", "off"
         private const val KEY_THEME_MODE = "theme_mode"
@@ -560,6 +564,33 @@ class SharedPreferencesHelper(context: Context) {
 
     fun setAmoledModeEnabled(enabled: Boolean) = mainPrefs.edit {
         putBoolean(KEY_AMOLED_MODE_ENABLED, enabled)
+    }
+    fun saveNotiActionSlot1(value: String) {
+        mainPrefs.edit().putString("noti_action_slot1", value).apply()
+    }
+    fun getNotiActionSlot1(): String =
+        mainPrefs.getString("noti_action_slot1",
+            NOTI_ACTION_DISMISS
+        ) ?: NOTI_ACTION_DISMISS
+
+    fun saveNotiActionSlot2(value: String) {
+        mainPrefs.edit().putString("noti_action_slot2", value).apply()
+    }
+    fun getNotiActionSlot2(): String =
+        mainPrefs.getString("noti_action_slot2",
+            NOTI_ACTION_OPEN
+        ) ?: NOTI_ACTION_OPEN
+    fun migrateNotiActionsIfNeeded() {
+        if (!mainPrefs.contains("noti_action_slot1")) {
+            val old1 = if (mainPrefs.getBoolean(KEY_USE_COPY_BUTTON2, false))
+                NOTI_ACTION_COPY else NOTI_ACTION_DISMISS   // old default was Dismiss
+            mainPrefs.edit { putString("noti_action_slot1", old1) }
+        }
+        if (!mainPrefs.contains("noti_action_slot2")) {
+            val old2 = if (mainPrefs.getBoolean(KEY_USE_COPY_BUTTON, false))
+                NOTI_ACTION_COPY else NOTI_ACTION_OPEN      // old default was Open
+            mainPrefs.edit { putString("noti_action_slot2", old2) }
+        }
     }
     fun getUseCopyButton2(): Boolean {
         return mainPrefs.getBoolean(KEY_USE_COPY_BUTTON2, false)  // false = Dismiss, true = Copy

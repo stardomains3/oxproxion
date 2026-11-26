@@ -1203,6 +1203,8 @@ class ChatAdapter(
                 ((g * factor).toInt() shl 8) or
                 (b * factor).toInt()
     }
+    fun lastAssistantPosition(): Int? =
+        messages.indexOfLast { it.role == "assistant" }.takeIf { it >= 0 }
     private fun resolveTextColorPrimary(context: Context): Int {
         val tv = android.util.TypedValue()
         context.theme.resolveAttribute(android.R.attr.textColorPrimary, tv, true)

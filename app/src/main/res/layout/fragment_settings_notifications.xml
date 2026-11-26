@@ -66,58 +66,175 @@
                     android:layout_marginBottom="16dp"
                     android:background="#1A000000" />
 
-                <!-- 2. Copy Button on Notification (instead of Dismiss) -->
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:layout_marginBottom="8dp"
+                    android:text="Select Notification Actions"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Copy Button (instead of Dismiss)"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/copyOrdismissSwitch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="false" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="16dp"
-                    android:background="#1A000000" />
-
-                <!-- 3. Copy Button on Notification (instead of Open) -->
-                <LinearLayout
+                <!-- Slot 1 -->
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:layout_marginBottom="4dp"
+                    android:text="Slot 1:"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Copy Button (instead of Open)"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                <HorizontalScrollView
+                    android:id="@+id/slot1ScrollView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:fillViewport="false"
+                    android:scrollbars="none">
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/copyOropenSwitch"
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/slot1ChipGroup"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
-                </LinearLayout>
+                        app:chipSpacingHorizontal="8dp"
+                        app:selectionRequired="true"
+                        app:singleLine="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot1ReaderChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Reader"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot1CopyChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Copy"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot1OpenChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Open"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot1DismissChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Dismiss"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+
+
+                <!-- Slot 2 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:text="Slot 2:"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <HorizontalScrollView
+                    android:id="@+id/slot2ScrollView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:fillViewport="false"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/slot2ChipGroup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipSpacingHorizontal="8dp"
+                        app:selectionRequired="true"
+                        app:singleLine="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot2ReaderChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+
+                            android:checkable="true"
+                            android:text="Reader"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot2CopyChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Copy"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot2OpenChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Open"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/slot2DismissChip"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Dismiss"
+                            app:checkedIconVisible="false"
+                            app:chipBackgroundColor="@color/toggle_background_selector"
+                            app:chipStrokeColor="@color/chestnut"
+                            app:chipStrokeWidth="1dp" />
+
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -151,11 +268,6 @@
                         app:strokeWidth="1dp"
                         app:backgroundTint="?attr/colorSurface" />
                 </LinearLayout>
-
-
-
-
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </ScrollView>
