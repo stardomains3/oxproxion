@@ -4,7 +4,6 @@ import android.Manifest
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AlertDialog
 import android.app.Activity
 import android.app.NotificationManager
 import android.content.ClipData
@@ -53,7 +52,6 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -71,7 +69,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -83,9 +81,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.doOnLayout
 import androidx.core.view.doOnPreDraw
-import androidx.core.view.isEmpty
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -103,7 +99,6 @@ import io.noties.markwon.LinkResolverDef
 import io.noties.markwon.Markwon
 import io.noties.markwon.MarkwonConfiguration
 import io.noties.markwon.SoftBreakAddsNewLinePlugin
-import io.noties.markwon.SpanFactory
 import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
@@ -146,6 +141,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
        const val UI_REQUEST_KEY = "chat_ui_request"
    }
     private var pendingReaderMode = false
+    private var centerRetryJob: Job? = null
     private var menuClosedByTouch = false
     private var isReadingMode = false
     private var readerFocusPosition: Int? = null
@@ -1014,7 +1010,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
             // NEW: consume pending reader-mode request from notification
             if (pendingReaderMode) {
                 pendingReaderMode = false
-                chatRecyclerView.post { enterReaderModeFromNotification() }
+                chatRecyclerView.postDelayed({ enterReaderModeFromNotification() }, 100)
             }
         }
 
@@ -4180,18 +4176,25 @@ $cleanContent
         applyReadingMode()
     }
     fun enterReaderModeFromNotification() {
-        val lastPos = chatAdapter.lastAssistantPosition()
-        if (lastPos == null) {
-            // Messages not loaded yet — retry after layout/first data pass
+        // Retry until the adapter has data, max ~1s
+        viewLifecycleOwner.lifecycleScope.launch {
+            var attempts = 0
+            while (attempts < 20) {
+                val lastPos = chatAdapter.lastAssistantPosition()
+                if (lastPos != null) {
+                    if (!isReadingMode) {
+                        toggleReadingMode(lastPos)
+                    } else {
+                        readerFocusPosition = lastPos
+                        applyReadingMode()
+                    }
+                    return@launch
+                }
+                delay(50.milliseconds)
+                attempts++
+            }
+            // Data never arrived — fall back to the observer-consumed flag
             pendingReaderMode = true
-            return
-        }
-
-        if (!isReadingMode) {
-            toggleReadingMode(lastPos)
-        } else {
-            readerFocusPosition = lastPos
-            applyReadingMode()
         }
     }
 
@@ -4279,39 +4282,46 @@ $cleanContent
     }
 
     private fun centerFocusedItem(position: Int) {
-        chatRecyclerView.post {
-            // Not laid out yet (height 0) — wait for the next layout pass
-            if (chatRecyclerView.height == 0 || chatRecyclerView.isEmpty()) {
-                chatRecyclerView.doOnLayout { centerFocusedItem(position) }
-                return@post
+        centerRetryJob?.cancel()
+        centerRetryJob = viewLifecycleOwner.lifecycleScope.launch {
+            // Up to ~10 attempts, 50ms apart = 0.5s max wait
+            repeat(10) {
+                if (tryCenter(position)) return@launch
+                delay(50.milliseconds)
             }
-            val vh = chatRecyclerView.findViewHolderForAdapterPosition(position)
-            if (vh == null) {
-                // Bring it into the viewport so RecyclerView binds it
-                layoutManager.scrollToPositionWithOffset(position, 0)
-                chatRecyclerView.doOnPreDraw { centerFocusedItem(position) }
-                return@post
-            }
-
-            val rvH = chatRecyclerView.height
-            val itemH = vh.itemView.height
-
-            if (originalRvPaddingTop == -1) {
-                originalRvPaddingTop = chatRecyclerView.paddingTop
-                originalRvPaddingBottom = chatRecyclerView.paddingBottom
-            }
-
-            val pad = if (itemH >= rvH) 0 else (rvH - itemH) / 2
-
-            // Crucial: allow items to draw/scroll into the padding area
-            // so the 2nd item can push the 1st item up into the top padding
-            chatRecyclerView.clipToPadding = false
-            chatRecyclerView.setPadding(0, pad, 0, pad)
-
-            // Offset is 0 because startAfterPadding is ALREADY at `pad`!
-            layoutManager.scrollToPositionWithOffset(position, 0)
+            // Final attempt even if layout was slow
+            tryCenter(position)
         }
     }
+
+    private fun tryCenter(position: Int): Boolean {
+        if (chatRecyclerView.height == 0 || chatRecyclerView.childCount == 0) return false
+
+        val vh = chatRecyclerView.findViewHolderForAdapterPosition(position)
+
+        if (vh == null) {
+            // Force RecyclerView to lay out the target item so it gets bound
+            layoutManager.scrollToPositionWithOffset(position, 0)
+            return false  // retry loop will call again after the scroll lands
+        }
+
+        val rvH = chatRecyclerView.height
+        val itemH = vh.itemView.height
+        if (itemH == 0) return false
+
+        if (originalRvPaddingTop == -1) {
+            originalRvPaddingTop = chatRecyclerView.paddingTop
+            originalRvPaddingBottom = chatRecyclerView.paddingBottom
+        }
+
+        val pad = if (itemH >= rvH) 0 else (rvH - itemH) / 2
+
+        chatRecyclerView.clipToPadding = false
+        chatRecyclerView.setPadding(0, pad, 0, pad)
+        layoutManager.scrollToPositionWithOffset(position, 0)
+        return true
+    }
+
     private fun restoreRecyclerViewPadding() {
         if (originalRvPaddingTop != -1) {
             chatRecyclerView.setPadding(0, originalRvPaddingTop, 0, originalRvPaddingBottom)

@@ -1,0 +1,2 @@
+- Optimized centering in singular Reader mode
+- Optimized app start up code

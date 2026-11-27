@@ -16,24 +16,27 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContextCompat
-import java.util.concurrent.Executor
 
 class MainActivity : AppCompatActivity() {
-
+    private val prefs by lazy { SharedPreferencesHelper(this) }
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* no-op */ }
 
-    private lateinit var biometricExecutor: Executor
-    private lateinit var biometricPrompt: BiometricPrompt
-    private lateinit var promptInfo: BiometricPrompt.PromptInfo
 
+
+    private var awaitingBiometricAuth = false
+    override fun onStart() {
+        super.onStart()
+        if (!awaitingBiometricAuth) {
+            ensureServiceRunning()
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
 
         /* ------------------------------------------------------ */
         /* 0. Theme setup — MUST run before super.onCreate()      */
         /* ------------------------------------------------------ */
-        val prefs = SharedPreferencesHelper(this)
+
 
         // Night mode (move it here from ChatFragment's global-layout hack)
         when (prefs.getThemeMode()) {
@@ -50,19 +53,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-
+// Full-document render for WebView-based PDF printing (printButton)
+        android.webkit.WebView.enableSlowWholeDocumentDraw()
         /* ------------------------------------------------------ */
         /* 1.  Cold-start gate:  finish() if auth fails / none    */
         /* ------------------------------------------------------ */
 
 
-        if (savedInstanceState == null && SharedPreferencesHelper(this).getBiometricEnabled()) {
+        if (savedInstanceState == null && prefs.getBiometricEnabled()) {
             val bm = BiometricManager.from(this)
             when (bm.canAuthenticate(BIOMETRIC_STRONG)) {
-                BiometricManager.BIOMETRIC_SUCCESS -> showBiometricGate()
+                BiometricManager.BIOMETRIC_SUCCESS -> {
+                    awaitingBiometricAuth = true
+                    showBiometricGate()
+                }
                 else -> {
                     // Optional: Auto-disable to avoid repeated warnings on future launches
-                    SharedPreferencesHelper(this).saveBiometricEnabled(false)
+                    prefs.saveBiometricEnabled(false)
 
                     Toast.makeText(
                         this,
@@ -87,11 +94,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showBiometricGate() {
-        biometricExecutor = ContextCompat.getMainExecutor(this)
-        biometricPrompt = BiometricPrompt(this, biometricExecutor,
-            object : BiometricPrompt.AuthenticationCallback() {
+        val prompt = BiometricPrompt(this, mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
+                    awaitingBiometricAuth = false
                     Toast.makeText(this@MainActivity, "Authentication error", Toast.LENGTH_SHORT).show()
                     finish()
                 }
@@ -99,41 +105,43 @@ class MainActivity : AppCompatActivity() {
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
                     Toast.makeText(this@MainActivity, "Authentication failed", Toast.LENGTH_SHORT).show()
-                    finish()
+
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    continueOnCreate() // unlock OK → proceed
+                    awaitingBiometricAuth = false
+                    ensureServiceRunning()   // service starts only after unlock
+                    continueOnCreate()
                 }
             })
 
-        promptInfo = BiometricPrompt.PromptInfo.Builder()
+        val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Unlock oxproxion")
             .setSubtitle("Use your biometric credential")
             .setNegativeButtonText("Cancel")
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .build()
 
-        biometricPrompt.authenticate(promptInfo)
+        prompt.authenticate(info)
     }
 
     private fun continueOnCreate() {
         setContentView(R.layout.activity_main)
         askNotificationPermission()
-        val sharedPreferencesHelper = SharedPreferencesHelper(this)
-        sharedPreferencesHelper.seedDefaultModelsIfNeeded()
-        sharedPreferencesHelper.seedDefaultSystemMessagesIfNeeded()
-        sharedPreferencesHelper.migrateNotiActionsIfNeeded()
-        if (!sharedPreferencesHelper.hasMigratedMaverick()) {
+
+        prefs.seedDefaultModelsIfNeeded()
+        prefs.seedDefaultSystemMessagesIfNeeded()
+        prefs.migrateNotiActionsIfNeeded()
+        if (!prefs.hasMigratedMaverick()) {
             // 1. Swap the active model if it was Maverick
-            val currentSavedModel = sharedPreferencesHelper.getPreferenceModelnew()
+            val currentSavedModel = prefs.getPreferenceModelnew()
             if (currentSavedModel == "meta-llama/llama-4-maverick") {
-                sharedPreferencesHelper.savePreferenceModelnewchat("openrouter/free")
+                prefs.savePreferenceModelnewchat("openrouter/free")
             }
 
             // 2. Scrub any old custom "openrouter/free" entries to prevent duplicates
-            val customModels = sharedPreferencesHelper.getCustomModels()
+            val customModels = prefs.getCustomModels()
             val initialSize = customModels.size
 
             // Remove any custom model matching the identifier (ignoring case just in case)
@@ -141,11 +149,11 @@ class MainActivity : AppCompatActivity() {
 
             // If we actually deleted something, save the clean list back to SharedPreferences
             if (customModels.size < initialSize) {
-                sharedPreferencesHelper.saveCustomModels(customModels)
+                prefs.saveCustomModels(customModels)
             }
 
             // 3. Mark as complete so this never runs again
-            sharedPreferencesHelper.setMigratedMaverick()
+            prefs.setMigratedMaverick()
         }
 
         if (supportFragmentManager.findFragmentById(R.id.fragment_container) == null) {
@@ -189,8 +197,8 @@ class MainActivity : AppCompatActivity() {
                 val clearChat = intent.getBooleanExtra("clear_chat", false)
                 if (clearChat) vm.startNewChat()
                 vm.consumeSharedText(text)
-                val sharedPreferencesHelper = SharedPreferencesHelper(this)
-                val systemMessageTitle = sharedPreferencesHelper.getSelectedSystemMessage().title
+
+                val systemMessageTitle = prefs.getSelectedSystemMessage().title
                 Toast.makeText(this, systemMessageTitle, Toast.LENGTH_SHORT).show()
             }
         }
@@ -208,8 +216,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
-        startForegroundService()
-       // if (sharedPreferencesHelper.getNotiPreference()) startForegroundService()
+
     }
     override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
         val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
@@ -243,47 +250,16 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+
+
     private fun askNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {   // 33
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) !=
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        // on 31/32 the permission doesn’t exist, notifications are enabled by default
     }
-    /*private fun startForegroundService() {
-        if (ForegroundService.isRunningForeground) return  // Guard to prevent restarts
-        try {
-            val serviceIntent = Intent(this, ForegroundService::class.java)
-            // Optionally pass initial title if needed
-           // val vm: ChatViewModel by viewModels()
-           // val displayName = vm.getModelDisplayName(vm.activeChatModel.value ?: "Unknown Model")
-           // serviceIntent.putExtra("initial_title", displayName)
-            startService(serviceIntent)
-        } catch (e: Exception) {
-           // Log.e("MainActivity", "Failed to start foreground service", e)
-        }
-    }*/
-    private fun startForegroundService() {
-        if (ForegroundService.isRunningForeground) return
-        try {
-            val serviceIntent = Intent(this, ForegroundService::class.java)
-            ContextCompat.startForegroundService(this, serviceIntent)  // ← From startService()
-        } catch (e: Exception) {
-         //   Log.e("MainActivity", "Failed to start foreground service", e)
-        }
-    }
-
-    /*private fun startForegroundService() {
-        try {
-            val serviceIntent = Intent(this, ForegroundService::class.java)
-            startService(serviceIntent)
-        } catch (e: Exception) {
-            Log.e("ChatFragment", "Failed to start foreground service", e)
-        }
-    }*/
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -301,9 +277,9 @@ class MainActivity : AppCompatActivity() {
         if (intent.action == Intent.ACTION_SEND && "text/plain" == intent.type && !intent.getBooleanExtra("autosend", false)) {
             intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
                 val vm: ChatViewModel by viewModels()
-                val sharedPreferencesHelper = SharedPreferencesHelper(this)
+
                 vm.consumeSharedText(text)
-                val systemMessageTitle = sharedPreferencesHelper.getSelectedSystemMessage().title
+                val systemMessageTitle = prefs.getSelectedSystemMessage().title
                 Toast.makeText(this, systemMessageTitle, Toast.LENGTH_SHORT).show()
                 //Toast.makeText(this, "Text received", Toast.LENGTH_LONG).show()
                 //val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
@@ -339,8 +315,8 @@ class MainActivity : AppCompatActivity() {
                 val clearChat = intent.getBooleanExtra("clear_chat", false)
                 if (clearChat) vm.startNewChat()
                 vm.consumeSharedText(text)
-                val sharedPreferencesHelper = SharedPreferencesHelper(this)
-                val systemMessageTitle = sharedPreferencesHelper.getSelectedSystemMessage().title
+
+                val systemMessageTitle = prefs.getSelectedSystemMessage().title
                 Toast.makeText(this, systemMessageTitle, Toast.LENGTH_SHORT).show()
             }
         }
@@ -378,7 +354,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             val vm: ChatViewModel by viewModels()
-            val prefs = SharedPreferencesHelper(this)
+
 
             // 2. Validation (Model and System Message still exist)
             val allModels = (vm.getBuiltInModels() + prefs.getCustomModels()).distinctBy { it.apiIdentifier.lowercase() }
@@ -415,71 +391,11 @@ class MainActivity : AppCompatActivity() {
             intent.removeExtra("apply_preset")
         }
     }
-   /* private fun handlePresetIntent(intent: Intent) {
-        if (intent.getBooleanExtra("apply_preset", false)) {
-            val presetId = intent.getStringExtra("preset_id") ?: return
-            val presetTitle = intent.getStringExtra("preset_title") ?: return
-            val presetModel = intent.getStringExtra("preset_model") ?: return
-            val systemMessageTitle = intent.getStringExtra("preset_system_message_title") ?: return
-            val systemMessagePrompt = intent.getStringExtra("preset_system_message_prompt") ?: return
-            val systemMessageIsDefault = intent.getBooleanExtra("preset_system_message_is_default", false)
-            val streaming = intent.getBooleanExtra("preset_streaming", false)
-            val reasoning = intent.getBooleanExtra("preset_reasoning", false)
-            val conversationMode = intent.getBooleanExtra("preset_conversation_mode", false)
-            val systemMessage = SystemMessage(systemMessageTitle, systemMessagePrompt, isDefault = systemMessageIsDefault)
-            val preset = Preset(
-                id = presetId,
-                title = presetTitle,
-                modelIdentifier = presetModel,
-                systemMessage = systemMessage,
-                streaming = streaming,
-                reasoning = reasoning,
-                conversationMode = conversationMode
-            )
-
-            val vm: ChatViewModel by viewModels()
-            // --- VALIDATION ---
-            val prefs = SharedPreferencesHelper(this)
-            val allModels = (vm.getBuiltInModels() + prefs.getCustomModels()).distinctBy { it.apiIdentifier.lowercase() }
-            if (allModels.none { it.apiIdentifier.equals(preset.modelIdentifier, ignoreCase = true) }) {
-                Toast.makeText(this, "Preset not applied: Model \"${preset.modelIdentifier}\" no longer exists.", Toast.LENGTH_LONG).show()
-                return
-            }
-
-            val allMessages = listOf(prefs.getDefaultSystemMessage()) + prefs.getCustomSystemMessages()
-            if (allMessages.none { it.title == preset.systemMessage.title && it.prompt == preset.systemMessage.prompt }) {
-                Toast.makeText(this, "Preset not applied: System message \"${preset.systemMessage.title}\" no longer exists.", Toast.LENGTH_LONG).show()
-                return
-            }
-            // --- END VALIDATION ---
-
-
-            PresetManager.applyPreset(this, vm, preset)
-          /*  if (ForegroundService.isRunningForeground && prefs.getNotiPreference()) {
-                val displayName = vm.getModelDisplayName(preset.title)
-                ForegroundService.updateNotificationStatusSilently(displayName, "Preset Applied")
-            }*/
-            vm.signalPresetApplied()
-            //Toast.makeText(this, "Preset Applied: ${preset.title}", Toast.LENGTH_SHORT).show()
-
-            val sharedText = intent.getStringExtra("shared_text")
-            if (sharedText != null) {
-                val clearChat = intent.getBooleanExtra("clear_chat", false)
-                if (clearChat) {
-                    vm.startNewChat()
-                }
-
-                if (intent.getBooleanExtra("autosend_preset", false)) {
-                    vm.consumeSharedTextautosend(sharedText)
-                } else if (intent.getBooleanExtra("input_only_preset", false)) {
-                    vm.consumeSharedText(sharedText)
-                }
-            }
-            // Clear the preset flag to prevent re-applying on config change
-            intent.removeExtra("apply_preset")
+    private fun ensureServiceRunning() {
+        if (!ForegroundService.isRunningForeground)
+        {
+            val intent = Intent(this, ForegroundService::class.java)
+            startForegroundService(intent)
         }
-    }*/
-
-
-
+    }
 }
