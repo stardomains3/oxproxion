@@ -1,6 +1,6 @@
 [versions]
 activityKtx = "1.13.0"
-agp = "9.5.2"
+agp = "9.5.3"
 oss-licenses-plugin = "0.13.0"
 oss-licenses-parser = "1.2.0"
 fragmentKtx = "1.9.1"

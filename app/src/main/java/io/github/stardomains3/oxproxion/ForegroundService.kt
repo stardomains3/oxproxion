@@ -75,10 +75,25 @@ class ForegroundService : Service(), TextToSpeech.OnInitListener {
     }
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
+        val removedRoot = rootIntent?.component?.className
+        // Tasks we intentionally create & tear down as share "trampolines".
+        val trampolineRoots: Set<String?> = setOf(
+            null, // defensive: unknown root → treat as trampoline, never kill the service
+            AutosendActivity::class.java.name,
+            ChooserActivity::class.java.name,
+            PresetChooserActivity::class.java.name,
+            SpellCheckActivity::class.java.name,
+            AssistantActivity::class.java.name,
+            Transactivity::class.java.name
+        )
+        if (removedRoot in trampolineRoots) {
+            // Not a user swipe — just a share trampoline task finishing.
+            // Keep the service alive.
+            return
+        }
+        // Genuine "swiped away from Recents" (root was MainActivity's task).
         if (isTtsActive) {
-            // let it finish; stop when done
-            // handleTtsFinished() path won't stop the service, so schedule it:
-            stop()  // or omit this branch if you want speech to continue
+            // let current speech finish; TTS onDone/onError path handles cleanup
         } else {
             stop()
         }
