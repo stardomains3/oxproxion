@@ -1,4 +1,6 @@
 <resources>
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="advanced_reasoning_outline_width">2dp</dimen>
+    <dimen name="touch_target_size">48dp</dimen>
+    <dimen name="button_margin_small">2dp</dimen>
 </resources>

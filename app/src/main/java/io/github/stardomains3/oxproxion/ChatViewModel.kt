@@ -102,6 +102,7 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import okhttp3.CompressionInterceptor
 import okhttp3.Gzip
+import okhttp3.OkHttpClient
 import okhttp3.brotli.BrotliInterceptor
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser
@@ -125,9 +126,11 @@ import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLException
 import javax.net.ssl.X509TrustManager
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
+import kotlin.text.toLong
 import kotlin.time.Duration.Companion.milliseconds
 
 @Serializable
@@ -280,7 +283,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     private fun createTransLanHttpClient(): HttpClient {
         val timeoutMs = sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L
-
+        val allowInsecureTls = sharedPreferencesHelper.getAllowInsecureLanTls()
         return HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(Json { ignoreUnknownKeys = true
@@ -289,26 +292,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             install(DefaultRequest) {
                 header("User-Agent", "oxproxion/${BuildConfig.VERSION_NAME}")
             }
-
             engine {
                 config {
                     // Disable connection pooling specifically for STT to avoid stale socket errors
                     connectionPool(okhttp3.ConnectionPool(0, 1, TimeUnit.NANOSECONDS))
                     retryOnConnectionFailure(true)
-
                     // --- START SSL BYPASS (Strictly for LAN) ---
-                    val trustAllCerts = object : X509TrustManager {
-                        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                    if (allowInsecureTls) {
+                        applyInsecureLanTlsIfEnabled()
                     }
-                    val sslContext = SSLContext.getInstance("SSL")
-                    sslContext.init(null, arrayOf(trustAllCerts), SecureRandom())
-
-                    sslSocketFactory(sslContext.socketFactory, trustAllCerts)
-                    hostnameVerifier { _, _ -> true }
                     // --- END SSL BYPASS ---
-
                     addInterceptor(CompressionInterceptor(Gzip))
                     addInterceptor(BrotliInterceptor)
                     readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
@@ -321,6 +314,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     private fun createLanHttpClient(): HttpClient {
         val timeoutMs = sharedPreferencesHelper.getTimeoutMinutes().toLong() * 60_000L
+        val allowInsecureTls = sharedPreferencesHelper.getAllowInsecureLanTls()
 
         return HttpClient(OkHttp) {
             install(ContentNegotiation) {
@@ -337,19 +331,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     pingInterval(56, TimeUnit.SECONDS)
                     retryOnConnectionFailure(true)
                     connectionPool(okhttp3.ConnectionPool(3, 90, TimeUnit.SECONDS))
-                    // --- START SSL BYPASS (Strictly for LAN) ---
-                    val trustAllCerts = object : X509TrustManager {
-                        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                    if (allowInsecureTls) {
+                        applyInsecureLanTlsIfEnabled()
                     }
-                    val sslContext = SSLContext.getInstance("SSL")
-                    sslContext.init(null, arrayOf(trustAllCerts), SecureRandom())
-
-                    sslSocketFactory(sslContext.socketFactory, trustAllCerts)
-                    hostnameVerifier { _, _ -> true }
-                    // --- END SSL BYPASS ---
-
                     addInterceptor(CompressionInterceptor(Gzip))
                     addInterceptor(BrotliInterceptor)
                     readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
@@ -5072,6 +5056,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 errorText // Return initial message for immediate display
             }
+            is SSLException -> {
+                if (activeModelIsLan() && !sharedPreferencesHelper.getAllowInsecureLanTls()) {
+                    """
+        **Error:**
+        ---
+        HTTPS certificate validation failed for your LAN server.
+        If it uses a **self-signed certificate** (typical for home servers), enable
+        **"Allow Insecure LAN Certificates"** in LAN Settings and try again.
+        """.trimIndent()
+                } else {
+                    "**Error:**\n---\nTLS error: ${e.localizedMessage ?: "Certificate validation failed"}"
+                }
+            }
             is ServerResponseException -> {
                 // Handle in a coroutine scope
                 var errorText = "**Error:**\n---\nServer error: ${e.response.status}. Try later."
@@ -7794,6 +7791,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun denyPendingTools() {
         approvalDeferred?.complete(false)
         approvalDeferred = null
+    }
+    /**
+     * Trust-all TLS configuration, applied ONLY when the user has explicitly opted in
+     * via settings. Off by default — standard certificate validation is used otherwise.
+     */
+    private fun OkHttpClient.Builder.applyInsecureLanTlsIfEnabled(): OkHttpClient.Builder {
+        val trustAllCerts = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        }
+        val sslContext = SSLContext.getInstance("SSL")
+        sslContext.init(null, arrayOf(trustAllCerts), SecureRandom())
+        sslSocketFactory(sslContext.socketFactory, trustAllCerts)
+        hostnameVerifier { _, _ -> true }
+        return this
     }
 
 

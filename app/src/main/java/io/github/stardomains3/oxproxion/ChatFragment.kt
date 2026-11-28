@@ -1475,6 +1475,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
         if (viewModel.activeModelIsLan()) {
             checkLocalNetworkPermission()
         }
+        maybeShowLanTlsMigrationNotice()
         // Clean up any orphaned voice recordings from previous sessions
         clearStaleVoiceFiles()
         // Clean up temp copies from previous tap-to-open sessions
@@ -1609,8 +1610,8 @@ class ChatFragment : Fragment(R.layout.fragment_chat), OnKeyboardShortcutListene
 
     // Helper to keep the code clean
     private fun applyCollapsedParams(btn: View) {
-        val size = (48 * resources.displayMetrics.density).toInt()
-        val margin = (2 * resources.displayMetrics.density).toInt()
+        val size = resources.getDimensionPixelSize(R.dimen.touch_target_size)
+        val margin = resources.getDimensionPixelSize(R.dimen.button_margin_small)
         val params = LinearLayout.LayoutParams(size, size)
         params.setMargins(0, 0, 0, margin)
         btn.layoutParams = params
@@ -5526,6 +5527,36 @@ $cleanContent
             })
             .build()
     }
+    private fun maybeShowLanTlsMigrationNotice() {
+        // One-time notice for the v3.0 TLS change: https endpoint + insecure toggle off
+        val endpoint = sharedPreferencesHelper.getLanEndpoint()?.trim() ?: return
+        if (!endpoint.startsWith("https://", ignoreCase = true)) return
+        if (sharedPreferencesHelper.getAllowInsecureLanTls()) return
+        if (sharedPreferencesHelper.isLanTlsNoticeShown()) return
+
+        sharedPreferencesHelper.saveLanTlsNoticeShown(true)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("LAN security change")
+            .setMessage(
+                "For better security, this version now validates HTTPS certificates when " +
+                        "connecting to your LAN server.\n\n" +
+                        "Your endpoint ($endpoint) uses HTTPS. If your server has a valid " +
+                        "certificate, nothing changes. If it uses a self-signed certificate " +
+                        "(typical for home servers), connections will fail until you enable " +
+                        "\"Allow Insecure LAN Certificates\" in LAN settings."
+            )
+            .setPositiveButton("Open LAN Settings") { _, _ ->
+                parentFragmentManager.beginTransaction()
+                    .hide(this)
+                    .add(R.id.fragment_container, LanSettingsFragment())
+                    .addToBackStack(null)
+                    .commit()
+            }
+            .setNegativeButton("Later", null)
+            .show()
+    }
+
     private fun hasFolderPermission(): Boolean {
         val uriString = sharedPreferencesHelper.getSafFolderUri() ?: return false
 

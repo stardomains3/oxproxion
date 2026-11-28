@@ -35,11 +35,13 @@ class SharedPreferencesHelper(context: Context) {
     }
     companion object {
         private const val KEY_TOOL_APPROVAL = "tool_approval_enabled"
+        private const val PREF_ALLOW_INSECURE_LAN_TLS = "allow_insecure_lan_tls"
         private const val KEY_WATERMARK_STT_ENABLED = "watermark_stt_enabled"
         private const val KEY_READING_FOCUS_DIM_ENABLED = "reading_focus_dim_enabled"
         private const val KEY_PREFER_FULLSCREEN_CHAT = "prefer_fullscreen_chat"
         private const val KEY_FLOATING_TRANSCRIBE_X = "floating_transcribe_x"
         private const val KEY_FLOATING_TRANSCRIBE_Y = "floating_transcribe_y"
+        private const val PREF_LAN_TLS_NOTICE_SHOWN = "lan_tls_notice_shown"
         const val NOTI_ACTION_READER = "reader"
         const val NOTI_ACTION_COPY = "copy"
         const val NOTI_ACTION_OPEN = "open"
@@ -304,6 +306,12 @@ class SharedPreferencesHelper(context: Context) {
         val jsonString = json.encodeToString(prompts)
         mainPrefs.edit { putString(KEY_CUSTOM_PROMPTS, jsonString) }
     }
+    fun getAllowInsecureLanTls(): Boolean =
+        mainPrefs.getBoolean(PREF_ALLOW_INSECURE_LAN_TLS, false)   // secure by default
+
+    fun saveAllowInsecureLanTls(enabled: Boolean) {
+        mainPrefs.edit { putBoolean(PREF_ALLOW_INSECURE_LAN_TLS, enabled) }
+    }
     fun getUseCopyButton(): Boolean {
         return mainPrefs.getBoolean(KEY_USE_COPY_BUTTON, false)  // false = Open, true = Copy
     }
@@ -402,7 +410,12 @@ class SharedPreferencesHelper(context: Context) {
             exclude
         )
     }
+    fun isLanTlsNoticeShown(): Boolean =
+        mainPrefs.getBoolean(PREF_LAN_TLS_NOTICE_SHOWN, false)
 
+    fun saveLanTlsNoticeShown(shown: Boolean) {
+        mainPrefs.edit { putBoolean(PREF_LAN_TLS_NOTICE_SHOWN, shown) }
+    }
     fun getReasoningMaxTokens(): Int? = mainPrefs.getInt("reasoning_max_tokens", -1).takeIf { it != -1 }
     fun saveReasoningMaxTokens(tokens: Int?) = mainPrefs.edit {
         putInt(

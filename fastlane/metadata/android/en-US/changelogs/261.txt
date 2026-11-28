@@ -1,0 +1,2 @@
+- Possible Breaking Change: New setting for to accept self-signed certificates in LAN settings for LAN HTTPS. Off by default. If currently using one you will need to toggle it on.
+- https://github.com/stardomains3/oxproxion/releases/tag/v2.3.0

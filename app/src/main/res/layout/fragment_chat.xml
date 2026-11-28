@@ -114,7 +114,7 @@
             <TextView
                 android:id="@+id/modelNameTextView"
                 android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_gravity="center"
                 android:gravity="center"
@@ -124,7 +124,7 @@
                 android:background="@drawable/background_selector"
                 android:textSize="15sp"
                 android:ellipsize="end"
-                android:singleLine="true"
+                android:maxLines="2"
                 android:visibility="visible"
                 android:drawablePadding="3dp"
                 android:paddingEnd="4dp"

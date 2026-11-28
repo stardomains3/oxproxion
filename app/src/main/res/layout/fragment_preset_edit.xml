@@ -36,8 +36,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                app:boxStrokeColor="?attr/colorPrimary"
-                app:hintTextColor="?attr/colorPrimary"
+                app:boxBackgroundColor="?attr/colorSurface"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="@color/text_input_stroke_color"
+                app:boxStrokeWidth="1dp"
+                app:boxStrokeWidthFocused="2dp"
+                app:boxBackgroundMode="outline"
+                app:hintTextColor="?android:attr/textColorSecondary"
                 android:hint="Title">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -54,7 +62,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                app:boxStrokeColor="?attr/colorPrimary"
+                app:boxStrokeColor="@color/text_input_stroke_color"
                 app:hintTextColor="?attr/colorPrimary"
                 app:endIconMode="dropdown_menu"
                 android:hint="Model">
@@ -77,7 +85,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                app:boxStrokeColor="?attr/colorPrimary"
+                app:boxStrokeColor="@color/text_input_stroke_color"
                 app:hintTextColor="?attr/colorPrimary"
                 app:endIconMode="dropdown_menu"
                 android:hint="System Message">
@@ -86,7 +94,6 @@
                     android:id="@+id/autoCompleteSystemMessage"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="top"
                     android:textColor="?android:attr/textColorPrimary"
                     android:textColorHint="?android:attr/textColorSecondary"
                     android:textSize="16sp"

@@ -26,7 +26,11 @@ class NetworkSettingsFragment : Fragment(R.layout.fragment_settings_network) {
 
         // ---- LAN Settings ----
         lanButton.setOnClickListener {
-            SaveLANDialogFragment().show(childFragmentManager, SaveLANDialogFragment.TAG)
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_container, LanSettingsFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
         // ---- Request Timeout ----
